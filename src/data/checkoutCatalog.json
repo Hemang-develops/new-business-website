@@ -1,0 +1,182 @@
+{
+  "become-a-new-you": {
+    "name": "Become a New You Mentorship",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/become-a-new-you/status/success",
+    "cancelPath": "/buy/become-a-new-you/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $1,111 USD",
+        "amount": "$1,111.00",
+        "priceKey": "STRIPE_PRICE_BECOME_A_NEW_YOU_USD",
+        "unitAmount": 111100,
+        "mode": "payment"
+      }
+    }
+  },
+  "email-coaching": {
+    "name": "30-Day Personalised Email Coaching",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/email-coaching/status/success",
+    "cancelPath": "/buy/email-coaching/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $250 USD",
+        "amount": "$250.00",
+        "priceKey": "STRIPE_PRICE_EMAIL_COACHING_USD",
+        "unitAmount": 25000,
+        "mode": "payment"
+      }
+    }
+  },
+  "single-audio-call": {
+    "name": "Single Audio Coaching Call",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/single-audio-call/status/success",
+    "cancelPath": "/buy/single-audio-call/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $155 USD",
+        "amount": "$155.00",
+        "priceKey": "STRIPE_PRICE_SINGLE_AUDIO_CALL_USD",
+        "unitAmount": 15500,
+        "mode": "payment"
+      }
+    }
+  },
+  "four-call-package": {
+    "name": "Four-Call Coaching Package",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/four-call-package/status/success",
+    "cancelPath": "/buy/four-call-package/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $555 USD",
+        "amount": "$555.00",
+        "priceKey": "STRIPE_PRICE_FOUR_CALL_PACKAGE_USD",
+        "unitAmount": 55500,
+        "mode": "payment"
+      }
+    }
+  },
+  "personalised-meditation": {
+    "name": "Personalised Meditation",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/personalised-meditation/status/success",
+    "cancelPath": "/buy/personalised-meditation/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $250 USD",
+        "amount": "$250.00",
+        "priceKey": "STRIPE_PRICE_PERSONALISED_MEDITATION_USD",
+        "unitAmount": 25000,
+        "mode": "payment"
+      }
+    }
+  },
+  "aphrodite-ritual": {
+    "name": "Aphrodite Activation Ritual",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/aphrodite-ritual/status/success",
+    "cancelPath": "/buy/aphrodite-ritual/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $22 USD",
+        "amount": "$22.00",
+        "priceKey": "STRIPE_PRICE_APHRODITE_RITUAL_USD",
+        "unitAmount": 2200,
+        "mode": "payment"
+      }
+    }
+  },
+  "trauma-release": {
+    "name": "Trauma Release Session",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/trauma-release/status/success",
+    "cancelPath": "/buy/trauma-release/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $11 USD",
+        "amount": "$11.00",
+        "priceKey": "STRIPE_PRICE_TRAUMA_RELEASE_USD",
+        "unitAmount": 1100,
+        "mode": "payment"
+      }
+    }
+  },
+  "quantum-jump": {
+    "name": "Quantum Jump Journey",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/quantum-jump/status/success",
+    "cancelPath": "/buy/quantum-jump/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $44 USD",
+        "amount": "$44.00",
+        "priceKey": "STRIPE_PRICE_QUANTUM_JUMP_USD",
+        "unitAmount": 4400,
+        "mode": "payment"
+      }
+    }
+  },
+  "manifest-sp": {
+    "name": "Manifest SP Intensive",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/manifest-sp/status/success",
+    "cancelPath": "/buy/manifest-sp/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $66 USD",
+        "amount": "$66.00",
+        "priceKey": "STRIPE_PRICE_MANIFEST_SP_USD",
+        "unitAmount": 6600,
+        "mode": "payment"
+      }
+    }
+  },
+  "inner-child": {
+    "name": "Inner Child Healing Session",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/inner-child/status/success",
+    "cancelPath": "/buy/inner-child/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $33 USD",
+        "amount": "$33.00",
+        "priceKey": "STRIPE_PRICE_INNER_CHILD_USD",
+        "unitAmount": 3300,
+        "mode": "payment"
+      }
+    }
+  },
+  "good-luck-ritual": {
+    "name": "Good Luck Ritual",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/good-luck-ritual/status/success",
+    "cancelPath": "/buy/good-luck-ritual/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $28 USD",
+        "amount": "$28.00",
+        "priceKey": "STRIPE_PRICE_GOOD_LUCK_RITUAL_USD",
+        "unitAmount": 2800,
+        "mode": "payment"
+      }
+    }
+  },
+  "sp-rampage-ebook": {
+    "name": "SP Rampage eBook",
+    "defaultCurrency": "usd",
+    "successPath": "/buy/sp-rampage-ebook/status/success",
+    "cancelPath": "/buy/sp-rampage-ebook/status/cancel",
+    "currencies": {
+      "usd": {
+        "label": "Pay $30 USD",
+        "amount": "$30.00",
+        "priceKey": "STRIPE_PRICE_SP_RAMPAGE_EBOOK_USD",
+        "unitAmount": 3000,
+        "mode": "payment"
+      }
+    }
+  }
+}
