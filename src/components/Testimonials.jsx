@@ -1,6 +1,8 @@
 import { useReveal } from '../hooks/useReveal';
+import { useEffect, useState } from "react";
+import { supabase } from "../supabase-client";
 
-const testimonials = [
+const fallbackTestimonials = [
   {
     name: "Anika, Toronto",
     quote:
@@ -19,6 +21,37 @@ const testimonials = [
 ];
 
 const Testimonials = () => {
+  const reviewsTable = import.meta.env.VITE_SUPABASE_REVIEWS_TABLE || "storefront_reviews";
+  const [testimonials, setTestimonials] = useState(fallbackTestimonials);
+
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      const { data, error } = await supabase
+        .from(reviewsTable)
+        .select("author,quote,sort_order,is_active")
+        .eq("placement", "home")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (!isMounted || error || !data?.length) {
+        return;
+      }
+
+      setTestimonials(
+        data.map((entry) => ({
+          name: entry.author || "Client",
+          quote: entry.quote || "",
+        })),
+      );
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [reviewsTable]);
+
   return (
     <section id="testimonials" className="min-h-[calc(100vh-4rem)] pt-16 bg-white py-4 lg:py-8 dark:bg-gray-950">
       <div className="mx-auto max-w-6xl px-6">

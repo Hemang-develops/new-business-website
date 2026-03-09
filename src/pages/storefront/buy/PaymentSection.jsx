@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
 import { formatAmountFromMajor, formatUnitAmountLabel, roundUpAestheticAmount } from "../../../services/pricing";
+import { useAuth } from "../../../context/AuthContext";
+import { supabase } from "../../../supabase-client";
+
 const isExternalLink = (link) => typeof link === "string" && /^(https?:|upi:|mailto:)/.test(link);
 
 const fallbackCountryData = [
@@ -57,6 +60,7 @@ const applyInstallmentFeeToCurrencies = (currencies, feePercent) => {
 };
 
 const PaymentSection = ({ item }) => {
+  const { user, isAuthenticated } = useAuth();
   const checkoutOptions = item.checkoutOptions;
   const manualInstructions = item.manualInstructions || [];
   const legalNotes = item.legalNotes || [];
@@ -277,10 +281,10 @@ const PaymentSection = ({ item }) => {
   }, [packageOptions, packagePricePreviews, previewCurrencyCode]);
   const showReferenceConversion = Boolean(
     hasCheckout &&
-      referenceUsdAmount &&
-      countryRate &&
-      !currencyKeys.includes(selectedCountryCurrencyCode.toLowerCase()) &&
-      selectedCountryCurrencyCode !== "USD",
+    referenceUsdAmount &&
+    countryRate &&
+    !currencyKeys.includes(selectedCountryCurrencyCode.toLowerCase()) &&
+    selectedCountryCurrencyCode !== "USD",
   );
   const presentmentCurrency = selectedCountryCurrencyCode.toLowerCase();
   const presentmentUnitAmount = useMemo(() => {
@@ -310,17 +314,18 @@ const PaymentSection = ({ item }) => {
       return selectedPreview.perInstallmentLabel;
     }
     if (!currencyConfig?.amount) {
-      return item.priceLabel || "Select an installment option";
+      return item.price?.usd ? `$${item.price.usd} USD` : "Select an installment option";
     }
     return String(currencyConfig.amount).trim();
   }, [
     currencyConfig?.amount,
-    item.priceLabel,
+    item.price?.usd,
     packagePricePreviews,
     selectedPackage?.id,
   ]);
 
   const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("stripe");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -334,7 +339,7 @@ const PaymentSection = ({ item }) => {
     [acceptedLegalNotes, legalNotes.length, requiresLegalConsent],
   );
   const isConsentPending = requiresLegalConsent && !hasAcceptedAllLegalNotes;
-  const isNameMissing = !firstName.trim();
+  const isNameMissing = !firstName.trim() || !lastName.trim();
   const isEmailMissing = !email.trim();
   const isActionBlockedByForm = isNameMissing || isEmailMissing || isConsentPending;
   const isActionBlocked = hasCheckout && isActionBlockedByForm;
@@ -361,6 +366,27 @@ const PaymentSection = ({ item }) => {
   useEffect(() => {
     setAcceptedLegalNotes(legalNotes.map(() => false));
   }, [legalNotes]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      return;
+    }
+    if (user.name) {
+      const fullName = String(user.name).trim();
+      const [prefillFirstName, ...restNames] = fullName.split(/\s+/);
+      const prefillLastName = restNames.join(" ");
+
+      if (prefillFirstName) {
+        setFirstName((previous) => (previous.trim() ? previous : prefillFirstName));
+      }
+      if (prefillLastName) {
+        setLastName((previous) => (previous.trim() ? previous : prefillLastName));
+      }
+    }
+    if (user.email) {
+      setEmail((previous) => (previous.trim() ? previous : user.email));
+    }
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (!canShowUpiOption && paymentMethod === "upi") {
@@ -394,8 +420,8 @@ const PaymentSection = ({ item }) => {
       setError("Enter your email so Stripe can send the receipt and download links.");
       return;
     }
-    if (!firstName?.trim()) {
-      setError("Enter your name to continue.");
+    if (!firstName?.trim() || !lastName?.trim()) {
+      setError("Enter your first and last name to continue.");
       return;
     }
 
@@ -431,10 +457,8 @@ const PaymentSection = ({ item }) => {
         throw new Error("UPI is manual right now. Please use Stripe or contact support for UPI details.");
       }
 
-      const response = await fetch(`${apiBase}/api/create-checkout-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, error: functionError } = await supabase.functions.invoke("stripe-endpoint", {
+        body: {
           productId: item.id,
           packageId: selectedPackage?.id || null,
           packageLabel: selectedPackage?.label || null,
@@ -442,12 +466,10 @@ const PaymentSection = ({ item }) => {
           installmentPlanLabel: selectedPackage?.label || null,
           installmentCount: selectedPackage?.installmentCount || 1,
           installmentFeePercent: selectedPackage?.feePercent || 0,
-          // Existing backend field.
           currency: selectedCurrency,
           preferredPaymentMethod: paymentMethod,
           mode: selectedPackage?.mode || "payment",
           recurringInterval: null,
-          // Dynamic live-rate fields (backend can create Stripe price_data with these).
           presentmentCurrency,
           presentmentUnitAmount,
           baseCurrency: "usd",
@@ -455,21 +477,17 @@ const PaymentSection = ({ item }) => {
           fxRate: countryRate || null,
           fxSource: "open.er-api",
           firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          fullName: `${firstName.trim()} ${lastName.trim()}`.trim(),
           email: email.trim(),
           country,
-        }),
+        },
       });
 
-      let data = null;
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      }
-
-      if (!response.ok) {
+      if (functionError) {
         throw new Error(
-          data?.error ||
-            "Unable to start checkout right now. Try again or email us for a manual invoice.",
+          functionError.message ||
+          "Unable to start checkout right now. Try again or email us for a manual invoice.",
         );
       }
 
@@ -497,24 +515,45 @@ const PaymentSection = ({ item }) => {
     }
   };
 
+  const getSubmitButtonText = () => {
+    if (isSubmitting) {
+      if (paymentMethod === "paypal") return "Redirecting to PayPal...";
+      if (paymentMethod === "upi") return "Opening UPI...";
+      return "Redirecting to Stripe...";
+    }
+    if (paymentMethod === "paypal") return "Continue with PayPal";
+    if (paymentMethod === "upi") return "Continue with UPI";
+    return "Confirm and pay now";
+  };
+
   return (
     <section className="space-y-8 rounded-3xl border border-white/10 bg-white/5 p-8 text-white/90 shadow-2xl backdrop-blur">
       <div className="space-y-6">
         <h3 className="text-xl font-semibold text-white">Checkout</h3>
         {hasCheckout ? (
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col space-y-2 text-sm text-white/70 sm:flex-1">
-                <span className="font-semibold text-white">Your name</span>
+                <span className="font-semibold text-white">First name</span>
                 <input
                   type="text"
                   value={firstName}
                   onChange={(event) => setFirstName(event.target.value)}
-                  placeholder="Your name"
+                  placeholder="First name"
                   className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-300/60"
                 />
               </label>
               <label className="flex flex-col space-y-2 text-sm text-white/70 sm:flex-1">
+                <span className="font-semibold text-white">Last name</span>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  placeholder="Last name"
+                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-300/60"
+                />
+              </label>
+              <label className="flex flex-col space-y-2 text-sm text-white/70 sm:col-span-2">
                 <span className="font-semibold text-white">Email</span>
                 <input
                   type="email"
@@ -533,11 +572,10 @@ const PaymentSection = ({ item }) => {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("stripe")}
-                  className={`rounded-xl border px-4 py-3 text-left transition ${
-                    paymentMethod === "stripe"
-                      ? "border-teal-200 bg-teal-300/20 text-teal-50"
-                      : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white"
-                  }`}
+                  className={`rounded-xl border px-4 py-3 text-left transition ${paymentMethod === "stripe"
+                    ? "border-teal-200 bg-teal-300/20 text-teal-50"
+                    : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white"
+                    }`}
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.2em]">Stripe</p>
                   <p className="mt-1 text-xs text-white/70">Cards, wallets, regional methods</p>
@@ -545,11 +583,10 @@ const PaymentSection = ({ item }) => {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("paypal")}
-                  className={`rounded-xl border px-4 py-3 text-left transition ${
-                    paymentMethod === "paypal"
-                      ? "border-teal-200 bg-teal-300/20 text-teal-50"
-                      : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white"
-                  }`}
+                  className={`rounded-xl border px-4 py-3 text-left transition ${paymentMethod === "paypal"
+                    ? "border-teal-200 bg-teal-300/20 text-teal-50"
+                    : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white"
+                    }`}
                 >
                   <p className="text-xs font-semibold uppercase tracking-[0.2em]">PayPal</p>
                   <p className="mt-1 text-xs text-white/70">Pay via your PayPal account</p>
@@ -558,11 +595,10 @@ const PaymentSection = ({ item }) => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("upi")}
-                    className={`rounded-xl border px-4 py-3 text-left transition ${
-                      paymentMethod === "upi"
-                        ? "border-teal-200 bg-teal-300/20 text-teal-50"
-                        : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white"
-                    }`}
+                    className={`rounded-xl border px-4 py-3 text-left transition ${paymentMethod === "upi"
+                      ? "border-teal-200 bg-teal-300/20 text-teal-50"
+                      : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white"
+                      }`}
                   >
                     <p className="text-xs font-semibold uppercase tracking-[0.2em]">UPI</p>
                     <p className="mt-1 text-xs text-white/70">
@@ -594,11 +630,10 @@ const PaymentSection = ({ item }) => {
                       type="button"
                       onClick={() => setSelectedPackageId(option.id)}
                       aria-pressed={isSelected}
-                      className={`rounded-2xl border p-4 text-left transition ${
-                        isSelected
-                          ? "border-teal-200 bg-teal-300/20 text-teal-50 shadow-[0_0_0_1px_rgba(45,212,191,0.25)]"
-                          : nonSelectedClass
-                      }`}
+                      className={`rounded-2xl border p-4 text-left transition ${isSelected
+                        ? "border-teal-200 bg-teal-300/20 text-teal-50 shadow-[0_0_0_1px_rgba(45,212,191,0.25)]"
+                        : nonSelectedClass
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em]">{option.label}</p>
@@ -663,7 +698,7 @@ const PaymentSection = ({ item }) => {
                     ? upiLink
                       ? "You will be redirected to your UPI payment flow."
                       : "UPI instructions will be shared via support."
-                  : "You'll be redirected to Stripe to complete your payment over a secure SSL connection."}
+                    : "You'll be redirected to Stripe to complete your payment over a secure SSL connection."}
               </p>
               {showReferenceConversion ? (
                 <p className="text-xs text-white/50">
@@ -690,7 +725,7 @@ const PaymentSection = ({ item }) => {
                           ),
                         )
                       }
-                      className="mt-0.5 h-4 w-4 rounded border-white/30 bg-black/30 text-teal-300 focus:ring-teal-300/70"
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/30 bg-black/30 text-teal-300 focus:ring-teal-300/70 hover:cursor-pointer"
                     />
                     <span>{note}</span>
                   </label>
@@ -702,17 +737,7 @@ const PaymentSection = ({ item }) => {
               disabled={isSubmitting || isActionBlocked}
               className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-teal-300 px-6 py-3 text-sm font-semibold text-gray-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSubmitting
-                ? paymentMethod === "paypal"
-                  ? "Redirecting to PayPal..."
-                  : paymentMethod === "upi"
-                    ? "Opening UPI..."
-                  : "Redirecting to Stripe..."
-                : paymentMethod === "paypal"
-                  ? "Continue with PayPal"
-                  : paymentMethod === "upi"
-                    ? "Continue with UPI"
-                  : "Confirm and pay now"}
+              {getSubmitButtonText()}
               <ArrowRight className="h-4 w-4" />
             </button>
           </form>

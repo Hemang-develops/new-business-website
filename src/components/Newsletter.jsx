@@ -2,7 +2,7 @@ const Newsletter = () => {
   return (
     <section id="newsletter" className="relative bg-gray-950 py-12 text-white">
       <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 via-blue-500/10 to-purple-500/30" />
-      <div className="relative mx-auto max-w-5xl px-6">
+      <div className="relative mx-auto max-w-6xl px-6">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur md:p-10">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brand-primary">
           The Frequency Drop

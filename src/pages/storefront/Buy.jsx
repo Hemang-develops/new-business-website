@@ -1,10 +1,11 @@
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import Footer from "../../components/common/Footer";
 import Navigation from "../../components/Navigation";
-import { offeringsIndex } from "../../data/offerings";
 import { BuyDetailView, BuyListView, UnknownProduct } from "./buy/BuyViews";
+import { useOfferingsData } from "../../hooks/useOfferingsData";
 
 const Buy = () => {
+  const { buySections, offeringsIndex } = useOfferingsData();
   const { productId, status: statusParam } = useParams();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -17,12 +18,12 @@ const Buy = () => {
       <Navigation />
       {isDetailRoute ? (
         product ? (
-          <BuyDetailView item={product} checkoutStatus={checkoutStatus} />
+          <BuyDetailView item={product} checkoutStatus={checkoutStatus} offeringsIndex={offeringsIndex} />
         ) : (
           <UnknownProduct />
         )
       ) : (
-        <BuyListView key={location.key} />
+        <BuyListView key={location.key} buySections={buySections} />
       )}
       <Footer />
     </div>

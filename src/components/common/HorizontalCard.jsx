@@ -20,6 +20,7 @@ function HorizontalCard({
   maxDescriptionLength = 120,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hasImageError, setHasImageError] = useState(false);
   const [localCurrency, setLocalCurrency] = useState("USD");
   const [usdRates, setUsdRates] = useState(null);
 
@@ -32,6 +33,7 @@ function HorizontalCard({
     buttonLink.startsWith("http") || buttonLink.startsWith("mailto:");
   const isAnchorLink = buttonLink.startsWith("#");
   const isInternalRoute = !isAnchorLink && !isExternalLink && buttonLink.startsWith("/");
+  const shouldShowImage = Boolean(image) && !hasImageError;
 
   const handleAnchorClick = (event) => {
     if (isAnchorLink) {
@@ -119,11 +121,19 @@ function HorizontalCard({
     <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg shadow-gray-200/50 transition-all duration-300 ease-in-out md:flex-row dark:border-gray-800 dark:bg-gray-800 dark:shadow-none">
       <div className="h-48 w-full shrink-0 md:h-auto md:w-2/5">
         <div className="h-full w-full overflow-hidden">
-          <img
-            src={image}
-            alt={imageAlt}
-            className="h-full w-full object-cover object-center"
-          />
+          {shouldShowImage ? (
+            <img
+              src={image}
+              alt={imageAlt}
+              className="h-full w-full object-cover object-center"
+              loading="lazy"
+              onError={() => setHasImageError(true)}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:from-gray-700 dark:to-gray-800 dark:text-gray-300">
+              No image
+            </div>
+          )}
         </div>
       </div>
 

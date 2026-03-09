@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { offeringSupportOptions } from "../data/offerings";
+import { useOfferingsData } from "../hooks/useOfferingsData";
 
 const initialFormState = {
   name: "",
@@ -10,6 +10,7 @@ const initialFormState = {
 };
 
 const Contact = () => {
+  const { offeringSupportOptions } = useOfferingsData();
   const [formValues, setFormValues] = useState(initialFormState);
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
   const contactMethods = [
@@ -30,7 +31,7 @@ const Contact = () => {
     },
   ];
 
-  const supportOptions = [...offeringSupportOptions, "Custom collaboration"];
+  const supportOptions = [...(offeringSupportOptions || []), "Custom collaboration"];
 
   const handleChange = (event) => {
     const { name, value } = event.target;

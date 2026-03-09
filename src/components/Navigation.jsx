@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CircleUserRound,
   CreditCard,
   Heart,
   List,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const anchorLinks = [
   { label: "About", href: "#about" },
@@ -88,6 +90,7 @@ const Navigation = () => {
   const [isQuickPanelOpen, setIsQuickPanelOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, isAuthenticated, isAdmin } = useAuth();
   const quickPanelRef = useRef(null);
   const quickPanelButtonRef = useRef(null);
 
@@ -168,6 +171,8 @@ const Navigation = () => {
     }
   };
 
+  const accountLabel = isAuthenticated ? user?.name?.split(" ")?.[0] || "Account" : "Account";
+
   return (
     <>
       <nav
@@ -214,12 +219,21 @@ const Navigation = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            <a
-              href="mailto:highfrequencies11@gmail.com"
-              className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-teal-300 hover:text-teal-200"
+            <Link
+              to="/sign-in"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-teal-300 hover:text-teal-200"
             >
-              Email Nehal
-            </a>
+              <CircleUserRound className="h-4 w-4" />
+              {accountLabel}
+            </Link>
+            {isAdmin ? (
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-2 rounded-full border border-teal-300/50 px-4 py-2 text-sm font-semibold text-teal-100 transition hover:border-teal-300 hover:text-teal-200"
+              >
+                Manage website
+              </Link>
+            ) : null}
             <Link
               to="/buy"
               className="inline-flex items-center gap-2 rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-200"
@@ -248,7 +262,7 @@ const Navigation = () => {
           <div className="fixed inset-0 z-40 hidden lg:block" aria-hidden onClick={() => setIsQuickPanelOpen(false)} />
           <div
             ref={quickPanelRef}
-            className="fixed right-6 top-24 z-50 hidden w-[24rem] rounded-3xl border border-white/10 bg-gray-950/95 p-6 shadow-2xl backdrop-blur lg:block"
+          className="fixed right-6 top-24 z-50 hidden w-[24rem] rounded-3xl border border-white/10 bg-gray-950/95 p-6 shadow-2xl backdrop-blur lg:block"
           >
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/50">Quick access</p>
             <div className="mt-4 space-y-5">
@@ -337,12 +351,23 @@ const Navigation = () => {
             >
               Visit shop
             </Link>
-            <a
-              href="mailto:highfrequencies11@gmail.com"
+            <Link
+              to="/sign-in"
+              onClick={() => setIsDrawerOpen(false)}
               className="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white/80 transition hover:border-teal-300 hover:text-teal-200"
             >
-              Email Nehal
-            </a>
+              <CircleUserRound className="h-4 w-4" />
+              {accountLabel}
+            </Link>
+            {isAdmin ? (
+              <Link
+                to="/admin"
+                onClick={() => setIsDrawerOpen(false)}
+                className="inline-flex items-center gap-2 rounded-full border border-teal-300/50 px-5 py-2 text-sm font-semibold text-teal-100 transition hover:border-teal-300 hover:text-teal-200"
+              >
+                Manage website
+              </Link>
+            ) : null}
           </div>
 
           <div className="space-y-8 overflow-y-auto pb-6">
@@ -394,7 +419,7 @@ const Navigation = () => {
               <a href="mailto:highfrequencies11@gmail.com" className="ml-1 text-teal-200">
                 highfrequencies11@gmail.com
               </a>
-              and let’s talk about what you’re manifesting.
+              and let's talk about what you're manifesting.
             </p>
           </div>
         </div>

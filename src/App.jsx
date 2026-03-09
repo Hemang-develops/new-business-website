@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { Home } from './pages/storefront/Home';
 import { ThankYou } from './pages/storefront/ThankYou';
 import Buy from './pages/storefront/Buy';
+import AuthPage from './pages/auth/AuthPage';
+import CatalogAdmin from './pages/admin/CatalogAdmin';
+import { AuthProvider } from './context/AuthContext';
 import './styles/globals.css';
 
 function RouteScrollController() {
@@ -38,20 +41,25 @@ function RouteScrollController() {
 
 function App() {
   return (
-    <Router>
-      <RouteScrollController />
-      <div className="flex flex-col min-h-screen">
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/buy" element={<Buy />} />
-            <Route path="/buy/:productId" element={<Buy />} />
-            <Route path="/buy/:productId/:status" element={<Buy />} />
-            <Route path="/thank-you" element={<ThankYou />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <RouteScrollController />
+        <div className="flex flex-col min-h-screen">
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/buy" element={<Buy />} />
+              <Route path="/buy/:productId" element={<Buy />} />
+              <Route path="/buy/:productId/:status" element={<Buy />} />
+              <Route path="/sign-in" element={<AuthPage mode="signin" />} />
+              <Route path="/sign-up" element={<AuthPage mode="signup" />} />
+              <Route path="/admin" element={<CatalogAdmin />} />
+              <Route path="/thank-you" element={<ThankYou />} />
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

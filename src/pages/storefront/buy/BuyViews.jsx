@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { buySections, offeringsIndex } from "../../../data/offerings";
 import { useSmoothScroll } from "../../../hooks/useSmoothScroll";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
 import { formatAmountFromMajor, getRoundedLocalizedUsdAmount } from "../../../services/pricing";
@@ -44,8 +43,8 @@ const CheckoutStatusBanner = ({ status, itemTitle }) => {
   );
 };
 
-const DetailSection = ({ detailsSections, closingNotes }) => {
-  if (!detailsSections?.length && !closingNotes?.length) {
+const DetailSection = ({ detailsSections }) => {
+  if (!detailsSections?.length) {
     return null;
   }
 
@@ -67,16 +66,6 @@ const DetailSection = ({ detailsSections, closingNotes }) => {
           )}
         </div>
       ))}
-
-      {closingNotes?.length ? (
-        <div className="space-y-3 rounded-3xl border border-teal-300/30 bg-teal-300/10 p-8 text-sm text-white/80">
-          {closingNotes.map((note) => (
-            <p key={note} className="leading-relaxed">
-              {note}
-            </p>
-          ))}
-        </div>
-      ) : null}
     </section>
   );
 };
@@ -98,23 +87,43 @@ const OfferHighlights = ({ item }) => {
   );
 };
 
-const SuccessStory = ({ successStory }) => {
-  if (!successStory) {
+const SuccessStory = ({ successStory, reviews }) => {
+  const reviewItems = reviews?.length ? reviews : successStory ? [successStory] : [];
+  if (!reviewItems.length) {
     return null;
   }
 
   return (
-    <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-8 text-white/80">
-      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-teal-200/80">{successStory.heading}</p>
-      <p className="text-lg leading-relaxed text-white/90">"{successStory.quote}"</p>
-      {successStory.author ? <p className="text-sm font-semibold text-white/60">{successStory.author}</p> : null}
+    <div className="space-y-4">
+      {reviewItems.map((entry, index) => (
+        <div key={`${entry.author || "review"}-${index}`} className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-8 text-white/80">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-teal-200/80">{entry.heading || "Client result"}</p>
+          <p className="text-lg leading-relaxed text-white/90">"{entry.quote}"</p>
+          {entry.author ? <p className="text-sm font-semibold text-white/60">{entry.author}</p> : null}
+        </div>
+      ))}
     </div>
   );
 };
 
-const OfferCard = ({ item, displayPriceLabel }) => (
-  <article className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-2xl backdrop-blur transition hover:border-teal-300 hover:shadow-teal-500/20 sm:p-8">
-    <div className="space-y-4">
+const OfferCard = ({ item, displayPriceLabel }) => {
+  const [hasImageError, setHasImageError] = useState(false);
+  const showImage = Boolean(item.imageUrl) && !hasImageError;
+
+  return (
+    <article className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-2xl backdrop-blur transition hover:border-teal-300 hover:shadow-teal-500/20 sm:p-8">
+      <div className="space-y-4">
+        {showImage ? (
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+            <img
+              src={item.imageUrl}
+              alt={item.imageAlt || item.title}
+              className="h-56 w-full object-cover transition duration-300 hover:scale-[1.02]"
+              loading="lazy"
+              onError={() => setHasImageError(true)}
+            />
+          </div>
+        ) : null}
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
           <h3 className="text-2xl font-semibold text-white">{item.title}</h3>
@@ -122,9 +131,9 @@ const OfferCard = ({ item, displayPriceLabel }) => (
             <p className="mt-1 text-sm font-medium uppercase tracking-[0.3em] text-teal-200/80">{item.subtitle}</p>
           )}
         </div>
-        {(displayPriceLabel || item.priceLabel || item.price) && (
+        {(displayPriceLabel || item.price) && (
           <span className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white/80">
-            {displayPriceLabel || item.priceLabel || `$${item.price.usd} / ?${item.price.inr}`}
+            {displayPriceLabel || (item.price?.usd ? `$${item.price.usd} USD` : "")}
           </span>
         )}
       </div>
@@ -141,10 +150,11 @@ const OfferCard = ({ item, displayPriceLabel }) => (
         <ArrowRight className="h-4 w-4" />
       </Link>
     </div>
-  </article>
-);
+    </article>
+  );
+};
 
-export const BuyListView = () => {
+export const BuyListView = ({ buySections = [] }) => {
   useSmoothScroll();
   const browserRegion = useMemo(() => getBrowserRegion(), []);
   const [localCurrency, setLocalCurrency] = useState("USD");
@@ -212,7 +222,7 @@ export const BuyListView = () => {
             <div className="mt-12 flex flex-col gap-10">
               {section.items.map((item) => {
                 const usdPrice = Number(String(item.price?.usd || "").replace(/,/g, ""));
-                let displayPriceLabel = item.priceLabel || "";
+                let displayPriceLabel = "";
                 if (Number.isFinite(usdPrice)) {
                   const roundedLocal = getRoundedLocalizedUsdAmount(usdPrice, localCurrency, usdRates);
                   if (Number.isFinite(roundedLocal)) {
@@ -229,8 +239,9 @@ export const BuyListView = () => {
   );
 };
 
-export const BuyDetailView = ({ item, checkoutStatus }) => {
+export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => {
   const navigate = useNavigate();
+  const [hasImageError, setHasImageError] = useState(false);
   const { section } = offeringsIndex[item.id];
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -256,6 +267,17 @@ export const BuyDetailView = ({ item, checkoutStatus }) => {
             {section?.title}
           </span>
           <h1 className="text-4xl font-bold text-white sm:text-5xl">{item.title}</h1>
+          {item.imageUrl && !hasImageError ? (
+            <div className="max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-black/20">
+              <img
+                src={item.imageUrl}
+                alt={item.imageAlt || item.title}
+                className="h-72 w-full object-cover sm:h-96"
+                loading="lazy"
+                onError={() => setHasImageError(true)}
+              />
+            </div>
+          ) : null}
           <p className="max-w-3xl text-lg text-white/75">{item.longDescription || item.summary}</p>
           <OfferHighlights item={item} />
         </div>
@@ -266,8 +288,8 @@ export const BuyDetailView = ({ item, checkoutStatus }) => {
           {checkoutStatus ? <CheckoutStatusBanner status={checkoutStatus} itemTitle={item.title} /> : null}
           <div className="flex flex-col gap-10">
             <div className="space-y-8 lg:flex-1">
-              <SuccessStory successStory={item.successStory} />
-              <DetailSection detailsSections={item.detailsSections} closingNotes={item.closingNotes} />
+              <SuccessStory successStory={item.successStory} reviews={item.reviews} />
+              <DetailSection detailsSections={item.detailsSections} />
               {item.purchase && (
                 <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-8 text-white/80">
                   <h3 className="text-lg font-semibold text-white">Need help accessing your files?</h3>
