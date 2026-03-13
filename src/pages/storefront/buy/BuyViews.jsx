@@ -5,6 +5,10 @@ import { useSmoothScroll } from "../../../hooks/useSmoothScroll";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
 import { formatAmountFromMajor, getRoundedLocalizedUsdAmount } from "../../../services/pricing";
 import PaymentSection from "./PaymentSection";
+import HorizontalCard from "../../../components/common/HorizontalCard";
+import { useToast } from "../../../context/ToastContext";
+import { useAuth } from "../../../context/AuthContext";
+import { supabase } from "../../../supabase-client";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -12,6 +16,7 @@ const fallbackCountryData = [
   { name: "Canada", code: "CA", currencies: ["CAD"] },
   { name: "United Kingdom", code: "GB", currencies: ["GBP"] },
 ];
+const reviewsTable = import.meta.env.VITE_SUPABASE_REVIEWS_TABLE || "storefront_reviews";
 
 const CheckoutStatusBanner = ({ status, itemTitle }) => {
   if (!status) {
@@ -87,6 +92,26 @@ const OfferHighlights = ({ item }) => {
   );
 };
 
+const ReviewAvatar = ({ entry }) => {
+  if (entry.imageUrl) {
+    return (
+      <img
+        src={entry.imageUrl}
+        alt={entry.imageAlt || entry.author || entry.heading || "Client review"}
+        className="h-14 w-14 rounded-2xl object-cover"
+        loading="lazy"
+      />
+    );
+  }
+
+  const initial = (entry.author || entry.heading || "R").replace(/[^A-Za-z0-9]/g, "").charAt(0).toUpperCase() || "R";
+  return (
+    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-300/15 text-lg font-semibold text-teal-100">
+      {initial}
+    </div>
+  );
+};
+
 const SuccessStory = ({ successStory, reviews }) => {
   const reviewItems = reviews?.length ? reviews : successStory ? [successStory] : [];
   if (!reviewItems.length) {
@@ -94,21 +119,47 @@ const SuccessStory = ({ successStory, reviews }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <section className="space-y-5">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-teal-200/80">Client reviews</p>
+        <h2 className="text-2xl font-semibold text-white">What clients are saying</h2>
+      </div>
       {reviewItems.map((entry, index) => (
-        <div key={`${entry.author || "review"}-${index}`} className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-8 text-white/80">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-teal-200/80">{entry.heading || "Client result"}</p>
-          <p className="text-lg leading-relaxed text-white/90">"{entry.quote}"</p>
-          {entry.author ? <p className="text-sm font-semibold text-white/60">{entry.author}</p> : null}
-        </div>
+        <article
+          key={`${entry.author || "review"}-${index}`}
+          className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/80 shadow-xl backdrop-blur sm:p-8"
+        >
+          <div className="flex items-start gap-4">
+            <ReviewAvatar entry={entry} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">
+                {entry.heading || "Client result"}
+              </p>
+              {entry.author ? <p className="mt-1 text-sm font-semibold text-white/70">{entry.author}</p> : null}
+            </div>
+          </div>
+          <p className="mt-5 text-lg leading-relaxed text-white/90">"{entry.quote}"</p>
+          {entry.imageUrl ? (
+            <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+              <img
+                src={entry.imageUrl}
+                alt={entry.imageAlt || entry.author || entry.heading || "Client review"}
+                className="h-56 w-full object-cover"
+                loading="lazy"
+              />
+            </div>
+          ) : null}
+        </article>
       ))}
-    </div>
+    </section>
   );
 };
 
 const OfferCard = ({ item, displayPriceLabel }) => {
   const [hasImageError, setHasImageError] = useState(false);
   const showImage = Boolean(item.imageUrl) && !hasImageError;
+  const normalizedUsdPrice = Number(String(item.price?.usd || "").replace(/,/g, ""));
+  const hasDisplayAmount = Boolean(displayPriceLabel) || (Number.isFinite(normalizedUsdPrice) && normalizedUsdPrice > 0);
 
   return (
     <article className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-2xl backdrop-blur transition hover:border-teal-300 hover:shadow-teal-500/20 sm:p-8">
@@ -131,7 +182,7 @@ const OfferCard = ({ item, displayPriceLabel }) => {
             <p className="mt-1 text-sm font-medium uppercase tracking-[0.3em] text-teal-200/80">{item.subtitle}</p>
           )}
         </div>
-        {(displayPriceLabel || item.price) && (
+        {hasDisplayAmount && (
           <span className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white/80">
             {displayPriceLabel || (item.price?.usd ? `$${item.price.usd} USD` : "")}
           </span>
@@ -154,11 +205,161 @@ const OfferCard = ({ item, displayPriceLabel }) => {
   );
 };
 
+const ReviewSubmissionForm = ({ itemId }) => {
+  const { user, isAuthenticated } = useAuth();
+  const toast = useToast();
+  const [formValues, setFormValues] = useState({
+    name: user?.name || "",
+    heading: "",
+    quote: "",
+    imageUrl: "",
+    imageAlt: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.name) {
+      return;
+    }
+    setFormValues((previous) => ({
+      ...previous,
+      name: previous.name || user.name,
+    }));
+  }, [isAuthenticated, user]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormValues((previous) => ({ ...previous, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!formValues.name.trim() || !formValues.quote.trim()) {
+      toast.error("Add your name and review before submitting.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        placement: "buy",
+        offering_id: itemId,
+        heading: formValues.heading.trim() || "Client review",
+        quote: formValues.quote.trim(),
+        author: formValues.name.trim(),
+        image_url: formValues.imageUrl.trim() || null,
+        image_alt: formValues.imageAlt.trim() || null,
+        sort_order: 999,
+        is_active: false,
+      };
+
+      const { error } = await supabase.from(reviewsTable).insert(payload);
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Your review was submitted and is now waiting for approval.", "Review received");
+      setFormValues({
+        name: isAuthenticated && user?.name ? user.name : "",
+        heading: "",
+        quote: "",
+        imageUrl: "",
+        imageAlt: "",
+      });
+    } catch (error) {
+      toast.error(error?.message || "We could not submit your review right now. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/80 shadow-xl backdrop-blur sm:p-8">
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-teal-200/80">Leave a review</p>
+        <h3 className="text-2xl font-semibold text-white">Share your experience</h3>
+        <p className="text-sm leading-relaxed text-white/65">
+          Your review helps future clients choose the right offering. New submissions are reviewed before they go live.
+        </p>
+      </div>
+
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2 text-sm text-white/70">
+            <span className="font-semibold text-white">Your name</span>
+            <input
+              name="name"
+              value={formValues.name}
+              onChange={handleChange}
+              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+              placeholder="Your name"
+            />
+          </label>
+          <label className="space-y-2 text-sm text-white/70">
+            <span className="font-semibold text-white">Short heading</span>
+            <input
+              name="heading"
+              value={formValues.heading}
+              onChange={handleChange}
+              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+              placeholder="What shifted for you"
+            />
+          </label>
+        </div>
+
+        <label className="space-y-2 text-sm text-white/70">
+          <span className="font-semibold text-white">Your review</span>
+          <textarea
+            name="quote"
+            value={formValues.quote}
+            onChange={handleChange}
+            rows={5}
+            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+            placeholder="Share your experience with this offering."
+          />
+        </label>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2 text-sm text-white/70">
+            <span className="font-semibold text-white">Review image URL</span>
+            <input
+              name="imageUrl"
+              value={formValues.imageUrl}
+              onChange={handleChange}
+              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+              placeholder="https://..."
+            />
+          </label>
+          <label className="space-y-2 text-sm text-white/70">
+            <span className="font-semibold text-white">Image alt text</span>
+            <input
+              name="imageAlt"
+              value={formValues.imageAlt}
+              onChange={handleChange}
+              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+              placeholder="Describe the image"
+            />
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="inline-flex items-center rounded-full border border-teal-300/40 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 transition hover:border-teal-200 hover:bg-teal-300/20 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isSubmitting ? "Submitting..." : "Submit review"}
+        </button>
+      </form>
+    </section>
+  );
+};
+
 export const BuyListView = ({ buySections = [] }) => {
   useSmoothScroll();
   const browserRegion = useMemo(() => getBrowserRegion(), []);
   const [localCurrency, setLocalCurrency] = useState("USD");
   const [usdRates, setUsdRates] = useState(null);
+  const activeSection = buySections.length === 1 ? buySections[0] : null;
 
   useEffect(() => {
     let isMounted = true;
@@ -201,14 +402,27 @@ export const BuyListView = ({ buySections = [] }) => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.2),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.25),transparent_60%)]" />
         <div className="relative mx-auto flex max-w-4xl flex-col items-center text-center">
           <span className="rounded-full border border-white/20 px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
-            High Frequencies 11 shop
+            {activeSection ? "Offering type" : "High Frequencies 11 shop"}
           </span>
           <h1 className="mt-6 text-4xl font-bold leading-tight sm:text-5xl">
-            Choose the portal that matches the future you've already claimed.
+            {activeSection
+              ? activeSection.title
+              : "Choose the portal that matches the future you've already claimed."}
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-white/70">
-            Every offering below delivers the exact energy, affirmations, and strategy you requested. Follow your intuition, click through for details, and I will deliver everything straight to your inbox within 24 hours.
+            {activeSection
+              ? activeSection.description
+              : "Every offering below delivers the exact energy, affirmations, and strategy you requested. Follow your intuition, click through for details, and I will deliver everything straight to your inbox within 24 hours."}
           </p>
+          {activeSection ? (
+            <Link
+              to="/#programs"
+              className="mt-8 inline-flex items-center gap-2 rounded-full border border-teal-300/40 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-200 transition hover:border-teal-200 hover:bg-teal-300/20"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to offerings
+            </Link>
+          ) : null}
         </div>
       </section>
 
@@ -219,7 +433,7 @@ export const BuyListView = ({ buySections = [] }) => {
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-teal-300">{section.title}</p>
               <p className="mt-4 text-lg text-white/70">{section.description}</p>
             </div>
-            <div className="mt-12 flex flex-col gap-10">
+            <div className={activeSection ? "mt-12 grid auto-rows-fr gap-8 md:grid-cols-2" : "mt-12 flex flex-col gap-10"}>
               {section.items.map((item) => {
                 const usdPrice = Number(String(item.price?.usd || "").replace(/,/g, ""));
                 let displayPriceLabel = "";
@@ -228,6 +442,24 @@ export const BuyListView = ({ buySections = [] }) => {
                   if (Number.isFinite(roundedLocal)) {
                     displayPriceLabel = formatAmountFromMajor(roundedLocal, localCurrency);
                   }
+                }
+                if (activeSection) {
+                  return (
+                    <div key={item.id} className="h-full">
+                      <HorizontalCard
+                        image={item.imageUrl || ""}
+                        imageAlt={item.imageAlt || item.title}
+                        title={item.title}
+                        subtitle={item.subtitle}
+                        description={item.summary || item.longDescription || ""}
+                        priceLabel={displayPriceLabel || (item.priceLabel === "0" ? "" : item.priceLabel)}
+                        buttonLink={`/buy/${item.id}`}
+                        buttonText={item.ctaLabel || "Explore offering"}
+                        maxDescriptionLength={240}
+                        clickableCard
+                      />
+                    </div>
+                  );
                 }
                 return <OfferCard key={item.id} item={item} displayPriceLabel={displayPriceLabel} />;
               })}
@@ -242,6 +474,7 @@ export const BuyListView = ({ buySections = [] }) => {
 export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => {
   const navigate = useNavigate();
   const [hasImageError, setHasImageError] = useState(false);
+  const toast = useToast();
   const { section } = offeringsIndex[item.id];
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -250,6 +483,20 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
     }
     navigate("/");
   };
+
+  useEffect(() => {
+    if (!checkoutStatus) {
+      return;
+    }
+    const normalized = checkoutStatus.toLowerCase();
+    if (normalized === "success") {
+      toast.success(`Your order for ${item.title} is confirmed.`, "Payment confirmed");
+      return;
+    }
+    if (normalized === "cancel") {
+      toast.info("Checkout was cancelled. You can restart it anytime from this page.", "Checkout cancelled");
+    }
+  }, [checkoutStatus, item.title, toast]);
 
   return (
     <main className="relative z-10">
@@ -289,6 +536,7 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
           <div className="flex flex-col gap-10">
             <div className="space-y-8 lg:flex-1">
               <SuccessStory successStory={item.successStory} reviews={item.reviews} />
+              <ReviewSubmissionForm itemId={item.id} />
               <DetailSection detailsSections={item.detailsSections} />
               {item.purchase && (
                 <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-8 text-white/80">
@@ -324,10 +572,26 @@ export const UnknownProduct = () => (
       The link you followed is no longer available. Explore the shop to choose a container or ritual that aligns with your current season.
     </p>
     <Link
-      to="/buy"
+      to="/#programs"
       className="mt-8 inline-flex items-center gap-2 rounded-full border border-teal-300/40 bg-teal-300/10 px-6 py-3 text-sm font-semibold text-teal-200 transition hover:border-teal-200 hover:bg-teal-300/20"
     >
-      Return to shop
+      Return to offerings
+      <ArrowRight className="h-4 w-4" />
+    </Link>
+  </main>
+);
+
+export const UnknownSection = () => (
+  <main className="relative z-10 flex min-h-[60vh] flex-col items-center justify-center bg-gray-950 px-6 py-24 text-center text-white">
+    <h1 className="text-4xl font-bold">Offering type not found</h1>
+    <p className="mt-4 max-w-xl text-base text-white/70">
+      This offering type is no longer available. Return to the shop to explore the current categories and choose the one that fits your season.
+    </p>
+    <Link
+      to="/#programs"
+      className="mt-8 inline-flex items-center gap-2 rounded-full border border-teal-300/40 bg-teal-300/10 px-6 py-3 text-sm font-semibold text-teal-200 transition hover:border-teal-200 hover:bg-teal-300/20"
+    >
+      Return to offerings
       <ArrowRight className="h-4 w-4" />
     </Link>
   </main>

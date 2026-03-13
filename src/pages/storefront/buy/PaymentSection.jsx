@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
 import { formatAmountFromMajor, formatUnitAmountLabel, roundUpAestheticAmount } from "../../../services/pricing";
 import { useAuth } from "../../../context/AuthContext";
+import { useToast } from "../../../context/ToastContext";
 import { supabase } from "../../../supabase-client";
 
 const isExternalLink = (link) => typeof link === "string" && /^(https?:|upi:|mailto:)/.test(link);
@@ -14,6 +15,7 @@ const fallbackCountryData = [
   { name: "United Kingdom", code: "GB", currencies: ["GBP"] },
 ];
 const DEFAULT_PAYPAL_LINK = "https://www.paypal.com/paypalme/NehalPatel64";
+const MIN_INSTALLMENT_AMOUNT_INR = 15000;
 
 const defaultInstallmentPresets = [
   {
@@ -61,6 +63,7 @@ const applyInstallmentFeeToCurrencies = (currencies, feePercent) => {
 
 const PaymentSection = ({ item }) => {
   const { user, isAuthenticated } = useAuth();
+  const toast = useToast();
   const checkoutOptions = item.checkoutOptions;
   const manualInstructions = item.manualInstructions || [];
   const legalNotes = item.legalNotes || [];
@@ -70,7 +73,7 @@ const PaymentSection = ({ item }) => {
   const paypalLink = item.paypalLink || import.meta.env.VITE_PAYPAL_ME_LINK || DEFAULT_PAYPAL_LINK;
   const upiLink = item.upiLink || import.meta.env.VITE_UPI_PAY_LINK || "";
 
-  const packageOptions = useMemo(() => {
+  const rawPackageOptions = useMemo(() => {
     if (!checkoutOptions) {
       return [];
     }
@@ -98,6 +101,26 @@ const PaymentSection = ({ item }) => {
       defaultCurrency: checkoutOptions.defaultCurrency || "usd",
     }));
   }, [checkoutOptions]);
+  const [usdRates, setUsdRates] = useState(null);
+  const estimatedBaseAmountInInr = useMemo(() => {
+    const usdUnitAmount = rawPackageOptions[0]?.currencies?.usd?.unitAmount;
+    const inrUnitAmount = rawPackageOptions[0]?.currencies?.inr?.unitAmount;
+    if (typeof inrUnitAmount === "number") {
+      return inrUnitAmount / 100;
+    }
+    if (typeof usdUnitAmount === "number" && usdRates?.INR) {
+      return (usdUnitAmount / 100) * usdRates.INR;
+    }
+    return null;
+  }, [rawPackageOptions, usdRates]);
+  const installmentEligible = estimatedBaseAmountInInr == null || estimatedBaseAmountInInr >= MIN_INSTALLMENT_AMOUNT_INR;
+  const packageOptions = useMemo(
+    () =>
+      rawPackageOptions.filter((option) =>
+        installmentEligible ? true : Math.max(1, option.installmentCount || 1) === 1,
+      ),
+    [installmentEligible, rawPackageOptions],
+  );
   const [selectedPackageId, setSelectedPackageId] = useState(() => packageOptions[0]?.id || "");
   const selectedPackage = useMemo(
     () => packageOptions.find((entry) => entry.id === selectedPackageId) || packageOptions[0] || null,
@@ -120,7 +143,6 @@ const PaymentSection = ({ item }) => {
     }, {}),
   );
   const [country, setCountry] = useState("India");
-  const [usdRates, setUsdRates] = useState(null);
   const preferredCurrencyByCountry = useMemo(() => {
     const currencies = countryCurrencyMap[country] || [];
     for (const code of currencies) {
@@ -314,7 +336,7 @@ const PaymentSection = ({ item }) => {
       return selectedPreview.perInstallmentLabel;
     }
     if (!currencyConfig?.amount) {
-      return item.price?.usd ? `$${item.price.usd} USD` : "Select an installment option";
+      return item.price?.usd ? `$${item.price.usd} USD` : "Choose your checkout method";
     }
     return String(currencyConfig.amount).trim();
   }, [
@@ -417,20 +439,28 @@ const PaymentSection = ({ item }) => {
     }
 
     if (!email?.trim()) {
-      setError("Enter your email so Stripe can send the receipt and download links.");
+      const message = "Enter your email so Stripe can send the receipt and download links.";
+      setError(message);
+      toast.error(message);
       return;
     }
     if (!firstName?.trim() || !lastName?.trim()) {
-      setError("Enter your first and last name to continue.");
+      const message = "Enter your first and last name to continue.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
     if (!selectedCurrency) {
-      setError("Select an installment option to continue.");
+      const message = "Choose your checkout method to continue.";
+      setError(message);
+      toast.error(message);
       return;
     }
     if (isConsentPending) {
-      setError("Please accept all legal notes to continue.");
+      const message = "Please accept all legal notes to continue.";
+      setError(message);
+      toast.error(message);
       return;
     }
 
@@ -442,15 +472,18 @@ const PaymentSection = ({ item }) => {
         if (!paypalLink) {
           throw new Error("PayPal is not configured yet. Please use Stripe or contact support.");
         }
+        toast.info("Redirecting you to PayPal to complete your order.", "Redirecting");
         window.location.href = paypalLink;
         return;
       }
       if (paymentMethod === "upi") {
         if (upiLink) {
+          toast.info("Opening your UPI payment flow.", "Redirecting");
           window.location.href = upiLink;
           return;
         }
         if (backupLink) {
+          toast.info("Sending you to the alternate support payment flow.", "Redirecting");
           window.location.href = backupLink;
           return;
         }
@@ -492,6 +525,7 @@ const PaymentSection = ({ item }) => {
       }
 
       if (data?.url) {
+        toast.info("Redirecting you to secure Stripe checkout.", "Redirecting");
         window.location.href = data.url;
         return;
       }
@@ -504,11 +538,12 @@ const PaymentSection = ({ item }) => {
           : "Unexpected error while launching checkout. Please email us and I'll help manually.";
 
       if (err?.name === "TypeError") {
-        setError(
-          `${message} If this keeps happening, use the manual payment instructions below while we restore the secure checkout link.`,
-        );
+        const nextMessage = `${message} If this keeps happening, use the manual payment instructions below while we restore the secure checkout link.`;
+        setError(nextMessage);
+        toast.error(nextMessage);
       } else {
         setError(message);
+        toast.error(message);
       }
     } finally {
       setIsSubmitting(false);
@@ -609,57 +644,59 @@ const PaymentSection = ({ item }) => {
               </div>
             </label>
 
-            <label className="flex flex-col space-y-2 text-sm text-white/70">
-              <span className="font-semibold text-white">Installment plan</span>
-              <p className="text-xs text-white/55">
-                Need lower upfront payment? Choose more installments. Total price increases with each split.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {packageOptions.map((option) => {
-                  const isSelected = option.id === selectedPackage?.id;
-                  const previewAmount = packagePricePreviews[option.id];
-                  const perInstallmentAmount = previewAmount?.perInstallmentLabel || option.label;
-                  const totalAmount = previewAmount?.totalLabel || option.label;
-                  const nonSelectedClass =
-                    option.installmentCount >= 4
-                      ? "border-amber-300/35 bg-amber-300/10 text-white/80 hover:border-amber-200/60"
-                      : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white";
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setSelectedPackageId(option.id)}
-                      aria-pressed={isSelected}
-                      className={`rounded-2xl border p-4 text-left transition ${isSelected
-                        ? "border-teal-200 bg-teal-300/20 text-teal-50 shadow-[0_0_0_1px_rgba(45,212,191,0.25)]"
-                        : nonSelectedClass
-                        }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em]">{option.label}</p>
-                        {option.badge ? (
-                          <span className="rounded-full border border-teal-200/30 bg-teal-300/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-100">
-                            {option.badge}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-2 text-2xl font-semibold text-white">
-                        {perInstallmentAmount}
-                      </p>
-                      <p className="mt-1 text-xs text-white/50">Per payment</p>
-                      <p className="mt-2 text-xs text-white/65">
-                        {option.installmentCount > 1
-                          ? `${option.installmentCount} x payments`
-                          : "1 x payment"}
-                      </p>
-                      <p className="mt-1 text-xs text-white/55">
-                        Total payable: {totalAmount}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </label>
+            {installmentEligible ? (
+              <label className="flex flex-col space-y-2 text-sm text-white/70">
+                <span className="font-semibold text-white">Installment plan</span>
+                <p className="text-xs text-white/55">
+                  Need lower upfront payment? Choose more installments. Total price increases with each split.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {packageOptions.map((option) => {
+                    const isSelected = option.id === selectedPackage?.id;
+                    const previewAmount = packagePricePreviews[option.id];
+                    const perInstallmentAmount = previewAmount?.perInstallmentLabel || option.label;
+                    const totalAmount = previewAmount?.totalLabel || option.label;
+                    const nonSelectedClass =
+                      option.installmentCount >= 4
+                        ? "border-amber-300/35 bg-amber-300/10 text-white/80 hover:border-amber-200/60"
+                        : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white";
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setSelectedPackageId(option.id)}
+                        aria-pressed={isSelected}
+                        className={`rounded-2xl border p-4 text-left transition ${isSelected
+                          ? "border-teal-200 bg-teal-300/20 text-teal-50 shadow-[0_0_0_1px_rgba(45,212,191,0.25)]"
+                          : nonSelectedClass
+                          }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-[0.22em]">{option.label}</p>
+                          {option.badge ? (
+                            <span className="rounded-full border border-teal-200/30 bg-teal-300/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-100">
+                              {option.badge}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-2xl font-semibold text-white">
+                          {perInstallmentAmount}
+                        </p>
+                        <p className="mt-1 text-xs text-white/50">Per payment</p>
+                        <p className="mt-2 text-xs text-white/65">
+                          {option.installmentCount > 1
+                            ? `${option.installmentCount} x payments`
+                            : "1 x payment"}
+                        </p>
+                        <p className="mt-1 text-xs text-white/55">
+                          Total payable: {totalAmount}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </label>
+            ) : null}
 
             <label className="flex flex-col space-y-2 text-sm text-white/70">
               <span className="font-semibold text-white">Country</span>
@@ -678,7 +715,9 @@ const PaymentSection = ({ item }) => {
 
             <div className="space-y-3 rounded-2xl border border-white/10 bg-black/40 p-6">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm font-semibold uppercase tracking-[0.3em] text-teal-200/80">Per installment</span>
+                <span className="text-sm font-semibold uppercase tracking-[0.3em] text-teal-200/80">
+                  {installmentEligible ? "Per installment" : "Your investment"}
+                </span>
                 <span className="text-lg font-semibold text-white">
                   {amountDueLabel}
                 </span>
@@ -688,9 +727,11 @@ const PaymentSection = ({ item }) => {
                   Total payable: {packagePricePreviews[selectedPackage?.id || ""].totalLabel}
                 </p>
               ) : null}
-              <p className="text-xs text-white/60">
-                Installment plan: {selectedPackage?.label || "Pay in full"}
-              </p>
+              {installmentEligible ? (
+                <p className="text-xs text-white/60">
+                  Installment plan: {selectedPackage?.label || "Pay in full"}
+                </p>
+              ) : null}
               <p className="text-xs text-white/60">
                 {paymentMethod === "paypal"
                   ? "You will be redirected to PayPal to complete payment securely."

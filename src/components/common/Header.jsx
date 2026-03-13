@@ -19,10 +19,10 @@ export function Header() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
           <Link
-            to="/buy"
+            to="/#programs"
             className="hover:text-purple-600 transition-colors text-gray-700"
           >
-            Buy
+            Offerings
           </Link>
           <a
             href="mailto:highfrequencies11@gmail.com"
@@ -60,7 +60,7 @@ export function Header() {
               Home
             </Link>
             <Link
-              to="/buy"
+              to="/#programs"
               className="text-gray-700 hover:text-purple-600"
               onClick={() => setMenuOpen(false)}
             >

@@ -80,3 +80,8 @@ Requirement:
 1. Monthly vs yearly subscriber view
 2. Configurable mail
 3. Courses
+4. Separate offerings to types in home page for separate landing page of each 
+5. minimum amount for installment: 15000 INR
+6. introduce toast msg for attention
+7. add comment(review) in offerings(option to add image)
+8. user inventory (admin)

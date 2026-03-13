@@ -24,6 +24,8 @@ const createEmptyReview = () => ({
   heading: "",
   quote: "",
   author: "",
+  image_url: "",
+  image_alt: "",
   sort_order: 0,
   is_active: true,
 });
@@ -97,7 +99,7 @@ const CatalogAdmin = () => {
           .maybeSingle(),
         supabase
           .from(reviewsTable)
-          .select("id,placement,offering_id,heading,quote,author,sort_order,is_active")
+          .select("id,placement,offering_id,heading,quote,author,image_url,image_alt,sort_order,is_active")
           .order("placement", { ascending: true })
           .order("sort_order", { ascending: true })
           .order("id", { ascending: true }),
@@ -279,6 +281,8 @@ const CatalogAdmin = () => {
         heading: entry.heading || null,
         quote: (entry.quote || "").trim(),
         author: (entry.author || "").trim(),
+        image_url: (entry.image_url || "").trim() || null,
+        image_alt: (entry.image_alt || "").trim() || null,
         sort_order: Number(entry.sort_order ?? index),
         is_active: Boolean(entry.is_active),
       }));
@@ -566,6 +570,24 @@ const CatalogAdmin = () => {
                           <input
                             value={review.author || ""}
                             onChange={(event) => updateReviewEditor(index, "author", event.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                          />
+                        </label>
+
+                        <label className="space-y-1 text-xs text-white/60">
+                          <span>Review image URL</span>
+                          <input
+                            value={review.image_url || ""}
+                            onChange={(event) => updateReviewEditor(index, "image_url", event.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                          />
+                        </label>
+
+                        <label className="space-y-1 text-xs text-white/60">
+                          <span>Review image alt</span>
+                          <input
+                            value={review.image_alt || ""}
+                            onChange={(event) => updateReviewEditor(index, "image_alt", event.target.value)}
                             className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                           />
                         </label>

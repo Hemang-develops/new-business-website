@@ -143,7 +143,7 @@ const fetchCatalogFromSupabase = async () => {
       .maybeSingle(),
     supabase
       .from(reviewsTable)
-      .select("id,placement,offering_id,heading,quote,author,sort_order,is_active")
+      .select("id,placement,offering_id,heading,quote,author,image_url,image_alt,sort_order,is_active")
       .eq("is_active", true)
       .in("placement", ["buy", "global"])
       .order("sort_order", { ascending: true }),
@@ -180,6 +180,8 @@ const fetchCatalogFromSupabase = async () => {
     heading: row.heading || "Client result",
     quote: row.quote || "",
     ...(row.author ? { author: row.author } : {}),
+    ...(row.image_url ? { imageUrl: row.image_url } : {}),
+    ...(row.image_alt ? { imageAlt: row.image_alt } : {}),
     offeringId: row.offering_id || null,
   }));
   const reviewMap = {
@@ -194,6 +196,8 @@ const fetchCatalogFromSupabase = async () => {
         heading: review.heading,
         quote: review.quote,
         ...(review.author ? { author: review.author } : {}),
+        ...(review.imageUrl ? { imageUrl: review.imageUrl } : {}),
+        ...(review.imageAlt ? { imageAlt: review.imageAlt } : {}),
       });
       return acc;
     }, {}),
@@ -203,6 +207,8 @@ const fetchCatalogFromSupabase = async () => {
         heading: review.heading,
         quote: review.quote,
         ...(review.author ? { author: review.author } : {}),
+        ...(review.imageUrl ? { imageUrl: review.imageUrl } : {}),
+        ...(review.imageAlt ? { imageAlt: review.imageAlt } : {}),
       })),
   };
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../services/marketData";
 import { roundUpAestheticAmount } from "../../services/pricing";
 
@@ -18,11 +18,13 @@ function HorizontalCard({
   buttonText = "Book here",
   buttonLink = "#",
   maxDescriptionLength = 120,
+  clickableCard = false,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
   const [localCurrency, setLocalCurrency] = useState("USD");
   const [usdRates, setUsdRates] = useState(null);
+  const navigate = useNavigate();
 
   const shouldTruncate = description && description.length > maxDescriptionLength;
   const displayDescription =
@@ -34,6 +36,7 @@ function HorizontalCard({
   const isAnchorLink = buttonLink.startsWith("#");
   const isInternalRoute = !isAnchorLink && !isExternalLink && buttonLink.startsWith("/");
   const shouldShowImage = Boolean(image) && !hasImageError;
+  const canClickCard = clickableCard && Boolean(buttonLink);
 
   const handleAnchorClick = (event) => {
     if (isAnchorLink) {
@@ -43,6 +46,45 @@ function HorizontalCard({
         target.scrollIntoView({ behavior: "smooth" });
       }
     }
+  };
+
+  const triggerCardNavigation = () => {
+    if (isInternalRoute) {
+      navigate(buttonLink);
+      return;
+    }
+    if (isAnchorLink) {
+      const target = document.querySelector(buttonLink);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth" });
+      }
+      return;
+    }
+    if (isExternalLink) {
+      window.open(buttonLink, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleCardClick = (event) => {
+    if (!canClickCard) {
+      return;
+    }
+    const interactiveTarget = event.target.closest("a,button,input,textarea,select,[role='button'],[role='link']");
+    if (interactiveTarget && interactiveTarget !== event.currentTarget) {
+      return;
+    }
+    triggerCardNavigation();
+  };
+
+  const handleCardKeyDown = (event) => {
+    if (!canClickCard) {
+      return;
+    }
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    triggerCardNavigation();
   };
 
   useEffect(() => {
@@ -89,6 +131,20 @@ function HorizontalCard({
     const numeric = Number(String(price).replace(/,/g, ""));
     return Number.isFinite(numeric) ? numeric : null;
   }, [price]);
+  const normalizedPriceLabel = useMemo(() => {
+    if (!priceLabel) {
+      return "";
+    }
+    const compact = String(priceLabel).replace(/[^0-9.]/g, "");
+    if (!compact) {
+      return String(priceLabel);
+    }
+    const numeric = Number(compact);
+    if (Number.isFinite(numeric) && numeric === 0) {
+      return "";
+    }
+    return String(priceLabel);
+  }, [priceLabel]);
 
   const localizedPriceLabel = useMemo(() => {
     if (normalizedPrice == null) {
@@ -118,7 +174,15 @@ function HorizontalCard({
   }, [currency, localCurrency, normalizedPrice, usdRates]);
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg shadow-gray-200/50 transition-all duration-300 ease-in-out md:flex-row dark:border-gray-800 dark:bg-gray-800 dark:shadow-none">
+    <div
+      className={`flex h-full w-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg shadow-gray-200/50 transition-all duration-300 ease-in-out md:flex-row dark:border-gray-800 dark:bg-gray-800 dark:shadow-none ${
+        canClickCard ? "cursor-pointer hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-teal-300" : ""
+      }`}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      role={canClickCard ? "link" : undefined}
+      tabIndex={canClickCard ? 0 : undefined}
+    >
       <div className="h-48 w-full shrink-0 md:h-auto md:w-2/5">
         <div className="h-full w-full overflow-hidden">
           {shouldShowImage ? (
@@ -173,10 +237,10 @@ function HorizontalCard({
         </div>
 
         <div className="mt-auto flex items-center justify-between">
-          {(priceLabel || price) && (
+          {((normalizedPriceLabel && normalizedPriceLabel.trim()) || (typeof normalizedPrice === "number" && normalizedPrice > 0)) && (
             <div className="flex flex-wrap items-center gap-2 text-base font-semibold text-gray-800 md:text-lg dark:text-white">
-              {priceLabel ? (
-                <span>{priceLabel}</span>
+              {normalizedPriceLabel ? (
+                <span>{normalizedPriceLabel}</span>
               ) : (
                 <span>{localizedPriceLabel || `${currency} ${price}`}</span>
               )}

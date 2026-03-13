@@ -3,11 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import Navigation from "../../components/Navigation";
 import Footer from "../../components/common/Footer";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 const AuthPage = ({ mode }) => {
   const isSignUp = mode === "signup";
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading, signIn, signUp, signOut, updateProfile } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoading, signIn, signUp, signOut, updateProfile } = useAuth();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -75,7 +77,9 @@ const AuthPage = ({ mode }) => {
         });
 
         if (signUpResult?.needsEmailConfirmation) {
-          setSuccessMessage("Account created. Check your email to confirm your account before signing in.");
+          const message = "Account created. Check your email to confirm your account before signing in.";
+          setSuccessMessage(message);
+          toast.success(message, "Account created");
           return;
         }
       } else {
@@ -85,9 +89,12 @@ const AuthPage = ({ mode }) => {
         });
       }
 
-      navigate("/buy");
+      toast.success(isSignUp ? "Your account is ready." : "You are signed in and ready to continue.", isSignUp ? "Welcome in" : "Signed in");
+      navigate("/#programs");
     } catch (submitError) {
-      setError(submitError.message || "Unable to continue. Please try again.");
+      const message = submitError.message || "Unable to continue. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -98,8 +105,11 @@ const AuthPage = ({ mode }) => {
     setSuccessMessage("");
     try {
       await signOut();
+      toast.info("You have been signed out of your account.", "Signed out");
     } catch (signOutError) {
-      setError(signOutError.message || "Unable to sign out right now.");
+      const message = signOutError.message || "Unable to sign out right now.";
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -140,8 +150,11 @@ const AuthPage = ({ mode }) => {
         lastName: profileData.lastName,
       });
       setSuccessMessage("Profile updated.");
+      toast.success("Your profile details were updated.", "Profile updated");
     } catch (profileError) {
-      setError(profileError.message || "Unable to update profile right now.");
+      const message = profileError.message || "Unable to update profile right now.";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsProfileSaving(false);
     }
@@ -157,17 +170,31 @@ const AuthPage = ({ mode }) => {
       <main className="relative z-10 px-6 pb-24 pt-32">
         <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[1.1fr,1fr]">
           <section className="space-y-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-teal-200/80">Account access</p>
-            <h1 className="text-4xl font-bold leading-tight text-white sm:text-5xl">{heading}</h1>
-            <p className="max-w-2xl text-base leading-relaxed text-white/70 sm:text-lg">{subHeading}</p>
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/75">
-              <p className="font-semibold uppercase tracking-[0.3em] text-white/50">Why create an account</p>
-              <ul className="mt-4 space-y-2">
-                <li>Faster checkout on paid offerings and digital rituals.</li>
-                <li>One place to manage your contact details for support follow-ups.</li>
-                <li>Easy re-entry when you return for new programs or bundles.</li>
-              </ul>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-teal-200/80">Account access</p>
+              {isAdmin ? (
+                <Link
+                  to="/admin"
+                  className="inline-flex items-center gap-2 rounded-full border border-teal-300/50 px-4 py-2 text-sm font-semibold text-teal-100 transition hover:border-teal-300 hover:text-teal-200"
+                >
+                  Manage website
+                </Link>
+              ) : null}
             </div>
+            <h1 className="text-4xl font-bold leading-tight text-white sm:text-5xl">{heading}</h1>
+            {isAuthenticated ? '' :
+              <>
+                <p className="max-w-2xl text-base leading-relaxed text-white/70 sm:text-lg">{subHeading}</p>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/75">
+                  <p className="font-semibold uppercase tracking-[0.3em] text-white/50">Why create an account</p>
+                  <ul className="mt-4 space-y-2">
+                    <li>Faster checkout on paid offerings and digital rituals.</li>
+                    <li>One place to manage your contact details for support follow-ups.</li>
+                    <li>Easy re-entry when you return for new programs or bundles.</li>
+                  </ul>
+                </div></>
+
+            }
           </section>
 
           <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl backdrop-blur sm:p-8">
@@ -238,7 +265,7 @@ const AuthPage = ({ mode }) => {
                 </form>
                 <div className="flex flex-wrap gap-3">
                   <Link
-                    to="/buy"
+                    to="/#programs"
                     className="inline-flex items-center rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 transition hover:bg-teal-200"
                   >
                     Continue to shop

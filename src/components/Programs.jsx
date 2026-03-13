@@ -2,8 +2,11 @@ import HorizontalCard from "./common/HorizontalCard";
 import { useReveal } from "../hooks/useReveal";
 import { useOfferingsData } from "../hooks/useOfferingsData";
 
-const ProgramItem = ({ item }) => {
+const ProgramItem = ({ group }) => {
   const [ref, visible] = useReveal({ threshold: 0.2 });
+  const previewTitles = group.items.slice(0, 3).map((item) => item.title).join(", ");
+  const imageSource = group.items.find((item) => item.imageUrl)?.imageUrl || "";
+  const imageAlt = group.items.find((item) => item.imageUrl)?.imageAlt || group.title;
 
   return (
     <div
@@ -13,16 +16,15 @@ const ProgramItem = ({ item }) => {
       }`}
     >
       <HorizontalCard
-        image={item.imageUrl || ""}
-        imageAlt={item.imageAlt || item.title}
-        title={item.title}
-        subtitle={item.subtitle}
-        description={item.summary || item.longDescription || ""}
-        price={item.price?.usd}
-        priceLabel={!item.price?.usd ? "Investment shared upon booking" : undefined}
-        buttonLink={`/buy/${item.id}`}
-        buttonText={item.ctaLabel || "Book here"}
-        maxDescriptionLength={240}
+        image={imageSource}
+        imageAlt={imageAlt}
+        title={group.title}
+        subtitle={`${group.items.length} offering${group.items.length === 1 ? "" : "s"}`}
+        description={`${group.description}${previewTitles ? ` Includes ${previewTitles}.` : ""}`}
+        buttonLink={`/offerings/${group.id}`}
+        buttonText="View more"
+        maxDescriptionLength={260}
+        clickableCard
       />
     </div>
   );
@@ -44,19 +46,9 @@ const Programs = () => {
           </p>
         </div>
 
-        <div className="mt-16 space-y-16">
+        <div className="mt-16 grid auto-rows-fr gap-8 md:grid-cols-2">
           {buySections.map((group) => (
-            <div key={group.id}>
-              <div className="text-center">
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">{group.title}</h3>
-                <p className="mt-3 text-base text-gray-600 dark:text-gray-300">{group.description}</p>
-              </div>
-              <div className="mt-10 grid auto-rows-fr gap-8 md:grid-cols-2">
-                {group.items.map((item) => (
-                  <ProgramItem key={item.id} item={item} />
-                ))}
-              </div>
-            </div>
+            <ProgramItem key={group.id} group={group} />
           ))}
         </div>
       </div>
