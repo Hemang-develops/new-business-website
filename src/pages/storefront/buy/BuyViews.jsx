@@ -6,6 +6,8 @@ import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/m
 import { formatAmountFromMajor, getRoundedLocalizedUsdAmount } from "../../../services/pricing";
 import PaymentSection from "./PaymentSection";
 import HorizontalCard from "../../../components/common/HorizontalCard";
+import { Input } from "../../../components/ui/input";
+import { Textarea } from "../../../components/ui/textarea";
 import { useToast } from "../../../context/ToastContext";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../supabase-client";
@@ -287,21 +289,21 @@ const ReviewSubmissionForm = ({ itemId }) => {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm text-white/70">
             <span className="font-semibold text-white">Your name</span>
-            <input
+            <Input
               name="name"
               value={formValues.name}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
               placeholder="Your name"
             />
           </label>
           <label className="space-y-2 text-sm text-white/70">
             <span className="font-semibold text-white">Short heading</span>
-            <input
+            <Input
               name="heading"
               value={formValues.heading}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
               placeholder="What shifted for you"
             />
           </label>
@@ -309,12 +311,12 @@ const ReviewSubmissionForm = ({ itemId }) => {
 
         <label className="space-y-2 text-sm text-white/70">
           <span className="font-semibold text-white">Your review</span>
-          <textarea
+          <Textarea
             name="quote"
             value={formValues.quote}
             onChange={handleChange}
             rows={5}
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+            className="border-white/10 bg-black/30 focus-visible:border-teal-300"
             placeholder="Share your experience with this offering."
           />
         </label>
@@ -322,21 +324,21 @@ const ReviewSubmissionForm = ({ itemId }) => {
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm text-white/70">
             <span className="font-semibold text-white">Review image URL</span>
-            <input
+            <Input
               name="imageUrl"
               value={formValues.imageUrl}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
               placeholder="https://..."
             />
           </label>
           <label className="space-y-2 text-sm text-white/70">
             <span className="font-semibold text-white">Image alt text</span>
-            <input
+            <Input
               name="imageAlt"
               value={formValues.imageAlt}
               onChange={handleChange}
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
               placeholder="Describe the image"
             />
           </label>
@@ -536,7 +538,6 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
           <div className="flex flex-col gap-10">
             <div className="space-y-8 lg:flex-1">
               <SuccessStory successStory={item.successStory} reviews={item.reviews} />
-              <ReviewSubmissionForm itemId={item.id} />
               <DetailSection detailsSections={item.detailsSections} />
               {item.purchase && (
                 <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-8 text-white/80">
@@ -558,6 +559,7 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
             <div className="lg:flex-[1.1]">
               <PaymentSection item={item} />
             </div>
+            <ReviewSubmissionForm itemId={item.id} />
           </div>
         </div>
       </section>

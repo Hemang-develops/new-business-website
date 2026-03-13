@@ -4,6 +4,7 @@ import Navigation from "../../components/Navigation";
 import Footer from "../../components/common/Footer";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
+import { Input } from "../../components/ui/input";
 
 const AuthPage = ({ mode }) => {
   const isSignUp = mode === "signup";
@@ -212,47 +213,47 @@ const AuthPage = ({ mode }) => {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block space-y-2">
                       <span className="text-sm text-white/75">First name</span>
-                      <input
+                      <Input
                         type="text"
                         name="firstName"
                         value={profileData.firstName}
                         onChange={handleProfileChange}
-                        className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+                        className="border-white/15 bg-black/30 focus-visible:border-teal-300"
                       />
                     </label>
                     <label className="block space-y-2">
                       <span className="text-sm text-white/75">Last name</span>
-                      <input
+                      <Input
                         type="text"
                         name="lastName"
                         value={profileData.lastName}
                         onChange={handleProfileChange}
-                        className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+                        className="border-white/15 bg-black/30 focus-visible:border-teal-300"
                       />
                     </label>
                   </div>
                   <label className="block space-y-2">
                     <span className="text-sm text-white/75">Email</span>
-                    <input
+                    <Input
                       type="email"
                       name="email"
                       value={profileData.email}
                       readOnly
                       disabled
                       title="Email cannot be changed from account settings."
-                      className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white/60 outline-none"
+                      className="border-white/15 bg-black/30 text-white/60"
                     />
                   </label>
                   <label className="block space-y-2">
                     <span className="text-sm text-white/75">Birthday</span>
-                    <input
+                    <Input
                       type="date"
                       name="birthday"
                       value={profileData.birthday}
                       readOnly
                       disabled
                       title="Birthday cannot be changed from account settings."
-                      className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white/60 outline-none"
+                      className="border-white/15 bg-black/30 text-white/60"
                     />
                   </label>
                   <button
@@ -289,23 +290,23 @@ const AuthPage = ({ mode }) => {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="block space-y-2">
                       <span className="text-sm text-white/75">First name</span>
-                      <input
+                      <Input
                         type="text"
                         name="firstName"
                         value={formData.firstName}
                         onChange={handleChange}
-                        className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+                        className="border-white/15 bg-black/30 focus-visible:border-teal-300"
                         placeholder="Nehal"
                       />
                     </label>
                     <label className="block space-y-2">
                       <span className="text-sm text-white/75">Last name</span>
-                      <input
+                      <Input
                         type="text"
                         name="lastName"
                         value={formData.lastName}
                         onChange={handleChange}
-                        className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+                        className="border-white/15 bg-black/30 focus-visible:border-teal-300"
                         placeholder="Patel"
                       />
                     </label>
@@ -315,7 +316,7 @@ const AuthPage = ({ mode }) => {
                 {isSignUp ? (
                   <label className="block space-y-2">
                     <span className="text-sm text-white/75">Birthday</span>
-                    <input
+                    <Input
                       ref={birthdayInputRef}
                       type="date"
                       name="birthday"
@@ -325,31 +326,31 @@ const AuthPage = ({ mode }) => {
                       onClick={openBirthdayPicker}
                       max={maxBirthday}
                       required
-                      className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300 [color-scheme:dark]"
+                      className="border-white/15 bg-black/30 focus-visible:border-teal-300 [color-scheme:dark]"
                     />
                   </label>
                 ) : null}
 
                 <label className="block space-y-2">
                   <span className="text-sm text-white/75">Email</span>
-                  <input
+                  <Input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+                    className="border-white/15 bg-black/30 focus-visible:border-teal-300"
                     placeholder="you@example.com"
                   />
                 </label>
 
                 <label className="block space-y-2">
                   <span className="text-sm text-white/75">Password</span>
-                  <input
+                  <Input
                     type="password"
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+                    className="border-white/15 bg-black/30 focus-visible:border-teal-300"
                     placeholder="Minimum 8 characters"
                   />
                 </label>
@@ -357,12 +358,12 @@ const AuthPage = ({ mode }) => {
                 {isSignUp ? (
                   <label className="block space-y-2">
                     <span className="text-sm text-white/75">Confirm password</span>
-                    <input
+                    <Input
                       type="password"
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      className="w-full rounded-2xl border border-white/15 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-teal-300"
+                      className="border-white/15 bg-black/30 focus-visible:border-teal-300"
                       placeholder="Re-enter password"
                     />
                   </label>

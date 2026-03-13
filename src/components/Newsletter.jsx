@@ -1,3 +1,5 @@
+import { Input } from "./ui/input";
+
 const Newsletter = () => {
   return (
     <section id="newsletter" className="relative bg-gray-950 py-12 text-white">
@@ -16,12 +18,12 @@ const Newsletter = () => {
             action="https://formspree.io/f/xovqwaaw"
             method="POST"
           >
-            <input
+            <Input
               type="email"
               name="email"
               required
               placeholder="Enter your email"
-              className="w-full flex-1 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm text-white placeholder:text-white/60 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              className="flex-1 rounded-full border-white/20 bg-white/10 px-6 placeholder:text-white/60 focus-visible:border-brand-primary focus-visible:ring-brand-primary"
             />
             <button
               type="submit"

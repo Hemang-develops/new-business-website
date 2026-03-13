@@ -5,6 +5,7 @@ import { ThankYou } from './pages/storefront/ThankYou';
 import Buy from './pages/storefront/Buy';
 import AuthPage from './pages/auth/AuthPage';
 import CatalogAdmin from './pages/admin/CatalogAdmin';
+import { TooltipProvider } from './components/ui/tooltip';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import './styles/globals.css';
@@ -44,23 +45,25 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Router>
-          <RouteScrollController />
-          <div className="flex flex-col min-h-screen">
-            <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/offerings/:sectionId" element={<Buy />} />
-                <Route path="/buy/:productId" element={<Buy />} />
-                <Route path="/buy/:productId/:status" element={<Buy />} />
-                <Route path="/sign-in" element={<AuthPage mode="signin" />} />
-                <Route path="/sign-up" element={<AuthPage mode="signup" />} />
-                <Route path="/admin" element={<CatalogAdmin />} />
-                <Route path="/thank-you" element={<ThankYou />} />
-              </Routes>
-            </main>
-          </div>
-        </Router>
+        <TooltipProvider>
+          <Router>
+            <RouteScrollController />
+            <div className="flex flex-col min-h-screen">
+              <main className="flex-1">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/offerings/:sectionId" element={<Buy />} />
+                  <Route path="/buy/:productId" element={<Buy />} />
+                  <Route path="/buy/:productId/:status" element={<Buy />} />
+                  <Route path="/sign-in" element={<AuthPage mode="signin" />} />
+                  <Route path="/sign-up" element={<AuthPage mode="signup" />} />
+                  <Route path="/admin" element={<CatalogAdmin />} />
+                  <Route path="/thank-you" element={<ThankYou />} />
+                </Routes>
+              </main>
+            </div>
+          </Router>
+        </TooltipProvider>
       </ToastProvider>
     </AuthProvider>
   );

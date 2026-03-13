@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
 import { formatAmountFromMajor, formatUnitAmountLabel, roundUpAestheticAmount } from "../../../services/pricing";
+import { Input } from "../../../components/ui/input";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { supabase } from "../../../supabase-client";
@@ -570,33 +571,33 @@ const PaymentSection = ({ item }) => {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col space-y-2 text-sm text-white/70 sm:flex-1">
                 <span className="font-semibold text-white">First name</span>
-                <input
+                <Input
                   type="text"
                   value={firstName}
                   onChange={(event) => setFirstName(event.target.value)}
                   placeholder="First name"
-                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-300/60"
+                  className="border-white/10 bg-black/40 placeholder:text-white/40 focus-visible:border-teal-300 focus-visible:ring-teal-300/30"
                 />
               </label>
               <label className="flex flex-col space-y-2 text-sm text-white/70 sm:flex-1">
                 <span className="font-semibold text-white">Last name</span>
-                <input
+                <Input
                   type="text"
                   value={lastName}
                   onChange={(event) => setLastName(event.target.value)}
                   placeholder="Last name"
-                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-300/60"
+                  className="border-white/10 bg-black/40 placeholder:text-white/40 focus-visible:border-teal-300 focus-visible:ring-teal-300/30"
                 />
               </label>
               <label className="flex flex-col space-y-2 text-sm text-white/70 sm:col-span-2">
                 <span className="font-semibold text-white">Email</span>
-                <input
+                <Input
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="you@example.com"
                   required
-                  className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-300/60"
+                  className="border-white/10 bg-black/40 placeholder:text-white/40 focus-visible:border-teal-300 focus-visible:ring-teal-300/30"
                 />
               </label>
             </div>
@@ -703,10 +704,10 @@ const PaymentSection = ({ item }) => {
               <select
                 value={country}
                 onChange={(event) => setCountry(event.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-300/60"
+                className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none transition focus:border-teal-300 focus:ring-2 focus:ring-teal-300/20"
               >
                 {countryOptions.map((option) => (
-                  <option key={option.code} value={option.name} className="bg-gray-900">
+                  <option key={option.code} value={option.name} className="bg-slate-900 text-white">
                     {option.name}
                   </option>
                 ))}

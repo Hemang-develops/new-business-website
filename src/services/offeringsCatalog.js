@@ -13,7 +13,7 @@ const mapPrice = (row) => (row.price_usd ? { usd: String(row.price_usd) } : unde
 const sortBy = (list, key = "sort_order") =>
   [...(list || [])].sort((a, b) => Number(a?.[key] || 0) - Number(b?.[key] || 0));
 
-const mapOffering = (row, sharedContent, reviewMap) => {
+const mapOffering = (row, section, sharedContent, reviewMap) => {
   const detailsSections = sortBy(row.detail_sections).map((section) => ({
     ...(section.heading ? { heading: section.heading } : {}),
     ...(section.description ? { description: section.description } : {}),
@@ -35,18 +35,26 @@ const mapOffering = (row, sharedContent, reviewMap) => {
     summary: row.summary || "",
     longDescription: row.long_description || undefined,
     price: mapPrice(row),
-    ctaLabel: row.cta_label || undefined,
-    actionLink: row.action_link || undefined,
-    checkoutFallbackMessage: row.checkout_fallback_message || undefined,
-    purchase: row.purchase_label || row.purchase_link
-      ? { label: row.purchase_label || "Email for access", link: row.purchase_link || "" }
+    ctaLabel: section.cta_label || row.cta_label || undefined,
+    actionLink: section.action_link || row.action_link || undefined,
+    checkoutFallbackMessage: section.checkout_fallback_message || row.checkout_fallback_message || undefined,
+    purchase: section.purchase_label || section.purchase_link || row.purchase_label || row.purchase_link
+      ? {
+          label: section.purchase_label || row.purchase_label || "Email for access",
+          link: section.purchase_link || row.purchase_link || "",
+        }
       : undefined,
-    manualSupport: row.manual_support_label || row.manual_support_link
-      ? { label: row.manual_support_label || "Email for support", link: row.manual_support_link || "" }
+    manualSupport: section.manual_support_label || section.manual_support_link || row.manual_support_label || row.manual_support_link
+      ? {
+          label: section.manual_support_label || row.manual_support_label || "Email for support",
+          link: section.manual_support_link || row.manual_support_link || "",
+        }
       : undefined,
     checkoutOptions,
     highlights: sortBy(row.highlights).map((entry) => entry.text),
-    paymentMethods: sortBy(row.payment_methods).map((entry) => entry.method),
+    paymentMethods: Array.isArray(section.payment_methods) && section.payment_methods.length
+      ? section.payment_methods
+      : sortBy(row.payment_methods).map((entry) => entry.method),
     manualInstructions: sharedContent.manualInstructions,
     legalNotes: sharedContent.legalNotes,
     closingNotes: sharedContent.closingNotes,
@@ -63,7 +71,7 @@ const buildCatalog = (sections, offerings, sharedContent, reviewMap) => {
     sections.map((section) => [
       section.id,
       {
-        id: section.id,
+        ...section,
         title: section.title || "",
         description: section.description || "",
         items: [],
@@ -76,7 +84,7 @@ const buildCatalog = (sections, offerings, sharedContent, reviewMap) => {
     if (!section) {
       continue;
     }
-    section.items.push(mapOffering(offeringRow, sharedContent, reviewMap));
+    section.items.push(mapOffering(offeringRow, section, sharedContent, reviewMap));
   }
 
   const buySections = Array.from(sectionsById.values()).filter((section) => section.items.length > 0);
@@ -100,7 +108,11 @@ const buildCatalog = (sections, offerings, sharedContent, reviewMap) => {
 
 const fetchCatalogFromSupabase = async () => {
   const [sectionsRes, offeringsRes, sharedContentRes, reviewsRes] = await Promise.all([
-    supabase.from(sectionsTable).select("id,title,description,sort_order,is_active").eq("is_active", true).order("sort_order", { ascending: true }),
+    supabase
+      .from(sectionsTable)
+      .select("id,title,description,cta_label,action_link,checkout_fallback_message,purchase_label,purchase_link,manual_support_label,manual_support_link,payment_methods,sort_order,is_active")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
     supabase
       .from(offeringsTable)
       .select(
@@ -115,14 +127,7 @@ const fetchCatalogFromSupabase = async () => {
           subtitle,
           summary,
           long_description,
-          cta_label,
-          action_link,
-          checkout_fallback_message,
           price_usd,
-          purchase_label,
-          purchase_link,
-          manual_support_label,
-          manual_support_link,
           checkout:storefront_checkout_configs(config),
           highlights:storefront_offering_highlights(sort_order,text),
           payment_methods:storefront_offering_payment_methods(sort_order,method),
