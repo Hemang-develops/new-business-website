@@ -11,6 +11,7 @@ import { Textarea } from "../../../components/ui/textarea";
 import { useToast } from "../../../context/ToastContext";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../supabase-client";
+import { Skeleton } from "../../../components/ui/skeleton";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -38,11 +39,10 @@ const CheckoutStatusBanner = ({ status, itemTitle }) => {
 
   return (
     <div
-      className={`rounded-3xl border p-6 text-sm leading-relaxed shadow-inner backdrop-blur ${
-        isSuccess
-          ? "border-teal-300/60 bg-teal-300/10 text-teal-50"
-          : "border-amber-300/60 bg-amber-300/10 text-amber-100"
-      }`}
+      className={`rounded-3xl border p-6 text-sm leading-relaxed shadow-inner backdrop-blur ${isSuccess
+        ? "border-teal-300/60 bg-teal-300/10 text-teal-50"
+        : "border-amber-300/60 bg-amber-300/10 text-amber-100"
+        }`}
     >
       <p className="text-xs font-semibold uppercase tracking-[0.3em]">{title}</p>
       <p className="mt-3">{description}</p>
@@ -177,32 +177,32 @@ const OfferCard = ({ item, displayPriceLabel }) => {
             />
           </div>
         ) : null}
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <h3 className="text-2xl font-semibold text-white">{item.title}</h3>
-          {item.subtitle && (
-            <p className="mt-1 text-sm font-medium uppercase tracking-[0.3em] text-teal-200/80">{item.subtitle}</p>
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div>
+            <h3 className="text-2xl font-semibold text-white">{item.title}</h3>
+            {item.subtitle && (
+              <p className="mt-1 text-sm font-medium uppercase tracking-[0.3em] text-teal-200/80">{item.subtitle}</p>
+            )}
+          </div>
+          {hasDisplayAmount && (
+            <span className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white/80">
+              {displayPriceLabel || (item.price?.usd ? `$${item.price.usd} USD` : "")}
+            </span>
           )}
         </div>
-        {hasDisplayAmount && (
-          <span className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white/80">
-            {displayPriceLabel || (item.price?.usd ? `$${item.price.usd} USD` : "")}
-          </span>
-        )}
+        <p className="text-base text-white/80">{item.summary}</p>
+        <OfferHighlights item={item} />
       </div>
-      <p className="text-base text-white/80">{item.summary}</p>
-      <OfferHighlights item={item} />
-    </div>
 
-    <div className="mt-6">
-      <Link
-        to={`/buy/${item.id}`}
-        className="inline-flex items-center gap-2 rounded-full border border-teal-300/40 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-200 transition hover:border-teal-200 hover:bg-teal-300/20"
-      >
-        {item.ctaLabel || "Explore offering"}
-        <ArrowRight className="h-4 w-4" />
-      </Link>
-    </div>
+      <div className="mt-6">
+        <Link
+          to={`/buy/${item.id}`}
+          className="inline-flex items-center gap-2 rounded-full border border-teal-300/40 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-200 transition hover:border-teal-200 hover:bg-teal-300/20"
+        >
+          {item.ctaLabel || "Explore offering"}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
     </article>
   );
 };
@@ -430,7 +430,7 @@ export const BuyListView = ({ buySections = [] }) => {
 
       {buySections.map((section) => (
         <section key={section.id} id={section.id} className="bg-gray-950 py-16">
-          <div className="mx-auto max-w-5xl px-6">
+          <div className="mx-auto max-w-6xl px-6">
             <div className="text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-teal-300">{section.title}</p>
               <p className="mt-4 text-lg text-white/70">{section.description}</p>
@@ -596,5 +596,110 @@ export const UnknownSection = () => (
       Return to offerings
       <ArrowRight className="h-4 w-4" />
     </Link>
+  </main>
+);
+
+export const OfferCardSkeleton = () => (
+  <article className="w-full rounded-3xl border border-white/10 bg-white/5 p-6 text-left shadow-2xl backdrop-blur transition hover:border-teal-300 hover:shadow-teal-500/20 sm:p-8">
+    <div className="space-y-4">
+      <Skeleton className="h-56 w-full rounded-2xl" />
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="w-1/2 space-y-2">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-1/3" />
+        </div>
+        <Skeleton className="h-10 w-24 rounded-full" />
+      </div>
+      <div className="space-y-2 pt-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
+    </div>
+    <div className="mt-6">
+      <Skeleton className="h-10 w-36 rounded-full" />
+    </div>
+  </article>
+);
+
+export const BuyListViewSkeleton = () => (
+  <main className="relative z-10">
+    <section className="relative flex min-h-[60vh] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-gray-950 to-black px-6 py-24">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.2),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.25),transparent_60%)]" />
+      <div className="relative mx-auto flex w-full max-w-4xl flex-col items-center text-center">
+        <Skeleton className="h-6 w-32 rounded-full" />
+        <Skeleton className="mt-6 h-12 w-3/4 sm:h-16" />
+        <div className="mt-6 w-full max-w-2xl space-y-3">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="mx-auto h-5 w-5/6" />
+        </div>
+      </div>
+    </section>
+
+    <section className="bg-gray-950 py-16">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="flex flex-col items-center text-center">
+          <Skeleton className="mb-4 h-4 w-24" />
+          <Skeleton className="h-5 w-1/2" />
+        </div>
+        <div className="mt-12 grid auto-rows-fr gap-8 md:grid-cols-2">
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
+        </div>
+      </div>
+    </section>
+  </main>
+);
+
+export const BuyDetailViewSkeleton = () => (
+  <main className="relative z-10">
+    <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-gray-950 to-black px-6 py-24">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.28),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.32),transparent_60%)]" />
+      <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <Skeleton className="h-8 w-24 rounded-full" />
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-10 w-2/3 sm:h-12" />
+        <Skeleton className="h-72 w-full max-w-3xl rounded-3xl border-none sm:h-96" />
+        <div className="w-full max-w-3xl space-y-3">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-5/6" />
+          <Skeleton className="h-5 w-4/6" />
+        </div>
+      </div>
+    </section>
+
+    <section className="bg-gray-950 px-6 pb-24 pt-12">
+      <div className="mx-auto flex max-w-5xl flex-col gap-10">
+        <div className="flex flex-col gap-10 lg:flex-row">
+          <div className="w-full space-y-8 lg:flex-1">
+            <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+              <Skeleton className="h-6 w-1/3" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+              </div>
+            </div>
+            <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+              <Skeleton className="h-6 w-1/3" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+              </div>
+            </div>
+          </div>
+          <div className="w-full lg:flex-[1.1]">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+              <Skeleton className="mb-6 h-8 w-1/2" />
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <Skeleton className="mt-8 h-12 w-full rounded-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 );

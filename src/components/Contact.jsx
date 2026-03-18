@@ -3,6 +3,7 @@ import { useState } from "react";
 import worldMap from "../assets/world.svg";
 import { useToast } from "../context/ToastContext";
 import { useOfferingsData } from "../hooks/useOfferingsData";
+import { Skeleton } from "./ui/skeleton";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 
@@ -14,7 +15,7 @@ const initialFormState = {
 };
 
 const Contact = () => {
-  const { offeringSupportOptions } = useOfferingsData();
+  const { offeringSupportOptions, isLoading } = useOfferingsData();
   const toast = useToast();
   const [formValues, setFormValues] = useState(initialFormState);
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
@@ -101,36 +102,36 @@ const Contact = () => {
             <div className="relative">
               <div className="flex flex-row items-center gap-4">
 
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 shadow-[0_12px_30px_rgba(0,0,0,0.28)]">
-                <div className="flex h-full w-full items-center justify-center rounded-[0.9rem] bg-slate-950/70">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-6 w-6 text-sky-400"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M22 7.535v9.465a3 3 0 0 1-2.824 2.995L19 20H5a3 3 0 0 1-2.995-2.824L2 17V7.535l9.445 6.297.116.066a1 1 0 0 0 .878 0l.116-.066L22 7.535Z"
-                      fill="currentColor"
-                      strokeWidth="0"
-                    />
-                    <path
-                      d="M19 4c1.08 0 2.027.57 2.555 1.427L12 11.797 2.445 5.427A2.999 2.999 0 0 1 4.799 4L5 3.993h14Z"
-                      fill="currentColor"
-                      strokeWidth="0"
-                    />
-                  </svg>
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 shadow-[0_12px_30px_rgba(0,0,0,0.28)]">
+                  <div className="flex h-full w-full items-center justify-center rounded-[0.9rem] bg-slate-950/70">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-6 w-6 text-sky-400"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M22 7.535v9.465a3 3 0 0 1-2.824 2.995L19 20H5a3 3 0 0 1-2.995-2.824L2 17V7.535l9.445 6.297.116.066a1 1 0 0 0 .878 0l.116-.066L22 7.535Z"
+                        fill="currentColor"
+                        strokeWidth="0"
+                      />
+                      <path
+                        d="M19 4c1.08 0 2.027.57 2.555 1.427L12 11.797 2.445 5.427A2.999 2.999 0 0 1 4.799 4L5 3.993h14Z"
+                        fill="currentColor"
+                        strokeWidth="0"
+                      />
+                    </svg>
+                  </div>
                 </div>
-              </div>
 
-              <p className="text-sm font-semibold uppercase tracking-[0.35em] text-brand-primary">
-                Connect
-              </p>
+                <p className="text-sm font-semibold uppercase tracking-[0.35em] text-brand-primary">
+                  Connect
+                </p>
               </div>
               <h2 className="mt-4 max-w-xl bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl">
                 Ready to raise your frequency?
@@ -217,22 +218,26 @@ const Contact = () => {
 
                 <div>
                   <label className="mb-2 inline-block text-sm font-medium text-gray-300">Desired Support</label>
-                  <select
-                    name="support"
-                    required
-                    value={formValues.support}
-                    onChange={handleChange}
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
-                  >
-                    <option value="" disabled className="bg-slate-900 text-white">
-                      Select the offering you are interested in
-                    </option>
+                  {isLoading ? (
+                    <Skeleton className="h-11 w-full rounded-xl" />
+                  ) : (
+                    <select
+                      name="support"
+                      required
+                      value={formValues.support}
+                      onChange={handleChange}
+                      className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+                    >
+                      <option value="" disabled className="bg-slate-900 text-white">
+                        Select the offering you are interested in
+                      </option>
                       {supportOptions.map((option) => (
                         <option key={option} value={option} className="bg-slate-900 text-white">
                           {option}
                         </option>
                       ))}
-                  </select>
+                    </select>
+                  )}
                 </div>
 
                 <div>

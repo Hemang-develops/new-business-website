@@ -128,14 +128,14 @@ const chartData = [
 
 const chartConfig = {
   visitors: {
-    label: "Visitors",
+    label: "Platform Growth",
   },
   desktop: {
-    label: "Desktop",
+    label: "Yearly Subscribers",
     color: "#f8fafc",
   },
   mobile: {
-    label: "Mobile",
+    label: "Monthly Subscribers",
     color: "#93c5fd",
   },
 } satisfies ChartConfig
@@ -167,10 +167,10 @@ export function ChartAreaInteractive() {
   return (
     <Card className="@container/card border border-white/10 bg-[linear-gradient(180deg,rgba(18,24,39,0.98),rgba(12,17,29,0.98))] shadow-[0_24px_70px_rgba(0,0,0,0.34)] ring-0">
       <CardHeader>
-        <CardTitle className="text-white">Total Visitors</CardTitle>
+        <CardTitle className="text-white">Platform Growth</CardTitle>
         <CardDescription className="text-[#b2b8c3]">
           <span className="hidden @[540px]/card:block">
-            Total for the last 3 months
+            New subscribers over the last 3 months
           </span>
           <span className="@[540px]/card:hidden">Last 3 months</span>
         </CardDescription>

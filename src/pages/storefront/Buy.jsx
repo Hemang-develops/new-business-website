@@ -1,11 +1,11 @@
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import Footer from "../../components/common/Footer";
 import Navigation from "../../components/Navigation";
-import { BuyDetailView, BuyListView, UnknownProduct, UnknownSection } from "./buy/BuyViews";
+import { BuyDetailView, BuyListView, BuyDetailViewSkeleton, BuyListViewSkeleton, UnknownProduct, UnknownSection } from "./buy/BuyViews";
 import { useOfferingsData } from "../../hooks/useOfferingsData";
 
 const Buy = () => {
-  const { buySections, offeringsIndex } = useOfferingsData();
+  const { buySections, offeringsIndex, isLoading } = useOfferingsData();
   const { productId, sectionId, status: statusParam } = useParams();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -18,13 +18,17 @@ const Buy = () => {
     <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
       <Navigation />
       {isDetailRoute ? (
-        product ? (
+        isLoading ? (
+          <BuyDetailViewSkeleton />
+        ) : product ? (
           <BuyDetailView item={product} checkoutStatus={checkoutStatus} offeringsIndex={offeringsIndex} />
         ) : (
           <UnknownProduct />
         )
       ) : sectionId ? (
-        selectedSection ? (
+        isLoading ? (
+          <BuyListViewSkeleton />
+        ) : selectedSection ? (
           <BuyListView key={`${location.key}-${sectionId}`} buySections={[selectedSection]} />
         ) : (
           <UnknownSection />

@@ -12,10 +12,10 @@ export default function AdminDashboard() {
             Admin Dashboard
           </p>
           <h1 className="mt-3 text-3xl font-semibold text-white md:text-4xl">
-            Website operations overview
+            Course & Subscriber Management
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-white/60">
-            Monitor progress, reorganize sections, and manage proposal-style dashboard data from one place.
+            Manage user inventory, track subscriber metrics, and monitor course engagement.
           </p>
         </div>
         <SectionCards />

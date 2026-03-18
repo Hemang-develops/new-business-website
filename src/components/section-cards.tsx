@@ -34,13 +34,13 @@ export function SectionCards() {
             <TrendingUpIcon className="size-4" />
           </div>
           <div className="text-[#a7afbb]">
-            Visitors for the last 6 months
+            Revenue for the last 6 months
           </div>
         </CardFooter>
       </Card>
       <Card className="@container/card border border-white/10 bg-[radial-gradient(circle_at_bottom,rgba(255,255,255,0.06),transparent_45%),linear-gradient(180deg,rgba(18,24,39,0.98),rgba(12,17,29,0.98))] shadow-[0_20px_50px_rgba(0,0,0,0.28)] ring-0">
         <CardHeader>
-          <CardDescription className="text-[15px] text-[#b8c0cc]">New Customers</CardDescription>
+          <CardDescription className="text-[15px] text-[#b8c0cc]">New Subscribers</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums text-white @[250px]/card:text-3xl">
             1,234
           </CardTitle>
@@ -64,7 +64,7 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card border border-white/10 bg-[radial-gradient(circle_at_bottom,rgba(255,255,255,0.06),transparent_45%),linear-gradient(180deg,rgba(18,24,39,0.98),rgba(12,17,29,0.98))] shadow-[0_20px_50px_rgba(0,0,0,0.28)] ring-0">
         <CardHeader>
-          <CardDescription className="text-[15px] text-[#b8c0cc]">Active Accounts</CardDescription>
+          <CardDescription className="text-[15px] text-[#b8c0cc]">Active Subscriptions</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums text-white @[250px]/card:text-3xl">
             45,678
           </CardTitle>
@@ -86,7 +86,7 @@ export function SectionCards() {
       </Card>
       <Card className="@container/card border border-white/10 bg-[radial-gradient(circle_at_bottom,rgba(255,255,255,0.06),transparent_45%),linear-gradient(180deg,rgba(18,24,39,0.98),rgba(12,17,29,0.98))] shadow-[0_20px_50px_rgba(0,0,0,0.28)] ring-0">
         <CardHeader>
-          <CardDescription className="text-[15px] text-[#b8c0cc]">Growth Rate</CardDescription>
+          <CardDescription className="text-[15px] text-[#b8c0cc]">Course Enrollments</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums text-white @[250px]/card:text-3xl">
             4.5%
           </CardTitle>

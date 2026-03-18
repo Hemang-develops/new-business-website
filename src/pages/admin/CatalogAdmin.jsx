@@ -6,6 +6,7 @@ import AdminDashboard from "./AdminDashboard";
 import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../supabase-client";
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
+import { Skeleton } from "../../components/ui/skeleton";
 
 const sectionsTable = import.meta.env.VITE_SUPABASE_SECTIONS_TABLE || "storefront_sections";
 const offeringsTable = import.meta.env.VITE_SUPABASE_OFFERINGS_TABLE || "storefront_offerings";
@@ -381,10 +382,10 @@ const CatalogAdmin = () => {
         prev.map((entry) =>
           entry.id === editor.id
             ? {
-                ...entry,
-                ...basePayload,
-                highlights: fromLines(editor.highlightsText),
-              }
+              ...entry,
+              ...basePayload,
+              highlights: fromLines(editor.highlightsText),
+            }
             : entry,
         ),
       );
@@ -430,10 +431,10 @@ const CatalogAdmin = () => {
         prev.map((section) =>
           section.id === selectedSectionId
             ? {
-                ...section,
-                ...payload,
-                paymentMethodsText: selectedSection.paymentMethodsText,
-              }
+              ...section,
+              ...payload,
+              paymentMethodsText: selectedSection.paymentMethodsText,
+            }
             : section,
         ),
       );
@@ -717,17 +718,33 @@ const CatalogAdmin = () => {
         <h1 className="text-3xl font-semibold">Catalog Admin</h1>
         {status.message ? (
           <p
-            className={`rounded-2xl border p-3 text-sm ${
-              status.type === "error"
+            className={`rounded-2xl border p-3 text-sm ${status.type === "error"
                 ? "border-rose-300/40 bg-rose-300/10 text-rose-100"
                 : "border-teal-300/40 bg-teal-300/10 text-teal-100"
-            }`}
+              }`}
           >
             {status.message}
           </p>
         ) : null}
 
-        {isLoadingData ? <p>Loading catalog...</p> : null}
+        {isLoadingData ? (
+          <div className="space-y-6 animate-pulse">
+            <div className="flex w-full flex-wrap gap-2 rounded-2xl border border-white/10 bg-[#11161f] p-1.5">
+              <Skeleton className="h-10 w-28 rounded-xl bg-white/10" />
+              <Skeleton className="h-10 w-28 rounded-xl bg-white/10" />
+              <Skeleton className="h-10 w-52 rounded-xl bg-white/10" />
+              <Skeleton className="h-10 w-28 rounded-xl bg-white/10" />
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <Skeleton className="mb-6 h-8 w-1/4 bg-white/10" />
+              <div className="space-y-4">
+                <Skeleton className="h-20 w-full rounded-2xl bg-white/10" />
+                <Skeleton className="h-20 w-full rounded-2xl bg-white/10" />
+                <Skeleton className="h-20 w-full rounded-2xl bg-white/10" />
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {!isLoadingData ? (
           <div className="space-y-6">
@@ -752,607 +769,607 @@ const CatalogAdmin = () => {
 
             {activeAdminTab === "offerings" ? (
               <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <div className="mb-5">
-                <h2 className="text-lg font-semibold text-white">Offerings</h2>
-                <p className="mt-1 text-xs text-white/60">
-                  Choose an offering type first, then edit one offering in a cleaner single-screen form.
-                </p>
-              </div>
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewSectionForm((prev) => !prev)}
-                    className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100"
-                  >
-                    {showNewSectionForm ? "Hide new type" : "Add new offering type"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewOfferingForm((prev) => !prev)}
-                    className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                    disabled={!selectedSectionId}
-                  >
-                    {showNewOfferingForm ? "Hide new offering" : "Add new offering"}
-                  </button>
+                <div className="mb-5">
+                  <h2 className="text-lg font-semibold text-white">Offerings</h2>
+                  <p className="mt-1 text-xs text-white/60">
+                    Choose an offering type first, then edit one offering in a cleaner single-screen form.
+                  </p>
                 </div>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowNewSectionForm((prev) => !prev)}
+                      className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100"
+                    >
+                      {showNewSectionForm ? "Hide new type" : "Add new offering type"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewOfferingForm((prev) => !prev)}
+                      className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                      disabled={!selectedSectionId}
+                    >
+                      {showNewOfferingForm ? "Hide new offering" : "Add new offering"}
+                    </button>
+                  </div>
 
-                {(showNewSectionForm || showNewOfferingForm) ? (
-                  <div className="grid gap-4 xl:grid-cols-2">
-                    {showNewSectionForm ? (
-                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add offering type</p>
-                        <div className="mt-4 space-y-3">
+                  {(showNewSectionForm || showNewOfferingForm) ? (
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      {showNewSectionForm ? (
+                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add offering type</p>
+                          <div className="mt-4 space-y-3">
+                            <label className="block space-y-1 text-xs text-white/60">
+                              <span>Type title</span>
+                              <input
+                                value={newSection.title}
+                                onChange={(event) => updateNewSection("title", event.target.value)}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                placeholder="For example: Coaching"
+                              />
+                            </label>
+                            <label className="block space-y-1 text-xs text-white/60">
+                              <span>Description</span>
+                              <textarea
+                                value={newSection.description}
+                                onChange={(event) => updateNewSection("description", event.target.value)}
+                                rows={3}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                placeholder="Short description for this offering type"
+                              />
+                            </label>
+                            <div className="flex flex-wrap gap-3">
+                              <button
+                                type="button"
+                                onClick={handleCreateSection}
+                                disabled={isCreatingSection}
+                                className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                              >
+                                {isCreatingSection ? "Creating..." : "Add offering type"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowNewSectionForm(false)}
+                                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {showNewOfferingForm ? (
+                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add offering to selected type</p>
+                          <div className="mt-4 space-y-3">
+                            <label className="block space-y-1 text-xs text-white/60">
+                              <span>Selected type</span>
+                              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
+                                {sectionsById[selectedSectionId]?.title || "Choose a type first"}
+                              </div>
+                            </label>
+                            <label className="block space-y-1 text-xs text-white/60">
+                              <span>Offering title</span>
+                              <input
+                                value={newOffering.title}
+                                onChange={(event) => updateNewOffering("title", event.target.value)}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                placeholder="For example: Private Mentorship"
+                              />
+                            </label>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <label className="block space-y-1 text-xs text-white/60">
+                                <span>Subtitle</span>
+                                <input
+                                  value={newOffering.subtitle}
+                                  onChange={(event) => updateNewOffering("subtitle", event.target.value)}
+                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                  placeholder="Optional subtitle"
+                                />
+                              </label>
+                              <label className="block space-y-1 text-xs text-white/60">
+                                <span>Price (USD)</span>
+                                <input
+                                  value={newOffering.price_usd}
+                                  onChange={(event) => updateNewOffering("price_usd", event.target.value)}
+                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                  placeholder="Optional"
+                                />
+                              </label>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                              <button
+                                type="button"
+                                onClick={handleCreateOffering}
+                                disabled={isCreatingOffering || !selectedSectionId}
+                                className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                              >
+                                {isCreatingOffering ? "Creating..." : "Add offering"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowNewOfferingForm(false)}
+                                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                    <label className="space-y-1 text-xs text-white/60">
+                      <span>Offering type</span>
+                      <select
+                        value={selectedSectionId}
+                        onChange={(event) => setSelectedSectionId(event.target.value)}
+                        className="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                      >
+                        {sections.map((section) => (
+                          <option key={section.id} value={section.id} className="bg-gray-900">
+                            {section.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="space-y-1 text-xs text-white/60">
+                      <span>Offering</span>
+                      <select
+                        value={selectedOfferingId}
+                        onChange={(event) => setSelectedOfferingId(event.target.value)}
+                        className="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                      >
+                        {offeringsForSelectedSection.map((offering) => (
+                          <option key={offering.id} value={offering.id} className="bg-gray-900">
+                            {offering.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">
+                          Current type
+                        </p>
+                        <p className="mt-1 text-base font-semibold text-white">
+                          {selectedSection?.title || "No type selected"}
+                        </p>
+                      </div>
+                      <p className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
+                        {offeringsForSelectedSection.length} offering{offeringsForSelectedSection.length === 1 ? "" : "s"} in this type
+                      </p>
+                    </div>
+                    {selectedSection ? (
+                      <div className="mt-4 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Type details</p>
+                        <div className="grid gap-3">
                           <label className="block space-y-1 text-xs text-white/60">
                             <span>Type title</span>
                             <input
-                              value={newSection.title}
-                              onChange={(event) => updateNewSection("title", event.target.value)}
+                              value={selectedSection.title || ""}
+                              onChange={(event) => updateSectionEditor("title", event.target.value)}
                               className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              placeholder="For example: Coaching"
                             />
                           </label>
-                          <label className="block space-y-1 text-xs text-white/60">
-                            <span>Description</span>
-                            <textarea
-                              value={newSection.description}
-                              onChange={(event) => updateNewSection("description", event.target.value)}
-                              rows={3}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              placeholder="Short description for this offering type"
-                            />
-                          </label>
-                          <div className="flex flex-wrap gap-3">
-                            <button
-                              type="button"
-                              onClick={handleCreateSection}
-                              disabled={isCreatingSection}
-                              className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                            >
-                              {isCreatingSection ? "Creating..." : "Add offering type"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowNewSectionForm(false)}
-                              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70"
-                            >
-                              Cancel
-                            </button>
-                          </div>
                         </div>
-                      </div>
-                    ) : null}
-
-                    {showNewOfferingForm ? (
-                      <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add offering to selected type</p>
-                        <div className="mt-4 space-y-3">
-                          <label className="block space-y-1 text-xs text-white/60">
-                            <span>Selected type</span>
-                            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
-                              {sectionsById[selectedSectionId]?.title || "Choose a type first"}
-                            </div>
-                          </label>
-                          <label className="block space-y-1 text-xs text-white/60">
-                            <span>Offering title</span>
-                            <input
-                              value={newOffering.title}
-                              onChange={(event) => updateNewOffering("title", event.target.value)}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              placeholder="For example: Private Mentorship"
-                            />
-                          </label>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>Subtitle</span>
-                              <input
-                                value={newOffering.subtitle}
-                                onChange={(event) => updateNewOffering("subtitle", event.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                placeholder="Optional subtitle"
-                              />
-                            </label>
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>Price (USD)</span>
-                              <input
-                                value={newOffering.price_usd}
-                                onChange={(event) => updateNewOffering("price_usd", event.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                placeholder="Optional"
-                              />
-                            </label>
-                          </div>
-                          <div className="flex flex-wrap gap-3">
-                            <button
-                              type="button"
-                              onClick={handleCreateOffering}
-                              disabled={isCreatingOffering || !selectedSectionId}
-                              className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                            >
-                              {isCreatingOffering ? "Creating..." : "Add offering"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowNewOfferingForm(false)}
-                              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                  <label className="space-y-1 text-xs text-white/60">
-                    <span>Offering type</span>
-                    <select
-                      value={selectedSectionId}
-                      onChange={(event) => setSelectedSectionId(event.target.value)}
-                      className="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                    >
-                      {sections.map((section) => (
-                        <option key={section.id} value={section.id} className="bg-gray-900">
-                          {section.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-1 text-xs text-white/60">
-                    <span>Offering</span>
-                    <select
-                      value={selectedOfferingId}
-                      onChange={(event) => setSelectedOfferingId(event.target.value)}
-                      className="w-full rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                    >
-                      {offeringsForSelectedSection.map((offering) => (
-                        <option key={offering.id} value={offering.id} className="bg-gray-900">
-                          {offering.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">
-                        Current type
-                      </p>
-                      <p className="mt-1 text-base font-semibold text-white">
-                        {selectedSection?.title || "No type selected"}
-                      </p>
-                    </div>
-                    <p className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
-                      {offeringsForSelectedSection.length} offering{offeringsForSelectedSection.length === 1 ? "" : "s"} in this type
-                    </p>
-                  </div>
-                  {selectedSection ? (
-                    <div className="mt-4 space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Type details</p>
-                      <div className="grid gap-3">
                         <label className="block space-y-1 text-xs text-white/60">
-                          <span>Type title</span>
-                          <input
-                            value={selectedSection.title || ""}
-                            onChange={(event) => updateSectionEditor("title", event.target.value)}
+                          <span>Description</span>
+                          <textarea
+                            value={selectedSection.description || ""}
+                            onChange={(event) => updateSectionEditor("description", event.target.value)}
+                            rows={3}
                             className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                           />
                         </label>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(selectedSection.is_active)}
+                              onChange={(event) => updateSectionEditor("is_active", event.target.checked)}
+                            />
+                            Active type
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleSaveSection}
+                            disabled={isSavingSection}
+                            className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                          >
+                            {isSavingSection ? "Saving..." : "Save offering type"}
+                          </button>
+                        </div>
                       </div>
-                      <label className="block space-y-1 text-xs text-white/60">
-                        <span>Description</span>
-                        <textarea
-                          value={selectedSection.description || ""}
-                          onChange={(event) => updateSectionEditor("description", event.target.value)}
-                          rows={3}
-                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                        />
-                      </label>
+                    ) : null}
+                  </div>
+
+                  {editor ? (
+                    <div className="space-y-4">
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Core content</p>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              {[
+                                ["title", "Title"],
+                                ["subtitle", "Subtitle"],
+                                ["price_usd", "Price (USD only)"],
+                              ].map(([key, label]) => (
+                                <label key={key} className="space-y-1 text-xs text-white/60">
+                                  <span>{label}</span>
+                                  <input
+                                    value={editor[key] ?? ""}
+                                    onChange={(event) => updateEditor(key, event.target.value)}
+                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                  />
+                                </label>
+                              ))}
+                            </div>
+
+                            <label className="mt-3 block space-y-1 text-xs text-white/60">
+                              <span>Summary</span>
+                              <textarea
+                                value={editor.summary || ""}
+                                onChange={(event) => updateEditor("summary", event.target.value)}
+                                rows={3}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                              />
+                            </label>
+
+                            <label className="mt-3 block space-y-1 text-xs text-white/60">
+                              <span>Long description</span>
+                              <textarea
+                                value={editor.long_description || ""}
+                                onChange={(event) => updateEditor("long_description", event.target.value)}
+                                rows={6}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                              />
+                            </label>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Offer details</p>
+                            <label className="mt-4 block space-y-1 text-xs text-white/60">
+                              <span>Highlights (one per line)</span>
+                              <textarea
+                                value={editor.highlightsText || ""}
+                                onChange={(event) => updateEditor("highlightsText", event.target.value)}
+                                rows={6}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Media and placement</p>
+                            <div className="mt-4 grid gap-3">
+                              <div className="space-y-2">
+                                <span className="block text-xs text-white/60">Upload image</span>
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <label className="inline-flex cursor-pointer items-center rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={handleOfferingImageUpload}
+                                    />
+                                    {uploadingTarget === "offering-image" ? "Uploading..." : "Upload offering image"}
+                                  </label>
+                                  {editor.image_url ? (
+                                    <a
+                                      href={editor.image_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-sm text-white/55 underline-offset-4 hover:text-white hover:underline"
+                                    >
+                                      Preview image
+                                    </a>
+                                  ) : null}
+                                </div>
+                              </div>
+                              {[
+                                ["image_url", "Image URL"],
+                                ["image_alt", "Image alt"],
+                              ].map(([key, label]) => (
+                                <label key={key} className="space-y-1 text-xs text-white/60">
+                                  <span>{label}</span>
+                                  <input
+                                    value={editor[key] ?? ""}
+                                    onChange={(event) => updateEditor(key, event.target.value)}
+                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                  />
+                                </label>
+                              ))}
+                              <label className="space-y-1 text-xs text-white/60">
+                                <span>Offering type</span>
+                                <select
+                                  value={editor.section_id || ""}
+                                  onChange={(event) => {
+                                    updateEditor("section_id", event.target.value);
+                                    setSelectedSectionId(event.target.value);
+                                  }}
+                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                >
+                                  {sections.map((section) => (
+                                    <option key={section.id} value={section.id} className="bg-gray-900">
+                                      {section.title}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(editor.is_active)}
+                                  onChange={(event) => updateEditor("is_active", event.target.checked)}
+                                />
+                                Active
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-white/60">
+                            <p className="font-semibold uppercase tracking-[0.24em] text-white/45">Editing now</p>
+                            <p className="mt-3 text-sm font-semibold text-white">
+                              {editor.title || "Untitled offering"}
+                            </p>
+                            <p className="mt-1">
+                              Type: {sectionsById[editor.section_id]?.title || editor.section_id}
+                            </p>
+                            <p className="mt-1">ID: {editor.id}</p>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex flex-wrap items-center gap-3">
-                        <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(selectedSection.is_active)}
-                            onChange={(event) => updateSectionEditor("is_active", event.target.checked)}
-                          />
-                          Active type
-                        </label>
                         <button
                           type="button"
-                          onClick={handleSaveSection}
-                          disabled={isSavingSection}
-                          className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                          onClick={handleSaveOffering}
+                          disabled={isSavingOffering}
+                          className="rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 disabled:opacity-60"
                         >
-                          {isSavingSection ? "Saving..." : "Save offering type"}
+                          {isSavingOffering ? "Saving..." : "Save offering"}
                         </button>
+                        <p className="text-sm text-white/45">
+                          Edits are scoped to the selected offering only.
+                        </p>
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/60">
+                      No offerings found for this type yet.
+                    </div>
+                  )}
                 </div>
-
-                {editor ? (
-                  <div className="space-y-4">
-                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-                      <div className="space-y-4">
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Core content</p>
-                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                            {[
-                              ["title", "Title"],
-                              ["subtitle", "Subtitle"],
-                              ["price_usd", "Price (USD only)"],
-                            ].map(([key, label]) => (
-                              <label key={key} className="space-y-1 text-xs text-white/60">
-                                <span>{label}</span>
-                                <input
-                                  value={editor[key] ?? ""}
-                                  onChange={(event) => updateEditor(key, event.target.value)}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                />
-                              </label>
-                            ))}
-                          </div>
-
-                          <label className="mt-3 block space-y-1 text-xs text-white/60">
-                            <span>Summary</span>
-                            <textarea
-                              value={editor.summary || ""}
-                              onChange={(event) => updateEditor("summary", event.target.value)}
-                              rows={3}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                            />
-                          </label>
-
-                          <label className="mt-3 block space-y-1 text-xs text-white/60">
-                            <span>Long description</span>
-                            <textarea
-                              value={editor.long_description || ""}
-                              onChange={(event) => updateEditor("long_description", event.target.value)}
-                              rows={6}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                            />
-                          </label>
-                        </div>
-
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Offer details</p>
-                          <label className="mt-4 block space-y-1 text-xs text-white/60">
-                            <span>Highlights (one per line)</span>
-                            <textarea
-                              value={editor.highlightsText || ""}
-                              onChange={(event) => updateEditor("highlightsText", event.target.value)}
-                              rows={6}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                            />
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Media and placement</p>
-                          <div className="mt-4 grid gap-3">
-                            <div className="space-y-2">
-                              <span className="block text-xs text-white/60">Upload image</span>
-                              <div className="flex flex-wrap items-center gap-3">
-                                <label className="inline-flex cursor-pointer items-center rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100">
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={handleOfferingImageUpload}
-                                  />
-                                  {uploadingTarget === "offering-image" ? "Uploading..." : "Upload offering image"}
-                                </label>
-                                {editor.image_url ? (
-                                  <a
-                                    href={editor.image_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-sm text-white/55 underline-offset-4 hover:text-white hover:underline"
-                                  >
-                                    Preview image
-                                  </a>
-                                ) : null}
-                              </div>
-                            </div>
-                            {[
-                              ["image_url", "Image URL"],
-                              ["image_alt", "Image alt"],
-                            ].map(([key, label]) => (
-                              <label key={key} className="space-y-1 text-xs text-white/60">
-                                <span>{label}</span>
-                                <input
-                                  value={editor[key] ?? ""}
-                                  onChange={(event) => updateEditor(key, event.target.value)}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                />
-                              </label>
-                            ))}
-                            <label className="space-y-1 text-xs text-white/60">
-                              <span>Offering type</span>
-                              <select
-                                value={editor.section_id || ""}
-                                onChange={(event) => {
-                                  updateEditor("section_id", event.target.value);
-                                  setSelectedSectionId(event.target.value);
-                                }}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              >
-                                {sections.map((section) => (
-                                  <option key={section.id} value={section.id} className="bg-gray-900">
-                                    {section.title}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
-                              <input
-                                type="checkbox"
-                                checked={Boolean(editor.is_active)}
-                                onChange={(event) => updateEditor("is_active", event.target.checked)}
-                              />
-                              Active
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-white/60">
-                          <p className="font-semibold uppercase tracking-[0.24em] text-white/45">Editing now</p>
-                          <p className="mt-3 text-sm font-semibold text-white">
-                            {editor.title || "Untitled offering"}
-                          </p>
-                          <p className="mt-1">
-                            Type: {sectionsById[editor.section_id]?.title || editor.section_id}
-                          </p>
-                          <p className="mt-1">ID: {editor.id}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={handleSaveOffering}
-                        disabled={isSavingOffering}
-                        className="rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 disabled:opacity-60"
-                      >
-                        {isSavingOffering ? "Saving..." : "Save offering"}
-                      </button>
-                      <p className="text-sm text-white/45">
-                        Edits are scoped to the selected offering only.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/60">
-                    No offerings found for this type yet.
-                  </div>
-                )}
-              </div>
               </section>
             ) : null}
 
             {activeAdminTab === "shared" ? (
               <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <div className="mb-5">
-                <h2 className="text-lg font-semibold text-white">Shared Checkout Content</h2>
-                <p className="mt-1 text-xs text-white/60">Shared copy that applies across checkout and buy pages.</p>
-              </div>
-              <div className="space-y-4">
-                <div className="flex flex-col gap-4">
-                  {[
-                    ["manualInstructionsText", "Manual instructions (one per line)"],
-                    ["legalNotesText", "Legal notes (one per line)"],
-                    ["closingNotesText", "Closing notes (one per line)"],
-                  ].map(([key, label]) => (
-                    <label key={key} className="space-y-1 text-xs text-white/60">
-                      <span>{label}</span>
-                      <textarea
-                        value={globalEditor[key] || ""}
-                        onChange={(event) => updateGlobalEditor(key, event.target.value)}
-                        rows={6}
-                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                      />
-                    </label>
-                  ))}
+                <div className="mb-5">
+                  <h2 className="text-lg font-semibold text-white">Shared Checkout Content</h2>
+                  <p className="mt-1 text-xs text-white/60">Shared copy that applies across checkout and buy pages.</p>
                 </div>
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-4">
+                    {[
+                      ["manualInstructionsText", "Manual instructions (one per line)"],
+                      ["legalNotesText", "Legal notes (one per line)"],
+                      ["closingNotesText", "Closing notes (one per line)"],
+                    ].map(([key, label]) => (
+                      <label key={key} className="space-y-1 text-xs text-white/60">
+                        <span>{label}</span>
+                        <textarea
+                          value={globalEditor[key] || ""}
+                          onChange={(event) => updateGlobalEditor(key, event.target.value)}
+                          rows={6}
+                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                        />
+                      </label>
+                    ))}
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={handleSaveGlobalContent}
-                  disabled={isSavingGlobal}
-                  className="rounded-full border border-teal-300/50 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                >
-                  {isSavingGlobal ? "Saving..." : "Save shared content"}
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveGlobalContent}
+                    disabled={isSavingGlobal}
+                    className="rounded-full border border-teal-300/50 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                  >
+                    {isSavingGlobal ? "Saving..." : "Save shared content"}
+                  </button>
+                </div>
               </section>
             ) : null}
 
             {activeAdminTab === "reviews" ? (
               <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <div className="mb-5">
-                <h2 className="text-lg font-semibold text-white">Reviews</h2>
-                <p className="mt-1 text-xs text-white/60">
-                  Manage multiple reviews for home testimonials and offering-specific buy pages.
-                </p>
-              </div>
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => setReviewsEditor((prev) => [...prev, { ...createEmptyReview(), sort_order: prev.length }])}
-                  className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100"
-                >
-                  Add review
-                </button>
-
+                <div className="mb-5">
+                  <h2 className="text-lg font-semibold text-white">Reviews</h2>
+                  <p className="mt-1 text-xs text-white/60">
+                    Manage multiple reviews for home testimonials and offering-specific buy pages.
+                  </p>
+                </div>
                 <div className="space-y-4">
-                  {reviewsEditor.map((review, index) => (
-                    <div key={review.id} className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="space-y-1 text-xs text-white/60">
-                          <span>Placement</span>
-                          <select
-                            value={review.placement || "home"}
-                            onChange={(event) => updateReviewEditor(index, "placement", event.target.value)}
-                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                          >
-                            <option value="home" className="bg-gray-900">Home</option>
-                            <option value="buy" className="bg-gray-900">Buy (offering specific)</option>
-                            <option value="global" className="bg-gray-900">Buy (global)</option>
-                          </select>
-                        </label>
+                  <button
+                    type="button"
+                    onClick={() => setReviewsEditor((prev) => [...prev, { ...createEmptyReview(), sort_order: prev.length }])}
+                    className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100"
+                  >
+                    Add review
+                  </button>
 
-                        <label className="space-y-1 text-xs text-white/60">
-                          <span>Offering type</span>
-                          <select
-                            value={review.section_id || ""}
-                            onChange={(event) =>
-                              setReviewsEditor((prev) =>
-                                prev.map((entry, entryIndex) =>
-                                  entryIndex === index
-                                    ? { ...entry, section_id: event.target.value, offering_id: "" }
-                                    : entry,
-                                ),
-                              )
-                            }
-                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                          >
-                            <option value="" className="bg-gray-900">None</option>
-                            {sections.map((section) => (
-                              <option key={section.id} value={section.id} className="bg-gray-900">
-                                {section.title}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                  <div className="space-y-4">
+                    {reviewsEditor.map((review, index) => (
+                      <div key={review.id} className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="space-y-1 text-xs text-white/60">
+                            <span>Placement</span>
+                            <select
+                              value={review.placement || "home"}
+                              onChange={(event) => updateReviewEditor(index, "placement", event.target.value)}
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                            >
+                              <option value="home" className="bg-gray-900">Home</option>
+                              <option value="buy" className="bg-gray-900">Buy (offering specific)</option>
+                              <option value="global" className="bg-gray-900">Buy (global)</option>
+                            </select>
+                          </label>
 
-                        <label className="space-y-1 text-xs text-white/60">
-                          <span>Offering (optional)</span>
-                          <select
-                            value={review.offering_id || ""}
-                            onChange={(event) => updateReviewEditor(index, "offering_id", event.target.value)}
-                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                          >
-                            <option value="" className="bg-gray-900">None</option>
-                            {(offeringsBySection[review.section_id] || []).map((offering) => (
-                              <option key={offering.id} value={offering.id} className="bg-gray-900">
-                                {offering.title}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                          <label className="space-y-1 text-xs text-white/60">
+                            <span>Offering type</span>
+                            <select
+                              value={review.section_id || ""}
+                              onChange={(event) =>
+                                setReviewsEditor((prev) =>
+                                  prev.map((entry, entryIndex) =>
+                                    entryIndex === index
+                                      ? { ...entry, section_id: event.target.value, offering_id: "" }
+                                      : entry,
+                                  ),
+                                )
+                              }
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                            >
+                              <option value="" className="bg-gray-900">None</option>
+                              {sections.map((section) => (
+                                <option key={section.id} value={section.id} className="bg-gray-900">
+                                  {section.title}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
 
-                        <label className="space-y-1 text-xs text-white/60">
-                          <span>Heading</span>
-                          <input
-                            value={review.heading || ""}
-                            onChange={(event) => updateReviewEditor(index, "heading", event.target.value)}
-                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                          />
-                        </label>
+                          <label className="space-y-1 text-xs text-white/60">
+                            <span>Offering (optional)</span>
+                            <select
+                              value={review.offering_id || ""}
+                              onChange={(event) => updateReviewEditor(index, "offering_id", event.target.value)}
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                            >
+                              <option value="" className="bg-gray-900">None</option>
+                              {(offeringsBySection[review.section_id] || []).map((offering) => (
+                                <option key={offering.id} value={offering.id} className="bg-gray-900">
+                                  {offering.title}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
 
-                        <label className="space-y-1 text-xs text-white/60">
-                          <span>Author</span>
-                          <input
-                            value={review.author || ""}
-                            onChange={(event) => updateReviewEditor(index, "author", event.target.value)}
-                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                          />
-                        </label>
-
-                        <label className="space-y-1 text-xs text-white/60">
-                          <span>Review image URL</span>
-                          <div className="flex items-center gap-2">
+                          <label className="space-y-1 text-xs text-white/60">
+                            <span>Heading</span>
                             <input
-                              value={review.image_url || ""}
-                              onChange={(event) => updateReviewEditor(index, "image_url", event.target.value)}
+                              value={review.heading || ""}
+                              onChange={(event) => updateReviewEditor(index, "heading", event.target.value)}
                               className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                             />
-                            <label
-                              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-teal-300/50 bg-teal-300/10 text-base text-teal-100 transition hover:bg-teal-300/20"
-                              title={uploadingTarget === `review-image-${index}` ? "Uploading image" : "Upload image"}
-                            >
+                          </label>
+
+                          <label className="space-y-1 text-xs text-white/60">
+                            <span>Author</span>
+                            <input
+                              value={review.author || ""}
+                              onChange={(event) => updateReviewEditor(index, "author", event.target.value)}
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                            />
+                          </label>
+
+                          <label className="space-y-1 text-xs text-white/60">
+                            <span>Review image URL</span>
+                            <div className="flex items-center gap-2">
                               <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(event) => handleReviewImageUpload(event, index)}
+                                value={review.image_url || ""}
+                                onChange={(event) => updateReviewEditor(index, "image_url", event.target.value)}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                               />
-                              <span aria-hidden="true">
-                                {uploadingTarget === `review-image-${index}` ? "..." : "\u2191"}
-                              </span>
-                            </label>
-                            {review.image_url ? (
-                              <a
-                                href={review.image_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-xs text-white/55 underline-offset-4 hover:text-white hover:underline"
+                              <label
+                                className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-teal-300/50 bg-teal-300/10 text-base text-teal-100 transition hover:bg-teal-300/20"
+                                title={uploadingTarget === `review-image-${index}` ? "Uploading image" : "Upload image"}
                               >
-                                Preview image
-                              </a>
-                            ) : null}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(event) => handleReviewImageUpload(event, index)}
+                                />
+                                <span aria-hidden="true">
+                                  {uploadingTarget === `review-image-${index}` ? "..." : "\u2191"}
+                                </span>
+                              </label>
+                              {review.image_url ? (
+                                <a
+                                  href={review.image_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs text-white/55 underline-offset-4 hover:text-white hover:underline"
+                                >
+                                  Preview image
+                                </a>
+                              ) : null}
+                            </div>
+                          </label>
+
+                          <label className="space-y-1 text-xs text-white/60">
+                            <span>Review image alt</span>
+                            <input
+                              value={review.image_alt || ""}
+                              onChange={(event) => updateReviewEditor(index, "image_alt", event.target.value)}
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                            />
+                          </label>
+
+                          <div className="flex items-center gap-3">
+                            <label className="inline-flex items-center gap-2 text-xs text-white/70">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(review.is_active)}
+                                onChange={(event) => updateReviewEditor(index, "is_active", event.target.checked)}
+                              />
+                              Active
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setReviewsEditor((prev) => prev.filter((_, entryIndex) => entryIndex !== index))}
+                              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#141922] text-lg leading-none text-white/70 transition hover:border-rose-300/40 hover:bg-rose-300/10 hover:text-rose-100"
+                              aria-label="Delete review"
+                            >
+                              <span aria-hidden="true">&times;</span>
+                            </button>
                           </div>
-                        </label>
+                        </div>
 
                         <label className="space-y-1 text-xs text-white/60">
-                          <span>Review image alt</span>
-                          <input
-                            value={review.image_alt || ""}
-                            onChange={(event) => updateReviewEditor(index, "image_alt", event.target.value)}
+                          <span>Quote</span>
+                          <textarea
+                            value={review.quote || ""}
+                            onChange={(event) => updateReviewEditor(index, "quote", event.target.value)}
+                            rows={3}
                             className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                           />
                         </label>
 
-                        <div className="flex items-center gap-3">
-                          <label className="inline-flex items-center gap-2 text-xs text-white/70">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(review.is_active)}
-                              onChange={(event) => updateReviewEditor(index, "is_active", event.target.checked)}
-                            />
-                            Active
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setReviewsEditor((prev) => prev.filter((_, entryIndex) => entryIndex !== index))}
-                            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#141922] text-lg leading-none text-white/70 transition hover:border-rose-300/40 hover:bg-rose-300/10 hover:text-rose-100"
-                            aria-label="Delete review"
-                          >
-                            <span aria-hidden="true">&times;</span>
-                          </button>
-                        </div>
                       </div>
+                    ))}
+                  </div>
 
-                      <label className="space-y-1 text-xs text-white/60">
-                        <span>Quote</span>
-                        <textarea
-                          value={review.quote || ""}
-                          onChange={(event) => updateReviewEditor(index, "quote", event.target.value)}
-                          rows={3}
-                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                        />
-                      </label>
-
-                    </div>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={handleSaveReviews}
+                    disabled={isSavingReviews}
+                    className="rounded-full border border-teal-300/50 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                  >
+                    {isSavingReviews ? "Saving..." : "Save reviews"}
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleSaveReviews}
-                  disabled={isSavingReviews}
-                  className="rounded-full border border-teal-300/50 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                >
-                  {isSavingReviews ? "Saving..." : "Save reviews"}
-                </button>
-              </div>
               </section>
             ) : null}
           </div>

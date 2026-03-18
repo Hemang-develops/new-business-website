@@ -16,7 +16,7 @@ const fallbackCountryData = [
   { name: "United Kingdom", code: "GB", currencies: ["GBP"] },
 ];
 const DEFAULT_PAYPAL_LINK = "https://www.paypal.com/paypalme/NehalPatel64";
-const MIN_INSTALLMENT_AMOUNT_INR = 15000;
+const MIN_INSTALLMENT_AMOUNT_INR = 15000000; // to enable disable installment
 
 const defaultInstallmentPresets = [
   {
@@ -488,7 +488,7 @@ const PaymentSection = ({ item }) => {
           window.location.href = backupLink;
           return;
         }
-        throw new Error("UPI is manual right now. Please use Stripe or contact support for UPI details.");
+        throw new Error("UPI is manual right now. Contact support for UPI details. Please use Stripe or PayPal to pay");
       }
 
       const { data, error: functionError } = await supabase.functions.invoke("stripe-endpoint", {
