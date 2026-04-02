@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSmoothScroll } from "../../../hooks/useSmoothScroll";
@@ -12,6 +12,7 @@ import { useToast } from "../../../context/ToastContext";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../supabase-client";
 import { Skeleton } from "../../../components/ui/skeleton";
+import BookingEmbed from "../../../components/storefront/BookingEmbed";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -21,34 +22,15 @@ const fallbackCountryData = [
 ];
 const reviewsTable = import.meta.env.VITE_SUPABASE_REVIEWS_TABLE || "storefront_reviews";
 
-const CheckoutStatusBanner = ({ status, itemTitle }) => {
-  if (!status) {
-    return null;
-  }
 
-  const normalized = status.toLowerCase();
-  if (normalized !== "success" && normalized !== "cancel") {
-    return null;
-  }
-
-  const isSuccess = normalized === "success";
-  const title = isSuccess ? "Payment confirmed" : "Checkout cancelled";
-  const description = isSuccess
-    ? `Your order for ${itemTitle} is confirmed. Check your inbox for the download or welcome email - if it's missing, reply to this message and we'll resend it manually.`
-    : "You left the Stripe checkout flow early. You can relaunch it above or email us to request an alternate payment option.";
-
-  return (
-    <div
-      className={`rounded-3xl border p-6 text-sm leading-relaxed shadow-inner backdrop-blur ${isSuccess
-        ? "border-teal-300/60 bg-teal-300/10 text-teal-50"
-        : "border-amber-300/60 bg-amber-300/10 text-amber-100"
-        }`}
-    >
-      <p className="text-xs font-semibold uppercase tracking-[0.3em]">{title}</p>
-      <p className="mt-3">{description}</p>
-    </div>
-  );
-};
+const BookingNextStepBanner = ({ item }) => (
+  <div className="rounded-3xl border border-teal-300/40 bg-teal-300/10 p-6 text-sm leading-relaxed text-teal-50 shadow-inner backdrop-blur">
+    <p className="text-xs font-semibold uppercase tracking-[0.3em]">Next step unlocked</p>
+    <p className="mt-3">
+      Your payment for {item.title} is confirmed. Use the booking section below to choose your session time.
+    </p>
+  </div>
+);
 
 const DetailSection = ({ detailsSections }) => {
   if (!detailsSections?.length) {
@@ -477,6 +459,7 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
   const navigate = useNavigate();
   const [hasImageError, setHasImageError] = useState(false);
   const toast = useToast();
+  const lastCheckoutToastRef = useRef("");
   const { section } = offeringsIndex[item.id];
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -488,9 +471,14 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
 
   useEffect(() => {
     if (!checkoutStatus) {
+      lastCheckoutToastRef.current = "";
       return;
     }
     const normalized = checkoutStatus.toLowerCase();
+    if (lastCheckoutToastRef.current === normalized) {
+      return;
+    }
+    lastCheckoutToastRef.current = normalized;
     if (normalized === "success") {
       toast.success(`Your order for ${item.title} is confirmed.`, "Payment confirmed");
       return;
@@ -499,6 +487,10 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
       toast.info("Checkout was cancelled. You can restart it anytime from this page.", "Checkout cancelled");
     }
   }, [checkoutStatus, item.title, toast]);
+
+  const hasCheckout = Boolean(item.checkoutOptions);
+  const bookingEnabled = Boolean(item.booking?.enabled);
+  const bookingUnlocked = bookingEnabled && (!hasCheckout || String(checkoutStatus || "").toLowerCase() === "success");
 
   return (
     <main className="relative z-10">
@@ -534,7 +526,7 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
 
       <section className="bg-gray-950 px-6 pb-24 pt-12">
         <div className="mx-auto max-w-5xl space-y-10">
-          {checkoutStatus ? <CheckoutStatusBanner status={checkoutStatus} itemTitle={item.title} /> : null}
+          {bookingUnlocked && hasCheckout ? <BookingNextStepBanner item={item} /> : null}
           <div className="flex flex-col gap-10">
             <div className="space-y-8 lg:flex-1">
               <SuccessStory successStory={item.successStory} reviews={item.reviews} />
@@ -557,7 +549,15 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
             </div>
 
             <div className="lg:flex-[1.1]">
-              <PaymentSection item={item} />
+              {bookingEnabled ? (
+                bookingUnlocked ? (
+                  <BookingEmbed item={item} />
+                ) : (
+                  <PaymentSection item={item} />
+                )
+              ) : (
+                <PaymentSection item={item} />
+              )}
             </div>
             <ReviewSubmissionForm itemId={item.id} />
           </div>

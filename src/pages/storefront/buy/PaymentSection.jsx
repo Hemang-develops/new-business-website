@@ -8,6 +8,8 @@ import { useToast } from "../../../context/ToastContext";
 import { supabase } from "../../../supabase-client";
 
 const isExternalLink = (link) => typeof link === "string" && /^(https?:|upi:|mailto:)/.test(link);
+const RAZORPAY_CHECKOUT_URL = "https://checkout.razorpay.com/v1/checkout.js";
+const RAZORPAY_CANCELLED_MESSAGE = "Razorpay checkout cancelled.";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -61,6 +63,33 @@ const applyInstallmentFeeToCurrencies = (currencies, feePercent) => {
     return acc;
   }, {});
 };
+
+const loadRazorpayCheckout = () =>
+  new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Razorpay is only available in the browser."));
+      return;
+    }
+
+    if (window.Razorpay) {
+      resolve(window.Razorpay);
+      return;
+    }
+
+    const existing = document.querySelector(`script[src="${RAZORPAY_CHECKOUT_URL}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => resolve(window.Razorpay), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Unable to load Razorpay checkout.")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = RAZORPAY_CHECKOUT_URL;
+    script.async = true;
+    script.onload = () => resolve(window.Razorpay);
+    script.onerror = () => reject(new Error("Unable to load Razorpay checkout."));
+    document.body.appendChild(script);
+  });
 
 const PaymentSection = ({ item }) => {
   const { user, isAuthenticated } = useAuth();
@@ -385,6 +414,9 @@ const PaymentSection = ({ item }) => {
     }
     return resolved.filter((instruction) => !/support button below/i.test(instruction));
   }, [backupLink, manualInstructions, upiInstructionLabel]);
+  const successPath = `/buy/${item.id}?status=success`;
+  const cancelPath = `/buy/${item.id}?status=cancel`;
+  const canUseRazorpay = hasCheckout && presentmentCurrency === "inr" && typeof presentmentUnitAmount === "number";
 
   useEffect(() => {
     setAcceptedLegalNotes(legalNotes.map(() => false));
@@ -415,7 +447,10 @@ const PaymentSection = ({ item }) => {
     if (!canShowUpiOption && paymentMethod === "upi") {
       setPaymentMethod("stripe");
     }
-  }, [canShowUpiOption, paymentMethod]);
+    if (!canUseRazorpay && paymentMethod === "razorpay") {
+      setPaymentMethod("stripe");
+    }
+  }, [canShowUpiOption, canUseRazorpay, paymentMethod]);
 
   useEffect(() => {
     if (!import.meta.env.DEV || !averageRoundedExtraLabel) {
@@ -490,6 +525,100 @@ const PaymentSection = ({ item }) => {
         }
         throw new Error("UPI is manual right now. Contact support for UPI details. Please use Stripe or PayPal to pay");
       }
+      if (paymentMethod === "razorpay") {
+        if (!canUseRazorpay) {
+          throw new Error("Razorpay is currently available only for INR payments.");
+        }
+
+        const Razorpay = await loadRazorpayCheckout();
+        if (!Razorpay) {
+          throw new Error("Razorpay checkout is unavailable right now.");
+        }
+
+        const { data: orderData, error: orderError } = await supabase.functions.invoke("razorpay-create-order", {
+          body: {
+            productId: item.id,
+            packageId: selectedPackage?.id || null,
+            packageLabel: selectedPackage?.label || null,
+            amount: presentmentUnitAmount,
+            currency: "INR",
+            email: email.trim(),
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            fullName: `${firstName.trim()} ${lastName.trim()}`.trim(),
+            country,
+            successPath,
+            cancelPath,
+          },
+        });
+
+        if (orderError) {
+          throw new Error(orderError.message || "Unable to create Razorpay order.");
+        }
+
+        const paymentCompleted = await new Promise((resolve, reject) => {
+          const razorpay = new Razorpay({
+            key: orderData?.keyId,
+            amount: orderData?.amount,
+            currency: orderData?.currency || "INR",
+            name: "High Frequencies 11",
+            description: item.title,
+            order_id: orderData?.orderId,
+            prefill: {
+              name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+              email: email.trim(),
+            },
+            notes: {
+              productId: item.id,
+              packageId: selectedPackage?.id || "",
+              packageLabel: selectedPackage?.label || "",
+            },
+            theme: {
+              color: "#2dd4bf",
+            },
+            modal: {
+              ondismiss: () => {
+                window.location.href = cancelPath;
+                resolve(false);
+              },
+            },
+            handler: async (response) => {
+              try {
+                const { data: verifyData, error: verifyError } = await supabase.functions.invoke("razorpay-verify-payment", {
+                  body: {
+                    productId: item.id,
+                    orderId: orderData?.orderId,
+                    razorpayOrderId: response.razorpay_order_id,
+                    paymentId: response.razorpay_payment_id,
+                    signature: response.razorpay_signature,
+                    successPath,
+                    cancelPath,
+                  },
+                });
+
+                if (verifyError) {
+                  throw new Error(verifyError.message || "Unable to verify Razorpay payment.");
+                }
+
+                if (verifyData?.status !== "success") {
+                  throw new Error(verifyData?.error || "Razorpay payment verification failed.");
+                }
+
+                window.location.href = successPath;
+                resolve(true);
+              } catch (verificationError) {
+                reject(verificationError);
+              }
+            },
+          });
+
+          razorpay.open();
+        });
+        if (!paymentCompleted) {
+          return;
+        }
+        return;
+      }
 
       const { data, error: functionError } = await supabase.functions.invoke("stripe-endpoint", {
         body: {
@@ -515,6 +644,10 @@ const PaymentSection = ({ item }) => {
           fullName: `${firstName.trim()} ${lastName.trim()}`.trim(),
           email: email.trim(),
           country,
+          returnUrl: window.location.href,
+          cancelUrl: window.location.href,
+          cancelPath: window.location.pathname,
+          successUrl: window.location.origin,
         },
       });
 
@@ -538,6 +671,10 @@ const PaymentSection = ({ item }) => {
           ? err.message
           : "Unexpected error while launching checkout. Please email us and I'll help manually.";
 
+      if (message === RAZORPAY_CANCELLED_MESSAGE) {
+        return;
+      }
+
       if (err?.name === "TypeError") {
         const nextMessage = `${message} If this keeps happening, use the manual payment instructions below while we restore the secure checkout link.`;
         setError(nextMessage);
@@ -555,10 +692,12 @@ const PaymentSection = ({ item }) => {
     if (isSubmitting) {
       if (paymentMethod === "paypal") return "Redirecting to PayPal...";
       if (paymentMethod === "upi") return "Opening UPI...";
+      if (paymentMethod === "razorpay") return "Opening Razorpay...";
       return "Redirecting to Stripe...";
     }
     if (paymentMethod === "paypal") return "Continue with PayPal";
     if (paymentMethod === "upi") return "Continue with UPI";
+    if (paymentMethod === "razorpay") return "Continue with Razorpay";
     return "Confirm and pay now";
   };
 
@@ -604,7 +743,7 @@ const PaymentSection = ({ item }) => {
 
             <label className="flex flex-col space-y-2 text-sm text-white/70">
               <span className="font-semibold text-white">Payment method</span>
-              <div className={`grid gap-2 ${canShowUpiOption ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+              <div className={`grid gap-2 ${canShowUpiOption || canUseRazorpay ? "sm:grid-cols-4" : "sm:grid-cols-2"}`}>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("stripe")}
@@ -640,6 +779,19 @@ const PaymentSection = ({ item }) => {
                     <p className="mt-1 text-xs text-white/70">
                       {upiLink ? "Pay instantly via UPI app" : "Get UPI details via support"}
                     </p>
+                  </button>
+                ) : null}
+                {canUseRazorpay ? (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("razorpay")}
+                    className={`rounded-xl border px-4 py-3 text-left transition ${paymentMethod === "razorpay"
+                      ? "border-teal-200 bg-teal-300/20 text-teal-50"
+                      : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white"
+                      }`}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em]">Razorpay</p>
+                    <p className="mt-1 text-xs text-white/70">Cards, UPI, netbanking in INR</p>
                   </button>
                 ) : null}
               </div>
@@ -736,6 +888,8 @@ const PaymentSection = ({ item }) => {
               <p className="text-xs text-white/60">
                 {paymentMethod === "paypal"
                   ? "You will be redirected to PayPal to complete payment securely."
+                  : paymentMethod === "razorpay"
+                    ? "Razorpay checkout will open in a secure modal for your INR payment."
                   : paymentMethod === "upi"
                     ? upiLink
                       ? "You will be redirected to your UPI payment flow."

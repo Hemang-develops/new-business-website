@@ -7,8 +7,13 @@ import AuthPage from './pages/auth/AuthPage';
 import CatalogAdmin from './pages/admin/CatalogAdmin';
 import { TooltipProvider } from './components/ui/tooltip';
 import { AuthProvider } from './context/AuthContext';
+import { SiteSettingsProvider } from './context/SiteSettingsContext';
 import { ToastProvider } from './context/ToastContext';
+import { loadSavedTheme } from './utils/themeGenerator';
 import './styles/globals.css';
+
+// Apply any saved theme at startup
+loadSavedTheme();
 
 function RouteScrollController() {
   const location = useLocation();
@@ -44,27 +49,29 @@ function RouteScrollController() {
 function App() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <TooltipProvider>
-          <Router>
-            <RouteScrollController />
-            <div className="flex flex-col min-h-screen">
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/offerings/:sectionId" element={<Buy />} />
-                  <Route path="/buy/:productId" element={<Buy />} />
-                  <Route path="/buy/:productId/:status" element={<Buy />} />
-                  <Route path="/sign-in" element={<AuthPage mode="signin" />} />
-                  <Route path="/sign-up" element={<AuthPage mode="signup" />} />
-                  <Route path="/admin" element={<CatalogAdmin />} />
-                  <Route path="/thank-you" element={<ThankYou />} />
-                </Routes>
-              </main>
-            </div>
-          </Router>
-        </TooltipProvider>
-      </ToastProvider>
+      <SiteSettingsProvider>
+        <ToastProvider>
+          <TooltipProvider>
+            <Router>
+              <RouteScrollController />
+              <div className="flex flex-col min-h-screen">
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/offerings/:sectionId" element={<Buy />} />
+                    <Route path="/buy/:productId" element={<Buy />} />
+                    <Route path="/buy/:productId/:status" element={<Buy />} />
+                    <Route path="/sign-in" element={<AuthPage mode="signin" />} />
+                    <Route path="/sign-up" element={<AuthPage mode="signup" />} />
+                    <Route path="/admin" element={<CatalogAdmin />} />
+                    <Route path="/thank-you" element={<ThankYou />} />
+                  </Routes>
+                </main>
+              </div>
+            </Router>
+          </TooltipProvider>
+        </ToastProvider>
+      </SiteSettingsProvider>
     </AuthProvider>
   );
 }

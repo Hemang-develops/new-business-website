@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useReveal } from '../hooks/useReveal';
+import { useSiteSettings } from "../context/SiteSettingsContext";
 import { supabase } from "../supabase-client";
 
 const fallbackTestimonials = [
@@ -22,6 +23,8 @@ const fallbackTestimonials = [
 ];
 
 const Testimonials = () => {
+  const { getSection } = useSiteSettings();
+  const testimonialsSection = getSection("testimonials");
   const reviewsTable = import.meta.env.VITE_SUPABASE_REVIEWS_TABLE || "storefront_reviews";
   const [testimonials, setTestimonials] = useState(fallbackTestimonials);
 
@@ -57,14 +60,12 @@ const Testimonials = () => {
     <section id="testimonials" className="min-h-[calc(100vh-4rem)] bg-gray-950 py-4 pt-16 text-white lg:py-8">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-400">
-            Testimonials
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-400">{testimonialsSection?.eyebrow}</p>
           <h2 className="mt-4 text-4xl font-bold text-white sm:text-5xl">
-            Words from the High Frequencies 11 collective.
+            {testimonialsSection?.heading}
           </h2>
           <p className="mx-auto mt-6 max-w-3xl text-lg text-gray-300">
-            Real people. Real timelines collapsing. Real lives transforming.
+            {testimonialsSection?.description}
           </p>
         </div>
 

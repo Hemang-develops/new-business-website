@@ -3,6 +3,7 @@ import Footer from "../../components/common/Footer";
 import Navigation from "../../components/Navigation";
 import { BuyDetailView, BuyListView, BuyDetailViewSkeleton, BuyListViewSkeleton, UnknownProduct, UnknownSection } from "./buy/BuyViews";
 import { useOfferingsData } from "../../hooks/useOfferingsData";
+import FAQSection from "../../components/storefront/FAQSection";
 
 const Buy = () => {
   const { buySections, offeringsIndex, isLoading } = useOfferingsData();
@@ -36,6 +37,7 @@ const Buy = () => {
       ) : (
         <UnknownSection />
       )}
+      <FAQSection />
       <Footer />
     </div>
   );

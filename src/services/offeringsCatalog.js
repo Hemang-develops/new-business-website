@@ -25,6 +25,22 @@ const mapOffering = (row, section, sharedContent, reviewMap) => {
   const offeringSpecificReviews = reviewMap.byOffering[row.id] || [];
   const sharedBuyReviews = reviewMap.sharedBuy || [];
   const mergedReviews = [...offeringSpecificReviews, ...sharedBuyReviews];
+  const ctaType = row.cta_type || (checkoutOptions ? "checkout" : "contact");
+  const booking = row.booking_enabled
+    ? {
+        enabled: Boolean(row.booking_enabled),
+        provider: row.booking_provider || "calcom",
+        status: row.booking_status || "pending",
+        externalId: row.booking_external_id || undefined,
+        url: row.booking_url || undefined,
+        ctaLabel: row.booking_cta_label || row.cta_label || section.cta_label || "Book now",
+        durationMinutes: row.duration_minutes || undefined,
+        sessionFormat: row.session_format || undefined,
+        hostId: row.host_id || undefined,
+        lastError: row.booking_last_error || undefined,
+      }
+    : undefined;
+  const fallbackActionLink = section.action_link || row.action_link || undefined;
 
   return {
     id: row.id,
@@ -35,8 +51,12 @@ const mapOffering = (row, section, sharedContent, reviewMap) => {
     summary: row.summary || "",
     longDescription: row.long_description || undefined,
     price: mapPrice(row),
-    ctaLabel: section.cta_label || row.cta_label || undefined,
-    actionLink: section.action_link || row.action_link || undefined,
+    ctaType,
+    ctaLabel:
+      (ctaType === "booking"
+        ? booking?.ctaLabel
+        : row.cta_label || section.cta_label) || undefined,
+    actionLink: fallbackActionLink,
     checkoutFallbackMessage: section.checkout_fallback_message || row.checkout_fallback_message || undefined,
     purchase: section.purchase_label || section.purchase_link || row.purchase_label || row.purchase_link
       ? {
@@ -59,6 +79,7 @@ const mapOffering = (row, section, sharedContent, reviewMap) => {
     legalNotes: sharedContent.legalNotes,
     closingNotes: sharedContent.closingNotes,
     detailsSections: detailsSections.length ? detailsSections : undefined,
+    booking,
     reviews: mergedReviews,
     successStory:
       mergedReviews[0] ||
@@ -128,6 +149,19 @@ const fetchCatalogFromSupabase = async () => {
           summary,
           long_description,
           price_usd,
+          cta_type,
+          cta_label,
+          action_link,
+          booking_enabled,
+          booking_provider,
+          booking_status,
+          booking_external_id,
+          booking_url,
+          booking_cta_label,
+          duration_minutes,
+          session_format,
+          host_id,
+          booking_last_error,
           checkout:storefront_checkout_configs(config),
           highlights:storefront_offering_highlights(sort_order,text),
           payment_methods:storefront_offering_payment_methods(sort_order,method),

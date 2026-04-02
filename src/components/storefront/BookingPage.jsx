@@ -1,17 +1,5 @@
-import React from 'react';
-import { CalcomWidget } from '@calcom/react-widget';
+import BookingEmbed from "./BookingEmbed";
 
-const App = () => {
-  return (
-    <div>
-      <h1>Welcome to My Website</h1>
-      <CalcomWidget
-        schedulingLink="YOUR_SCHEDULING_LINK_HERE"
-        buttonText="Book my Cal"
-        
-      />
-    </div>
-  );
-}
+const BookingPage = ({ item }) => <BookingEmbed item={item} />;
 
-export default App;
+export default BookingPage;

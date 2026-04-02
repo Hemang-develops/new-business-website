@@ -1,7 +1,11 @@
 import WorldMap from "./ui/world-map";
 import { useReveal } from '../hooks/useReveal';
+import { useSiteSettings } from "../context/SiteSettingsContext";
 
 const About = () => {
+  const { getSection, getSectionItems } = useSiteSettings();
+  const aboutSection = getSection("about");
+  const highlights = getSectionItems("about");
   const [phRef, phVisible] = useReveal({ threshold: 0.2 });
   const globalDots = [
     {
@@ -53,21 +57,6 @@ const About = () => {
       end: { lat: 36.7783, lng: -119.4197, label: "California, USA" },
     },
   ];
-  const highlights = [
-    {
-      label: "1,000+",
-      description: "souls supported through sessions, workshops, and digital communities",
-    },
-    {
-      label: "8+ years",
-      description: "of practical manifestation and mindset coaching experience",
-    },
-    {
-      label: "Global",
-      description: "clients from 15 countries united by the High Frequencies 11 movement",
-    },
-  ];
-
   return (
     <section
       id="about"
@@ -76,23 +65,18 @@ const About = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-sky-950/30 via-gray-950 to-transparent flex flex-col" />
       <div className="relative mx-auto flex max-w-6xl flex-col gap-16 px-6 lg:flex-row lg:items-center">
         <div className="lg:w-1/2">
-          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-400">
-            About the movement
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-400">{aboutSection?.eyebrow}</p>
           <h2 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl">
-            High Frequencies 11 is a sanctuary for conscious creators.
+            {aboutSection?.heading}
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-gray-300">
-            Founded by manifestation mentor <span className="font-semibold text-blue-400">Nehal Patel</span>,
-            High Frequencies 11 helps you collapse timelines, trust your inner guidance, and
-            manifest a life that reflects your highest self. We blend spiritual wisdom with
-            grounded action so you can experience sustainable shifts rather than quick fixes.
+            {aboutSection?.description}
           </p>
-          <p className="mt-4 text-lg leading-relaxed text-gray-300">
-            Whether you join for high-touch private mentorship, immersive audio coaching, or
-            heart-led community circles, every offering is designed to amplify your energy and
-            make manifestation practical, joyful, and deeply personal.
-          </p>
+          {aboutSection?.descriptionSecondary ? (
+            <p className="mt-4 text-lg leading-relaxed text-gray-300">
+              {aboutSection.descriptionSecondary}
+            </p>
+          ) : null}
         </div>
         <div className="lg:w-1/2">
           {/* <div className="grid gap-6 sm:grid-cols-3">
@@ -124,20 +108,18 @@ const About = () => {
               <div className="flex flex-col gap-6">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.32em] text-blue-400">
-                    Around the world
+                    {aboutSection?.supportingEyebrow}
                   </p>
-                  <h3 className="mt-3 text-xl font-semibold">Our users are building new realities globally</h3>
+                  <h3 className="mt-3 text-xl font-semibold">{aboutSection?.supportingHeading}</h3>
                   <p className="mt-3 text-base leading-relaxed text-gray-300">
-                    High Frequencies 11 supports clients across time zones, cultures, and chapters of
-                    life. The work may be personal, but the movement is international.
+                    {aboutSection?.supportingDescription}
                   </p>
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-blue-400/20 bg-gradient-to-br from-slate-950 via-[#081120] to-slate-900 p-3 shadow-inner shadow-sky-950/40">
                   <WorldMap dots={globalDots} lineColor="#60a5fa" theme="dark" />
                 </div>
                 <p className="text-sm leading-relaxed text-gray-400">
-                  From North America to Europe, the Middle East, Africa, Asia, and Australia, our
-                  community keeps expanding through aligned support and word of mouth.
+                  {aboutSection?.supportingNote}
                 </p>
               </div>
             </div>
@@ -149,14 +131,14 @@ const About = () => {
           const [ref, visible] = useReveal({ threshold: 0.2 });
           return (
             <div
-              key={item.label}
+              key={item.key}
               ref={ref}
               className={`group rounded-2xl border border-white/10 bg-white/5 p-6 text-center shadow-xl shadow-black/20 backdrop-blur transition-all duration-700 ease-out hover:-translate-y-1 ${
                 visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
               }`}
             >
               <p className="text-3xl font-bold text-blue-400 transition-colors group-hover:text-blue-300">
-                {item.label}
+                {item.title}
               </p>
               <p className="mt-2 text-sm text-gray-300">{item.description}</p>
             </div>

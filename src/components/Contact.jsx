@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import worldMap from "../assets/world.svg";
 import { useToast } from "../context/ToastContext";
+import { useSiteSettings } from "../context/SiteSettingsContext";
 import { useOfferingsData } from "../hooks/useOfferingsData";
 import { Skeleton } from "./ui/skeleton";
 import { Input } from "./ui/input";
@@ -15,27 +16,13 @@ const initialFormState = {
 };
 
 const Contact = () => {
+  const { getSection, getLinks } = useSiteSettings();
+  const contactSection = getSection("contact");
   const { offeringSupportOptions, isLoading } = useOfferingsData();
   const toast = useToast();
   const [formValues, setFormValues] = useState(initialFormState);
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
-  const contactMethods = [
-    {
-      label: "Email",
-      value: "highfrequencies11@gmail.com",
-      href: "mailto:highfrequencies11@gmail.com",
-    },
-    {
-      label: "Instagram",
-      value: "@highfrequencies11",
-      href: "https://www.instagram.com/highfrequencies11/",
-    },
-    {
-      label: "YouTube",
-      value: "@nehalpatelishere",
-      href: "https://www.youtube.com/@nehalpatelishere",
-    },
-  ];
+  const contactMethods = getLinks("contact");
 
   const supportOptions = [...(offeringSupportOptions || []), "Custom collaboration"];
 
@@ -130,15 +117,14 @@ const Contact = () => {
                 </div>
 
                 <p className="text-sm font-semibold uppercase tracking-[0.35em] text-brand-primary">
-                  Connect
+                  {contactSection?.eyebrow}
                 </p>
               </div>
               <h2 className="mt-4 max-w-xl bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl">
-                Ready to raise your frequency?
+                {contactSection?.heading}
               </h2>
               <p className="mt-6 max-w-xl text-base leading-7 text-white/70">
-                Tell me about the reality you are stepping into and how you desire to be supported. I
-                respond to all inquiries within 48 hours Monday through Friday.
+                {contactSection?.description}
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-white/55">
@@ -181,10 +167,10 @@ const Contact = () => {
             <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(148,163,184,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.16)_1px,transparent_1px)] [background-position:center] [background-size:22px_22px]" />
 
             <div className="relative z-10">
-              <h3 className="text-2xl font-semibold text-white">Share your intentions</h3>
+              <h3 className="text-2xl font-semibold text-white">{contactSection?.formHeading || "Share your intentions"}</h3>
               <p className="mt-3 max-w-xl text-sm leading-6 text-gray-300">
-                This form lands directly in my inbox. Share your story, desires, and what kind of
-                support you are calling in.
+                {contactSection?.formDescription ||
+                  "This form lands directly in my inbox. Share your story, desires, and what kind of support you are calling in."}
               </p>
 
               <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
@@ -259,7 +245,7 @@ const Contact = () => {
                   aria-label={submissionState.status === "submitting" ? "Sending message" : "Send message"}
                   className="inline-flex w-full items-center justify-center rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/30 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-white/70"
                 >
-                  {submissionState.status === "submitting" ? "Sending..." : "Send message"}
+                  {submissionState.status === "submitting" ? "Sending..." : contactSection?.formSubmitLabel || "Send message"}
                 </button>
               </form>
 
@@ -273,8 +259,8 @@ const Contact = () => {
               </div>
 
               <p className="mt-6 text-sm text-gray-400">
-                By submitting this form you agree to receive occasional updates about High Frequencies
-                11 offerings. You can opt out at any time.
+                {contactSection?.formDisclaimer ||
+                  "By submitting this form you agree to receive occasional updates about High Frequencies 11 offerings. You can opt out at any time."}
               </p>
             </div>
           </div>

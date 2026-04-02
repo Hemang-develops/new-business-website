@@ -83,8 +83,33 @@ Requirement:
 4. Separate offerings to types in home page for separate landing page of each 
 5. minimum amount for installment: 15000 INR
 6. introduce toast msg for attention
+11. make demo live
+10. improve confirm email supabase default mail
+
 7. add comment(review) in offerings(option to add image)
 8. user inventory (admin)
-9. calendly integration
-10. improve confirm email supabase default mail
-11. make demo live // priority
+9. calendly integration - > cal.com integration
+
+## Cal.com booking sync
+
+This project now supports auto-provisioned Cal.com event types for offerings saved from the admin.
+
+Frontend env:
+
+```env
+VITE_CALCOM_DEFAULT_HOST_ID=default-host
+```
+
+Supabase Edge Function secrets:
+
+```env
+CALCOM_USERNAME=your-calcom-username
+CALCOM_API_KEY=cal_xxx
+RAZORPAY_KEY_ID=rzp_live_xxx
+RAZORPAY_KEY_SECRET=xxx
+```
+
+Deploy the booking sync function after adding the new `storefront_offerings` booking columns from:
+
+- `supabase/add_booking_fields_to_storefront_offerings.sql`
+- `supabase/functions/sync-booking-offering`

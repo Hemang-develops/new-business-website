@@ -12,13 +12,33 @@ import Testimonials from '../../components/Testimonials';
 import { useSmoothScroll } from '../../hooks/useSmoothScroll';
 import Footer from '../../components/common/Footer';
 import Hero from '../../components/storefront/Hero';
+import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { getBrowserRegion, getCountries, getUsdRates } from '../../services/marketData';
 
 export function Home() {
   useSmoothScroll();
   const location = useLocation();
+  const { settings } = useSiteSettings();
   const [localRateLabel, setLocalRateLabel] = useState("");
   const browserRegion = useMemo(() => getBrowserRegion(), []);
+  const sectionComponents = useMemo(
+    () => ({
+      hero: <Hero />,
+      about: <About />,
+      programs: <Programs />,
+      services: <Services />,
+      testimonials: <Testimonials />,
+      resources: <Resources />,
+      coaching: <PersonalizedCoachingCTA />,
+      contact: <Contact />,
+      newsletter: <Newsletter />,
+    }),
+    [],
+  );
+  const enabledSections = useMemo(
+    () => settings.sections.filter((section) => section.enabled && sectionComponents[section.id]),
+    [sectionComponents, settings.sections],
+  );
 
   useEffect(() => {
     if (location.hash) {
@@ -66,15 +86,9 @@ export function Home() {
     <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
       <Navigation />
       <main className="relative z-10">
-        <Hero />
-        <About />
-        <Programs />
-        <Services />
-        <Testimonials />
-        <Resources />
-        <PersonalizedCoachingCTA />
-        <Contact />
-        <Newsletter />
+        {enabledSections.map((section) => (
+          <div key={section.id}>{sectionComponents[section.id]}</div>
+        ))}
       </main>
       <Footer />
     </div>

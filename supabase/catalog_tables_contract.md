@@ -38,6 +38,20 @@ Optional link object columns:
 - `manual_support_label` (text)
 - `manual_support_link` (text)
 
+Booking columns:
+- `cta_type` (text, `checkout | booking | contact`)
+- `booking_enabled` (boolean)
+- `booking_provider` (text, currently `calcom`)
+- `booking_status` (text, `pending | synced | failed`)
+- `booking_external_id` (text)
+- `booking_url` (text)
+- `booking_cta_label` (text)
+- `duration_minutes` (integer)
+- `session_format` (text)
+- `host_id` (text)
+- `booking_last_synced_at` (timestamptz)
+- `booking_last_error` (text)
+
 Array/object JSONB columns:
 - `highlights` (jsonb) array of strings
 - `payment_methods` (jsonb) array of strings

@@ -55,6 +55,11 @@ button {
 }
 
 :root {
+  --site-brand-primary: #06b6d4;
+  --site-brand-primary-light: #67e8f9;
+  --site-brand-secondary: #8b5cf6;
+  --site-brand-accent: #ec4899;
+  --site-brand-dark: #0f172a;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -174,5 +179,134 @@ button {
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .bg-brand-primary { background-color: var(--site-brand-primary) !important; }
+  .bg-brand-dark { background-color: var(--site-brand-dark) !important; }
+  .bg-brand-primary-light { background-color: var(--site-brand-primary-light) !important; }
+  .bg-brand-secondary { background-color: var(--site-brand-secondary) !important; }
+  .bg-brand-accent { background-color: var(--site-brand-accent) !important; }
+  .text-brand-primary { color: var(--site-brand-primary) !important; }
+  .text-brand-primary-light { color: var(--site-brand-primary-light) !important; }
+  .text-brand-secondary { color: var(--site-brand-secondary) !important; }
+  .text-brand-accent { color: var(--site-brand-accent) !important; }
+  .border-brand-primary { border-color: var(--site-brand-primary) !important; }
+  .border-brand-primary-light { border-color: var(--site-brand-primary-light) !important; }
+  .border-brand-secondary { border-color: var(--site-brand-secondary) !important; }
+  .border-brand-accent { border-color: var(--site-brand-accent) !important; }
+  .from-brand-secondary {
+    --tw-gradient-from: var(--site-brand-secondary) var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+  .via-brand-secondary {
+    --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--site-brand-secondary) var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+  }
+  .to-brand-primary {
+    --tw-gradient-to: var(--site-brand-primary) var(--tw-gradient-to-position) !important;
+  }
+  .hover\:bg-brand-primary-light:hover { background-color: var(--site-brand-primary-light) !important; }
+  .hover\:text-brand-primary-light:hover { color: var(--site-brand-primary-light) !important; }
+  .hover\:border-brand-primary-light:hover { border-color: var(--site-brand-primary-light) !important; }
+  .focus-visible\:border-brand-primary:focus-visible { border-color: var(--site-brand-primary) !important; }
+  .focus-visible\:ring-brand-primary:focus-visible { --tw-ring-color: var(--site-brand-primary) !important; }
+
+  .text-blue-400,
+  .text-sky-400,
+  .text-teal-200,
+  .text-teal-100,
+  .text-teal-50,
+  .text-pink-200 {
+    color: var(--site-brand-primary-light) !important;
+  }
+
+  .text-purple-600,
+  .text-blue-500 {
+    color: var(--site-brand-secondary) !important;
+  }
+
+  .text-pink-500,
+  .text-rose-500,
+  .text-amber-100,
+  .text-amber-200 {
+    color: var(--site-brand-accent) !important;
+  }
+
+  .bg-blue-500,
+  .bg-teal-300 {
+    background-color: var(--site-brand-primary) !important;
+  }
+
+  .bg-blue-400,
+  .bg-teal-200,
+  .bg-sky-300 {
+    background-color: var(--site-brand-primary-light) !important;
+  }
+
+  .bg-pink-500,
+  .bg-pink-400 {
+    background-color: var(--site-brand-accent) !important;
+  }
+
+  .border-blue-400,
+  .border-sky-400,
+  .border-teal-300,
+  .focus\:border-blue-400:focus,
+  .focus-visible\:border-blue-400:focus-visible {
+    border-color: var(--site-brand-primary) !important;
+  }
+
+  .focus-visible\:ring-blue-400:focus-visible,
+  .focus\:ring-blue-400:focus,
+  .focus\:ring-teal-300:focus,
+  .focus-visible\:ring-teal-300:focus-visible {
+    --tw-ring-color: color-mix(in srgb, var(--site-brand-primary) 28%, transparent) !important;
+  }
+
+  .hover\:bg-blue-400:hover,
+  .hover\:bg-teal-200:hover {
+    background-color: var(--site-brand-primary-light) !important;
+  }
+
+  .hover\:text-blue-300:hover,
+  .hover\:text-teal-200:hover,
+  .hover\:text-pink-200:hover {
+    color: var(--site-brand-primary-light) !important;
+  }
+
+  .hover\:border-blue-400:hover,
+  .hover\:border-teal-300:hover,
+  .hover\:border-pink-300:hover {
+    border-color: var(--site-brand-primary-light) !important;
+  }
+
+  .from-blue-600,
+  .from-teal-500,
+  .from-teal-400,
+  .from-blue-500,
+  .from-sky-500,
+  .from-purple-100,
+  .from-sky-950,
+  .from-purple-900 {
+    --tw-gradient-from: var(--site-brand-secondary) var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  .via-blue-500,
+  .via-blue-600,
+  .via-purple-600 {
+    --tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--site-brand-primary) var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+  }
+
+  .to-purple-600,
+  .to-rose-500,
+  .to-pink-100,
+  .to-blue-600 {
+    --tw-gradient-to: var(--site-brand-accent) var(--tw-gradient-to-position) !important;
   }
 }

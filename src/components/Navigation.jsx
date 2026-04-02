@@ -12,14 +12,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const anchorLinks = [
-  { label: "About", href: "#about" },
-  { label: "Programs", href: "#programs" },
-  { label: "Services", href: "#services" },
-  { label: "Testimonials", href: "#testimonials" },
-  { label: "Contact", href: "#contact" },
-];
+import { useSiteSettings } from "../context/SiteSettingsContext";
 
 const quickLinkGroups = {
   content: {
@@ -91,8 +84,10 @@ const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const { settings } = useSiteSettings();
   const quickPanelRef = useRef(null);
   const quickPanelButtonRef = useRef(null);
+  const anchorLinks = settings.sections.filter((section) => section.enabled && section.navVisible && section.anchor);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -181,15 +176,15 @@ const Navigation = () => {
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link to="/" className="text-2xl font-bold text-white" onClick={() => setIsDrawerOpen(false)}>
-            HF11
+            {settings.brand.navTitle}
           </Link>
 
           <div className="hidden items-center gap-10 lg:flex">
             {anchorLinks.map((link) => (
               <a
-                key={link.label}
-                href={link.href}
-                onClick={(event) => handleAnchorNavigation(event, link.href)}
+                key={link.id}
+                href={link.anchor}
+                onClick={(event) => handleAnchorNavigation(event, link.anchor)}
                 className="text-sm font-medium tracking-[0.24em] text-white/70 transition-colors hover:text-teal-200"
               >
                 {link.label}
@@ -225,10 +220,10 @@ const Navigation = () => {
               {accountLabel}
             </Link>
             <Link
-              to="/#programs"
+              to={settings.brand.shopHref}
               className="inline-flex items-center gap-2 rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-200"
             >
-              Visit shop
+              {settings.brand.shopLabel}
             </Link>
           </div>
 
@@ -297,8 +292,8 @@ const Navigation = () => {
             </div>
             <div className="mt-6 rounded-2xl border border-teal-300/40 bg-teal-300/10 p-4 text-sm text-teal-100">
               Need support choosing an offering? Email
-              <a className="ml-1 font-semibold" href="mailto:highfrequencies11@gmail.com">
-                highfrequencies11@gmail.com
+              <a className="ml-1 font-semibold" href={`mailto:${settings.brand.supportEmail}`}>
+                {settings.brand.supportEmail}
               </a>
               .
             </div>
@@ -324,20 +319,20 @@ const Navigation = () => {
           <div className="space-y-5">
             {anchorLinks.map((link) => (
               <a
-                key={link.label}
-                href={link.href}
-                onClick={(event) => handleAnchorNavigation(event, link.href, true)}
+                key={link.id}
+                href={link.anchor}
+                onClick={(event) => handleAnchorNavigation(event, link.anchor, true)}
                 className="block text-base font-medium tracking-[0.28em] text-white/80 transition-colors hover:text-teal-200"
               >
                 {link.label}
               </a>
             ))}
             <Link
-              to="/#programs"
+              to={settings.brand.shopHref}
               onClick={() => setIsDrawerOpen(false)}
               className="inline-flex items-center gap-2 rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-200"
             >
-              Visit shop
+              {settings.brand.shopLabel}
             </Link>
             <Link
               to="/sign-in"
@@ -395,8 +390,8 @@ const Navigation = () => {
             <p className="text-sm font-medium uppercase tracking-[0.35em] text-white/60">Need a sign?</p>
             <p className="mt-2 text-sm">
               Email
-              <a href="mailto:highfrequencies11@gmail.com" className="ml-1 text-teal-200">
-                highfrequencies11@gmail.com
+              <a href={`mailto:${settings.brand.supportEmail}`} className="ml-1 text-teal-200">
+                {settings.brand.supportEmail}
               </a>
               and let's talk about what you're manifesting.
             </p>

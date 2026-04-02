@@ -1,6 +1,7 @@
 import HorizontalCard from "./common/HorizontalCard";
 import { useReveal } from "../hooks/useReveal";
 import { useOfferingsData } from "../hooks/useOfferingsData";
+import { useSiteSettings } from "../context/SiteSettingsContext";
 import { Skeleton } from "./ui/skeleton";
 
 const ProgramItem = ({ group }) => {
@@ -55,17 +56,19 @@ const ProgramSkeleton = () => (
 
 const Programs = () => {
   const { buySections, isLoading } = useOfferingsData();
+  const { getSection } = useSiteSettings();
+  const programsSection = getSection("programs");
 
   return (
     <section id="programs" className="min-h-[calc(100vh-4rem)] bg-gray-950 py-4 pt-16 text-white lg:py-8">
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-400">Offerings</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-400">{programsSection?.eyebrow}</p>
           <h2 className="mt-4 text-4xl font-bold text-white sm:text-5xl">
-            Choose the support that aligns with your season of growth.
+            {programsSection?.heading}
           </h2>
           <p className="mx-auto mt-6 max-w-3xl text-lg text-gray-300">
-            Every option below is a living portal into your next reality. Select what resonates now and I will follow up with next steps within 24 hours.
+            {programsSection?.description}
           </p>
         </div>
 
