@@ -13,6 +13,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../supabase-client";
 import { Skeleton } from "../../../components/ui/skeleton";
 import OfferingHero from "../../../components/storefront/OfferingHero";
+import RichTextContent from "../../../components/ui/RichTextContent";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -42,7 +43,7 @@ const DetailSection = ({ detailsSections }) => {
       {detailsSections?.map((section) => (
         <div key={section.heading} className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">
           <h3 className="text-lg font-semibold text-white">{section.heading}</h3>
-          {section.description && <p className="text-base leading-relaxed text-white/75">{section.description}</p>}
+          {section.description && <RichTextContent value={section.description} className="text-base leading-relaxed text-white/75" />}
           {section.items && (
             <ul className="space-y-3 text-sm leading-relaxed text-white/70">
               {section.items.map((item) => (
@@ -56,23 +57,6 @@ const DetailSection = ({ detailsSections }) => {
         </div>
       ))}
     </section>
-  );
-};
-
-const OfferHighlights = ({ item }) => {
-  if (!item.highlights?.length) {
-    return null;
-  }
-
-  return (
-    <ul className="space-y-3 text-sm leading-relaxed text-white/75">
-      {item.highlights.map((highlight) => (
-        <li key={highlight} className="flex items-center gap-3">
-          <span className="mt-1 block h-1.5 w-1.5 rounded-full bg-teal-300" />
-          <span>{highlight}</span>
-        </li>
-      ))}
-    </ul>
   );
 };
 
@@ -173,7 +157,6 @@ const OfferCard = ({ item, displayPriceLabel }) => {
           )}
         </div>
         <p className="text-base text-white/80">{item.summary}</p>
-        <OfferHighlights item={item} />
       </div>
 
       <div className="mt-6">
@@ -386,7 +369,7 @@ export const BuyListView = ({ buySections = [] }) => {
           <div className="mx-auto max-w-6xl px-6">
             <div className="text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-teal-300">{section.title}</p>
-              <p className="mt-4 text-lg text-white/70">{section.description}</p>
+              <RichTextContent value={section.description} className="mt-4 text-lg text-white/70" />
             </div>
             <div className={activeSection ? "mt-12 grid auto-rows-fr gap-8 md:grid-cols-2" : "mt-12 flex flex-col gap-10"}>
               {section.items.map((item) => {
@@ -490,8 +473,7 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
               />
             </div>
           ) : null}
-          <p className="max-w-3xl text-lg text-white/75">{item.longDescription || item.summary}</p>
-          <OfferHighlights item={item} />
+          <RichTextContent value={item.longDescription || item.summary} className="max-w-3xl text-lg text-white/75" />
         </div>
       </section>
 

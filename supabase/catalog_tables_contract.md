@@ -5,7 +5,7 @@ The frontend now expects three separate Supabase tables (not one umbrella JSON t
 ## 1) `storefront_sections`
 - `id` (text, primary key)
 - `title` (text, not null)
-- `description` (text, nullable)
+- `description` (text, nullable, stores sanitized rich text HTML for paragraphs/lists)
 - `sort_order` (int, default 0)
 - `is_active` (boolean, default true)
 - `updated_at` (timestamptz, default now())
@@ -22,7 +22,7 @@ Core content columns:
 - `image_alt` (text, nullable)
 - `subtitle` (text)
 - `summary` (text)
-- `long_description` (text)
+- `long_description` (text, stores sanitized rich text HTML for paragraphs/lists)
 - `price_label` (text)
 - `cta_label` (text)
 - `action_link` (text)
@@ -53,7 +53,7 @@ Booking columns:
 - `booking_last_error` (text)
 
 Array/object JSONB columns:
-- `highlights` (jsonb) array of strings
+- `highlights` (jsonb) array of strings, legacy/optional; offer detail copy now lives in `long_description` rich text
 - `payment_methods` (jsonb) array of strings
 - `price_details` (jsonb) array of objects
 - `manual_instructions` (jsonb) array of strings

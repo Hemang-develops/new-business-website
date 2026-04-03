@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
 import { profilePic } from "../../utils";
+import RichTextContent from "../ui/RichTextContent";
 
 const OfferingHero = ({ section }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -110,9 +110,7 @@ const OfferingHero = ({ section }) => {
           </h1>
 
           {/* Description */}
-          <p className="mx-auto max-w-3xl text-lg leading-relaxed text-white/70 lg:mx-0">
-            {section.heroDescription}
-          </p>
+          <RichTextContent value={section.heroDescription} className="mx-auto max-w-3xl text-lg leading-relaxed text-white/70 lg:mx-0" />
 
           {/* CTA Button */}
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-start">

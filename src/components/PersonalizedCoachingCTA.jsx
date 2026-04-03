@@ -4,6 +4,7 @@ import { useSiteSettings } from "../context/SiteSettingsContext";
 import { getBrowserRegion, getCountries, getUsdRates } from "../services/marketData";
 import { roundUpAestheticAmount } from "../services/pricing";
 import { useOfferingsData } from "../hooks/useOfferingsData";
+import RichTextContent from "./ui/RichTextContent";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -104,7 +105,7 @@ const PersonalizedCoachingCTA = () => {
           <div className="max-w-3xl space-y-5">
             <p className="text-xs font-semibold uppercase tracking-[0.45em] text-pink-200">{coachingSection?.eyebrow}</p>
             <h2 className="text-4xl font-bold leading-tight sm:text-5xl">{coachingSection?.heading}</h2>
-            <p className="text-lg text-white/75">{coachingSection?.description}</p>
+            <RichTextContent value={coachingSection?.description} className="text-lg text-white/75" />
           </div>
           <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/10 p-8 backdrop-blur">
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-pink-200">
@@ -113,9 +114,12 @@ const PersonalizedCoachingCTA = () => {
             <div className="mt-4 flex items-baseline gap-3">
               <p className="text-4xl font-bold">{localInvestmentLabel || usdInvestmentLabel}</p>
             </div>
-            <p className="mt-4 text-sm text-white/70">
-              {coachingSection?.supportingNote || "30 days • private Voxer/email support • personalised meditations"}
-            </p>
+            <RichTextContent
+              value={
+                coachingSection?.supportingDescription ||                "<p>30 days • private Voxer/email support • personalised meditations</p>"
+              }
+              className="mt-4 text-sm text-white/70"
+            />
             <Link
               to={coachingHref}
               className="mt-6 inline-flex w-full items-center justify-center rounded-full border-2 border-pink-200/90 bg-pink-500 px-6 py-3 text-sm font-semibold uppercase tracking-[0.32em] text-white shadow-xl shadow-pink-500/45 transition-all hover:-translate-y-0.5 hover:border-white hover:bg-pink-400 hover:shadow-pink-400/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"

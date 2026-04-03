@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
 import { profilePic } from "../../utils";
+import RichTextContent from "../ui/RichTextContent";
 
 const Hero = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -33,9 +34,7 @@ const Hero = () => {
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-white/60">{heroSection.eyebrow}</p>
           ) : null}
           <h1 className="text-4xl font-bold leading-tight sm:text-6xl">{heroSection?.heading}</h1>
-          <p className="max-w-2xl text-lg text-white/70">
-            {heroSection?.description}
-          </p>
+          <RichTextContent value={heroSection?.description} className="max-w-2xl text-lg text-white/70" />
           <div className="flex flex-wrap gap-4">
             <a
               href={heroSection?.primaryCtaHref || "#programs"}
@@ -54,7 +53,7 @@ const Hero = () => {
             {heroProofs.map((item) => (
               <div key={item.title} className="w-full sm:w-1/3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
                 <p className="text-base font-semibold text-white">{item.title}</p>
-                <p className="mt-2 leading-relaxed">{item.description}</p>
+                <RichTextContent value={item.description} className="mt-2 leading-relaxed" />
               </div>
             ))}
           </div>

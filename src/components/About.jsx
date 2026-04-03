@@ -1,6 +1,7 @@
 import WorldMap from "./ui/world-map";
 import { useReveal } from '../hooks/useReveal';
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import RichTextContent from "./ui/RichTextContent";
 
 const About = () => {
   const { getSection, getSectionItems } = useSiteSettings();
@@ -69,14 +70,7 @@ const About = () => {
           <h2 className="mt-4 text-4xl font-bold leading-tight sm:text-5xl">
             {aboutSection?.heading}
           </h2>
-          <p className="mt-6 text-lg leading-relaxed text-gray-300">
-            {aboutSection?.description}
-          </p>
-          {aboutSection?.descriptionSecondary ? (
-            <p className="mt-4 text-lg leading-relaxed text-gray-300">
-              {aboutSection.descriptionSecondary}
-            </p>
-          ) : null}
+          <RichTextContent value={aboutSection?.description} className="mt-6 text-lg leading-relaxed text-gray-300" />
         </div>
         <div className="lg:w-1/2">
           {/* <div className="grid gap-6 sm:grid-cols-3">
@@ -111,16 +105,11 @@ const About = () => {
                     {aboutSection?.supportingEyebrow}
                   </p>
                   <h3 className="mt-3 text-xl font-semibold">{aboutSection?.supportingHeading}</h3>
-                  <p className="mt-3 text-base leading-relaxed text-gray-300">
-                    {aboutSection?.supportingDescription}
-                  </p>
+                  <RichTextContent value={aboutSection?.supportingDescription} className="mt-3 text-base leading-relaxed text-gray-300" />
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-blue-400/20 bg-gradient-to-br from-slate-950 via-[#081120] to-slate-900 p-3 shadow-inner shadow-sky-950/40">
                   <WorldMap dots={globalDots} lineColor="#60a5fa" theme="dark" />
                 </div>
-                <p className="text-sm leading-relaxed text-gray-400">
-                  {aboutSection?.supportingNote}
-                </p>
               </div>
             </div>
           </div>
@@ -140,7 +129,7 @@ const About = () => {
               <p className="text-3xl font-bold text-blue-400 transition-colors group-hover:text-blue-300">
                 {item.title}
               </p>
-              <p className="mt-2 text-sm text-gray-300">{item.description}</p>
+              <RichTextContent value={item.description} className="mt-2 text-sm text-gray-300" />
             </div>
           );
         })}

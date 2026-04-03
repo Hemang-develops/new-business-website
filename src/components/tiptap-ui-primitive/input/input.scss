@@ -1,0 +1,36 @@
+:root {
+  --tt-input-placeholder: #94a3b8;
+  --tt-input-border: rgb(15 23 42 / 0.14);
+  --tt-input-border-focus: rgb(20 184 166 / 0.55);
+}
+
+.tiptap-input {
+  width: 100%;
+  min-width: 0;
+  height: 2rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--tt-radius-md);
+  border: 1px solid var(--tt-input-border);
+  background: transparent;
+  color: #0f172a;
+  font-size: 1rem;
+  outline: none;
+  transition:
+    color,
+    background-color,
+    border-color 150ms;
+
+  &::placeholder {
+    color: var(--tt-input-placeholder);
+  }
+}
+
+.tiptap-input:focus-visible {
+  border-color: var(--tt-input-border-focus);
+}
+
+@media (min-width: 768px) {
+  .tiptap-input {
+    font-size: 0.875rem;
+  }
+}

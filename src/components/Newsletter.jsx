@@ -1,5 +1,6 @@
 import { Input } from "./ui/input";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import RichTextContent from "./ui/RichTextContent";
 
 const Newsletter = () => {
   const { getSection } = useSiteSettings();
@@ -13,9 +14,7 @@ const Newsletter = () => {
             {newsletterSection?.eyebrow}
           </p>
           <h2 className="mt-4 text-3xl font-bold sm:text-4xl">{newsletterSection?.heading}</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-white/70">
-            {newsletterSection?.description}
-          </p>
+          <RichTextContent value={newsletterSection?.description} className="mx-auto mt-4 max-w-2xl text-base text-white/70" />
           <form
             className="mx-auto mt-6 flex w-full max-w-2xl flex-col gap-3 sm:flex-row"
             action={newsletterSection?.formAction || "https://formspree.io/f/xovqwaaw"}
@@ -35,7 +34,7 @@ const Newsletter = () => {
               {newsletterSection?.primaryCtaLabel || "Join now"}
             </button>
           </form>
-          <p className="mt-3 text-xs text-white/50">{newsletterSection?.supportingNote || "No spam. Just potent reminders."}</p>
+          <RichTextContent value={newsletterSection?.supportingDescription || "No spam. Just potent reminders."} className="mt-3 text-xs text-white/50" />
         </div>
       </div>
     </section>

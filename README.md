@@ -85,14 +85,14 @@ Requirement:
 6. introduce toast msg for attention
 11. make demo live
 10. improve confirm email supabase default mail
+9. calendly integration - > cal.com integration
+12. remove back to offerings button
+13. separate hero for offering pages
 
 7. add comment(review) in offerings(option to add image)
 8. user inventory (admin)
-9. calendly integration - > cal.com integration
-10. old content should not be shown after modified but loadershould be shown then new data
+10. old content should not be shown after modified but loader should be shown then new data
 11. pages break after refresh due to page api not found
-12. remove back to offerings button
-13. separate hero for offering pages
 
 ## Cal.com booking sync
 

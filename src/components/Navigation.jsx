@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { defaultSiteSettings } from "../services/siteSettings";
 
 const quickLinkGroups = {
   content: {
@@ -85,9 +86,10 @@ const Navigation = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { settings } = useSiteSettings();
+  const siteSettings = settings || defaultSiteSettings;
   const quickPanelRef = useRef(null);
   const quickPanelButtonRef = useRef(null);
-  const anchorLinks = settings.sections.filter((section) => section.enabled && section.navVisible && section.anchor);
+  const anchorLinks = siteSettings.sections.filter((section) => section.enabled && section.navVisible && section.anchor);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -176,7 +178,7 @@ const Navigation = () => {
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link to="/" className="text-2xl font-bold text-white" onClick={() => setIsDrawerOpen(false)}>
-            {settings.brand.navTitle}
+            {siteSettings.brand.navTitle}
           </Link>
 
           <div className="hidden items-center gap-10 lg:flex">
@@ -220,10 +222,10 @@ const Navigation = () => {
               {accountLabel}
             </Link>
             <Link
-              to={settings.brand.shopHref}
+              to={siteSettings.brand.shopHref}
               className="inline-flex items-center gap-2 rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-200"
             >
-              {settings.brand.shopLabel}
+              {siteSettings.brand.shopLabel}
             </Link>
           </div>
 
@@ -292,8 +294,8 @@ const Navigation = () => {
             </div>
             <div className="mt-6 rounded-2xl border border-teal-300/40 bg-teal-300/10 p-4 text-sm text-teal-100">
               Need support choosing an offering? Email
-              <a className="ml-1 font-semibold" href={`mailto:${settings.brand.supportEmail}`}>
-                {settings.brand.supportEmail}
+              <a className="ml-1 font-semibold" href={`mailto:${siteSettings.brand.supportEmail}`}>
+                {siteSettings.brand.supportEmail}
               </a>
               .
             </div>
@@ -328,11 +330,11 @@ const Navigation = () => {
               </a>
             ))}
             <Link
-              to={settings.brand.shopHref}
+              to={siteSettings.brand.shopHref}
               onClick={() => setIsDrawerOpen(false)}
               className="inline-flex items-center gap-2 rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-200"
             >
-              {settings.brand.shopLabel}
+              {siteSettings.brand.shopLabel}
             </Link>
             <Link
               to="/sign-in"
@@ -390,8 +392,8 @@ const Navigation = () => {
             <p className="text-sm font-medium uppercase tracking-[0.35em] text-white/60">Need a sign?</p>
             <p className="mt-2 text-sm">
               Email
-              <a href={`mailto:${settings.brand.supportEmail}`} className="ml-1 text-teal-200">
-                {settings.brand.supportEmail}
+              <a href={`mailto:${siteSettings.brand.supportEmail}`} className="ml-1 text-teal-200">
+                {siteSettings.brand.supportEmail}
               </a>
               and let's talk about what you're manifesting.
             </p>

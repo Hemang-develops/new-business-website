@@ -7,6 +7,7 @@ import { useOfferingsData } from "../hooks/useOfferingsData";
 import { Skeleton } from "./ui/skeleton";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
+import RichTextContent from "./ui/RichTextContent";
 
 const initialFormState = {
   name: "",
@@ -123,9 +124,7 @@ const Contact = () => {
               <h2 className="mt-4 max-w-xl bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl">
                 {contactSection?.heading}
               </h2>
-              <p className="mt-6 max-w-xl text-base leading-7 text-white/70">
-                {contactSection?.description}
-              </p>
+              <RichTextContent value={contactSection?.description} className="mt-6 max-w-xl text-base leading-7 text-white/70" />
 
               <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-white/55">
                 {contactMethods.map((method, index) => (
@@ -168,10 +167,8 @@ const Contact = () => {
 
             <div className="relative z-10">
               <h3 className="text-2xl font-semibold text-white">{contactSection?.formHeading || "Share your intentions"}</h3>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-gray-300">
-                {contactSection?.formDescription ||
-                  "This form lands directly in my inbox. Share your story, desires, and what kind of support you are calling in."}
-              </p>
+              <RichTextContent value={contactSection?.formDescription ||
+                "This form lands directly in my inbox. Share your story, desires, and what kind of support you are calling in."} className="mt-3 max-w-xl text-sm leading-6 text-gray-300" />
 
               <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
                 <div>
@@ -258,10 +255,8 @@ const Contact = () => {
                 )}
               </div>
 
-              <p className="mt-6 text-sm text-gray-400">
-                {contactSection?.formDisclaimer ||
-                  "By submitting this form you agree to receive occasional updates about High Frequencies 11 offerings. You can opt out at any time."}
-              </p>
+              <RichTextContent value={contactSection?.formDisclaimer ||
+                "By submitting this form you agree to receive occasional updates about High Frequencies 11 offerings. You can opt out at any time."} className="mt-6 text-sm text-gray-400" />
             </div>
           </div>
         </div>

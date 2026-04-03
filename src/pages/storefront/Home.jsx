@@ -12,13 +12,14 @@ import Testimonials from '../../components/Testimonials';
 import { useSmoothScroll } from '../../hooks/useSmoothScroll';
 import Footer from '../../components/common/Footer';
 import Hero from '../../components/storefront/Hero';
+import SiteLoadingScreen from '../../components/storefront/SiteLoadingScreen';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { getBrowserRegion, getCountries, getUsdRates } from '../../services/marketData';
 
 export function Home() {
   useSmoothScroll();
   const location = useLocation();
-  const { settings } = useSiteSettings();
+  const { settings, isLoading, error } = useSiteSettings();
   const [localRateLabel, setLocalRateLabel] = useState("");
   const browserRegion = useMemo(() => getBrowserRegion(), []);
   const sectionComponents = useMemo(
@@ -36,8 +37,8 @@ export function Home() {
     [],
   );
   const enabledSections = useMemo(
-    () => settings.sections.filter((section) => section.enabled && sectionComponents[section.id]),
-    [sectionComponents, settings.sections],
+    () => (settings?.sections || []).filter((section) => section.enabled && sectionComponents[section.id]),
+    [sectionComponents, settings?.sections],
   );
 
   useEffect(() => {
@@ -82,19 +83,24 @@ export function Home() {
     };
   }, [browserRegion]);
 
-  if (settings.isLoading) {
+  if (error) {
     return (
       <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
-        <Navigation />
-        <main className="relative z-10 flex min-h-[calc(100vh-4rem)] items-center justify-center">
-          <div className="flex flex-col items-center gap-4 rounded-3xl border border-white/20 bg-black/50 p-8 text-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-brand-primary-light" />
-            <p className="text-white/80">Loading site content...</p>
+        <main className="relative z-10 flex min-h-screen items-center justify-center px-6 py-16">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-rose-300/20 bg-black/50 p-8 text-center">
+            <h1 className="text-3xl font-semibold text-white">Unable to load site content</h1>
+            <p className="mt-4 text-base leading-relaxed text-white/65">
+              The latest website data could not be loaded, so the page has been paused instead of showing outdated content.
+            </p>
+            <p className="mt-6 text-sm text-rose-200/80">{error.message || "Please try refreshing the page."}</p>
           </div>
         </main>
-        <Footer />
       </div>
     );
+  }
+
+  if (isLoading || !settings) {
+    return <SiteLoadingScreen title="Entering the vortex" description="Take a breath while the experience settles into place." />;
   }
 
   return (

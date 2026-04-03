@@ -71,7 +71,6 @@ const mapOffering = (row, section, sharedContent, reviewMap) => {
         }
       : undefined,
     checkoutOptions,
-    highlights: sortBy(row.highlights).map((entry) => entry.text),
     paymentMethods: Array.isArray(section.payment_methods) && section.payment_methods.length
       ? section.payment_methods
       : sortBy(row.payment_methods).map((entry) => entry.method),
@@ -169,7 +168,6 @@ const fetchCatalogFromSupabase = async () => {
           host_id,
           booking_last_error,
           checkout:storefront_checkout_configs(config),
-          highlights:storefront_offering_highlights(sort_order,text),
           payment_methods:storefront_offering_payment_methods(sort_order,method),
           detail_sections:storefront_offering_detail_sections(
             sort_order,

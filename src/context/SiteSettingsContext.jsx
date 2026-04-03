@@ -8,8 +8,9 @@ const siteSectionItemsTable = import.meta.env.VITE_SUPABASE_SITE_SECTION_ITEMS_T
 const siteLinksTable = import.meta.env.VITE_SUPABASE_SITE_LINKS_TABLE || "storefront_site_links";
 
 const SiteSettingsContext = createContext({
-  settings: defaultSiteSettings,
+  settings: null,
   isLoading: true,
+  error: null,
   refreshSettings: async () => {},
   getSection: () => null,
   getSectionItems: () => [],
@@ -25,11 +26,13 @@ export const applyThemeVariables = (theme) => {
 };
 
 export const SiteSettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState(defaultSiteSettings);
+  const [settings, setSettings] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const refreshSettings = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const [globalRes, sectionsRes, itemsRes, linksRes] = await Promise.all([
         supabase
@@ -39,7 +42,7 @@ export const SiteSettingsProvider = ({ children }) => {
           .maybeSingle(),
         supabase
           .from(siteSectionsTable)
-          .select("key,label,anchor,is_enabled,show_in_nav,show_in_footer,sort_order,eyebrow,heading,description,description_secondary,primary_cta_label,primary_cta_href,secondary_cta_label,secondary_cta_href,supporting_eyebrow,supporting_heading,supporting_description,supporting_note,form_heading,form_description,form_submit_label,form_disclaimer,form_action,featured_offering_id")
+          .select("key,label,anchor,is_enabled,show_in_nav,show_in_footer,sort_order,eyebrow,heading,description,primary_cta_label,primary_cta_href,secondary_cta_label,secondary_cta_href,supporting_eyebrow,supporting_heading,supporting_description,form_heading,form_description,form_submit_label,form_disclaimer,form_action,featured_offering_id")
           .order("sort_order", { ascending: true }),
         supabase
           .from(siteSectionItemsTable)
@@ -73,8 +76,9 @@ export const SiteSettingsProvider = ({ children }) => {
           links: linksRes.data || [],
         }),
       );
-    } catch (error) {
-      setSettings(defaultSiteSettings);
+    } catch (loadError) {
+      setSettings(null);
+      setError(loadError);
     } finally {
       setIsLoading(false);
     }
@@ -85,21 +89,26 @@ export const SiteSettingsProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    applyThemeVariables(settings.theme);
-  }, [settings.theme]);
+    if (settings?.theme) {
+      applyThemeVariables(settings.theme);
+      return;
+    }
+    applyThemeVariables(defaultSiteSettings.theme);
+  }, [settings?.theme]);
 
   const value = useMemo(
     () => ({
       settings,
       isLoading,
+      error,
       refreshSettings,
-      getSection: (sectionId) => settings.sections.find((section) => section.id === sectionId) || null,
+      getSection: (sectionId) => settings?.sections?.find((section) => section.id === sectionId) || null,
       getSectionItems: (sectionId) =>
-        settings.sectionItems.filter((item) => item.sectionKey === sectionId && item.enabled),
+        settings?.sectionItems?.filter((item) => item.sectionKey === sectionId && item.enabled) || [],
       getLinks: (groupKey) =>
-        settings.links.filter((link) => link.groupKey === groupKey && link.enabled),
+        settings?.links?.filter((link) => link.groupKey === groupKey && link.enabled) || [],
     }),
-    [settings, isLoading],
+    [error, isLoading, settings],
   );
 
   return <SiteSettingsContext.Provider value={value}>{children}</SiteSettingsContext.Provider>;

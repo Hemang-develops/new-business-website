@@ -1,6 +1,7 @@
 import { Layers3, Library, Sparkles, Users } from "lucide-react";
 import { useReveal } from "../hooks/useReveal";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import RichTextContent from "./ui/RichTextContent";
 
 const serviceIcons = {
   sparkles: Sparkles,
@@ -27,7 +28,7 @@ const Services = () => {
         <div className="text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.35em] text-white/70">{servicesSection?.eyebrow}</p>
           <h2 className="mt-4 text-4xl font-bold sm:text-5xl">{servicesSection?.heading}</h2>
-          <p className="mx-auto mt-6 max-w-3xl text-lg text-white/80">{servicesSection?.description}</p>
+          <RichTextContent value={servicesSection?.description} className="mx-auto mt-6 max-w-3xl text-lg text-white/80" />
         </div>
 
         <div className="mt-16 grid auto-rows-fr gap-8 md:grid-cols-2 xl:grid-cols-4">
@@ -46,7 +47,7 @@ const Services = () => {
                   <Icon className="h-6 w-6" />
                 </span>
                 <h3 className="mt-6 text-2xl font-semibold">{service.title}</h3>
-                <p className="mt-4 flex-1 text-lg text-white/80">{service.description}</p>
+                <RichTextContent value={service.description} className="mt-4 flex-1 text-lg text-white/80" />
               </div>
             );
           })}

@@ -1,5 +1,6 @@
 import { useReveal } from '../hooks/useReveal';
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import RichTextContent from "./ui/RichTextContent";
 
 const Resources = () => {
   const { getSection, getSectionItems } = useSiteSettings();
@@ -13,9 +14,7 @@ const Resources = () => {
           <h2 className="mt-4 text-4xl font-bold text-white sm:text-5xl">
             {resourcesSection?.heading}
           </h2>
-          <p className="mx-auto mt-6 max-w-3xl text-lg text-gray-300">
-            {resourcesSection?.description}
-          </p>
+          <RichTextContent value={resourcesSection?.description} className="mx-auto mt-6 max-w-3xl text-lg text-gray-300" />
         </div>
 
         <div className="mt-16 grid auto-rows-fr gap-6 md:grid-cols-2">
@@ -36,7 +35,7 @@ const Resources = () => {
                   <h3 className="text-2xl font-semibold text-white transition-colors group-hover:text-blue-400">
                     {resource.title}
                   </h3>
-                  <p className="mt-4 text-base text-gray-300">{resource.description}</p>
+                  <RichTextContent value={resource.description} className="mt-4 text-base text-gray-300" />
                 </div>
                 <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-blue-400 transition-colors group-hover:text-blue-300">
                   {resource.label}

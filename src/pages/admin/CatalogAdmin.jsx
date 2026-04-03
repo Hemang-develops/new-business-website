@@ -9,8 +9,10 @@ import { supabase } from "../../supabase-client";
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
 import { Skeleton } from "../../components/ui/skeleton";
 import { defaultSiteSettings, normalizeSiteSettingsFromRows } from "../../services/siteSettings";
-import { Wand2 } from "lucide-react";
+import { CircleAlert, Wand2 } from "lucide-react";
 import { generateRandomTheme } from "../../utils/themeGenerator";
+import { SimpleEditor } from "../../components/tiptap-templates/simple/simple-editor";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
 
 const sectionsTable = import.meta.env.VITE_SUPABASE_SECTIONS_TABLE || "storefront_sections";
 const offeringsTable = import.meta.env.VITE_SUPABASE_OFFERINGS_TABLE || "storefront_offerings";
@@ -87,7 +89,7 @@ const siteSectionEditorMeta = {
     itemDescription: "Headline proof points under the world map panel.",
     itemType: "metric",
     fields: ["title", "description"],
-    advancedFields: ["descriptionSecondary", "supportingEyebrow", "supportingHeading", "supportingDescription", "supportingNote"],
+    advancedFields: ["supportingEyebrow", "supportingHeading", "supportingDescription"],
   },
   services: {
     itemTitle: "Service pillars",
@@ -106,7 +108,7 @@ const siteSectionEditorMeta = {
     itemDescription: "Everything included in the featured coaching offer.",
     itemType: "benefit",
     fields: ["title"],
-    advancedFields: ["supportingEyebrow", "supportingNote", "featuredOfferingId"],
+    advancedFields: ["supportingEyebrow", "supportingDescription", "featuredOfferingId"],
   },
   contact: {
     itemTitle: "Contact methods",
@@ -117,12 +119,12 @@ const siteSectionEditorMeta = {
   newsletter: {
     itemTitle: "Newsletter settings",
     itemDescription: "Signup button and helper note.",
-    advancedFields: ["supportingNote", "formAction"],
+    advancedFields: ["supportingDescription", "formAction"],
   },
 };
 
 const siteLinkGroupMeta = [
-  { key: "footer_offerings", title: "Footer offerings links", description: "The offerings column in the footer." },
+  { key: "footer_offerings", title: "Footer products links", description: "The products column in the footer." },
   { key: "footer_resources", title: "Footer resource links", description: "External media and platform links." },
   { key: "footer_support", title: "Footer support links", description: "Support and utility links in the footer." },
   { key: "footer_social", title: "Footer social icons", description: "Icon links shown on the right side of the footer." },
@@ -152,6 +154,23 @@ const themePresets = [
     theme: { primary: "#22d3ee", primaryLight: "#a5f3fc", secondary: "#8b5cf6", accent: "#ec4899", dark: "#0b1020" },
   },
 ];
+
+const InfoHint = ({ text }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        type="button"
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-white/40 transition hover:text-teal-200"
+        aria-label={text}
+      >
+        <CircleAlert className="h-3.5 w-3.5" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent side="top" sideOffset={8} className="max-w-sm bg-white text-slate-900">
+      {text}
+    </TooltipContent>
+  </Tooltip>
+);
 
 const CatalogAdmin = () => {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -244,13 +263,9 @@ const CatalogAdmin = () => {
       setIsLoadingData(true);
       setStatus({ type: "idle", message: "" });
 
-      const [sectionsRes, offeringsRes, highlightsRes, globalRes, siteSectionsRes, siteSectionItemsRes, siteLinksRes, reviewsRes] = await Promise.all([
+      const [sectionsRes, offeringsRes, globalRes, siteSectionsRes, siteSectionItemsRes, siteLinksRes, reviewsRes] = await Promise.all([
         supabase.from(sectionsTable).select("*").order("sort_order", { ascending: true }),
         supabase.from(offeringsTable).select("*").order("sort_order", { ascending: true }),
-        supabase
-          .from("storefront_offering_highlights")
-          .select("offering_id,sort_order,text")
-          .order("sort_order", { ascending: true }),
         supabase
           .from(globalContentTable)
           .select("manual_instructions,legal_notes,closing_notes,success_heading,success_quote,success_author,brand_nav_title,brand_full_title,brand_footer_tagline,brand_shop_label,brand_shop_href,brand_support_email,theme_primary,theme_primary_light,theme_secondary,theme_accent,theme_dark,profile_image_url,profile_image_alt,profile_role_label,footer_intro_eyebrow,footer_intro_heading,footer_status_label,footer_terms_label,footer_terms_href,footer_privacy_label,footer_privacy_href,newsletter_form_action,faqs")
@@ -258,7 +273,7 @@ const CatalogAdmin = () => {
           .maybeSingle(),
         supabase
           .from(siteSectionsTable)
-          .select("key,label,anchor,is_enabled,show_in_nav,show_in_footer,sort_order,eyebrow,heading,description,description_secondary,primary_cta_label,primary_cta_href,secondary_cta_label,secondary_cta_href,supporting_eyebrow,supporting_heading,supporting_description,supporting_note,form_heading,form_description,form_submit_label,form_disclaimer,form_action,featured_offering_id")
+          .select("key,label,anchor,is_enabled,show_in_nav,show_in_footer,sort_order,eyebrow,heading,description,primary_cta_label,primary_cta_href,secondary_cta_label,secondary_cta_href,supporting_eyebrow,supporting_heading,supporting_description,form_heading,form_description,form_submit_label,form_disclaimer,form_action,featured_offering_id")
           .order("sort_order", { ascending: true }),
         supabase
           .from(siteSectionItemsTable)
@@ -280,7 +295,6 @@ const CatalogAdmin = () => {
       const firstError = [
         sectionsRes.error,
         offeringsRes.error,
-        highlightsRes.error,
         globalRes.error,
         siteSectionsRes.error,
         siteSectionItemsRes.error,
@@ -298,17 +312,6 @@ const CatalogAdmin = () => {
         return;
       }
 
-      const group = (rows, key) =>
-        (rows || []).reduce((acc, row) => {
-          if (!acc[row.offering_id]) {
-            acc[row.offering_id] = [];
-          }
-          acc[row.offering_id].push(row[key]);
-          return acc;
-        }, {});
-
-      const highlights = group(highlightsRes.data, "text");
-
       const mergedOfferings = (offeringsRes.data || []).map((row) => ({
         ...row,
         cta_type: row.cta_type || "contact",
@@ -320,7 +323,6 @@ const CatalogAdmin = () => {
         session_format: row.session_format || "google-meet",
         host_id: row.host_id || defaultCalcomHostId,
         booking_last_error: row.booking_last_error || "",
-        highlights: highlights[row.id] || [],
       }));
       const getLoadedSectionIdForOffering = (offeringId) =>
         mergedOfferings.find((entry) => entry.id === offeringId)?.section_id || "";
@@ -438,7 +440,6 @@ const CatalogAdmin = () => {
       session_format: selected.session_format || "google-meet",
       host_id: selected.host_id || defaultCalcomHostId,
       booking_last_error: selected.booking_last_error || "",
-      highlightsText: toLines(selected.highlights),
     });
   }, [offerings, selectedOfferingId]);
 
@@ -655,9 +656,9 @@ const CatalogAdmin = () => {
       if (!editor.image_alt) {
         updateEditor("image_alt", editor.title || file.name);
       }
-      setStatus({ type: "success", message: "Offering image uploaded successfully." });
+      setStatus({ type: "success", message: "Product image uploaded successfully." });
     } catch (error) {
-      setStatus({ type: "error", message: error?.message || "Unable to upload offering image." });
+      setStatus({ type: "error", message: error?.message || "Unable to upload product image." });
     } finally {
       setUploadingTarget("");
     }
@@ -805,12 +806,6 @@ const CatalogAdmin = () => {
         throw offeringError;
       }
 
-      await replaceRows(
-        "storefront_offering_highlights",
-        editor.id,
-        fromLines(editor.highlightsText).map((text, index) => ({ offering_id: editor.id, sort_order: index, text })),
-      );
-
       let syncedFields = {
         booking_status: basePayload.booking_status,
         booking_external_id: basePayload.booking_external_id,
@@ -866,7 +861,6 @@ const CatalogAdmin = () => {
               ...entry,
               ...basePayload,
               ...syncedFields,
-              highlights: fromLines(editor.highlightsText),
             }
             : entry,
         ),
@@ -876,13 +870,13 @@ const CatalogAdmin = () => {
         type: syncedFields.booking_status === "failed" ? "error" : "success",
         message:
           syncedFields.booking_status === "failed"
-            ? syncedFields.booking_last_error || "Offering saved, but booking sync failed."
+            ? syncedFields.booking_last_error || "Product saved, but booking sync failed."
             : bookingEnabled
-              ? "Offering and booking synced successfully."
-              : "Offering saved successfully.",
+              ? "Product and booking synced successfully."
+              : "Product saved successfully.",
       });
     } catch (error) {
-      setStatus({ type: "error", message: error?.message || "Unable to save offering." });
+      setStatus({ type: "error", message: error?.message || "Unable to save product." });
     } finally {
       setIsSavingOffering(false);
     }
@@ -934,9 +928,9 @@ const CatalogAdmin = () => {
             : section,
         ),
       );
-      setStatus({ type: "success", message: "Offering type saved successfully." });
+      setStatus({ type: "success", message: "Product type saved successfully." });
     } catch (error) {
-      setStatus({ type: "error", message: error?.message || "Unable to save offering type." });
+      setStatus({ type: "error", message: error?.message || "Unable to save product type." });
     } finally {
       setIsSavingSection(false);
     }
@@ -945,7 +939,7 @@ const CatalogAdmin = () => {
   const handleCreateSection = async () => {
     const title = newSection.title.trim();
     if (!title) {
-      setStatus({ type: "error", message: "Add an offering type title first." });
+      setStatus({ type: "error", message: "Add a product type title first." });
       return;
     }
 
@@ -989,9 +983,9 @@ const CatalogAdmin = () => {
       setSelectedSectionId(payload.id);
       setNewSection({ title: "", description: "" });
       setShowNewSectionForm(false);
-      setStatus({ type: "success", message: "Offering type created successfully." });
+      setStatus({ type: "success", message: "Product type created successfully." });
     } catch (error) {
-      setStatus({ type: "error", message: error?.message || "Unable to create offering type." });
+      setStatus({ type: "error", message: error?.message || "Unable to create product type." });
     } finally {
       setIsCreatingSection(false);
     }
@@ -1000,11 +994,11 @@ const CatalogAdmin = () => {
   const handleCreateOffering = async () => {
     const title = newOffering.title.trim();
     if (!selectedSectionId) {
-      setStatus({ type: "error", message: "Select an offering type before creating an offering." });
+      setStatus({ type: "error", message: "Select a product type before creating a product." });
       return;
     }
     if (!title) {
-      setStatus({ type: "error", message: "Add an offering title first." });
+      setStatus({ type: "error", message: "Add a product title first." });
       return;
     }
 
@@ -1056,7 +1050,6 @@ const CatalogAdmin = () => {
 
       const nextOffering = {
         ...payload,
-        highlights: [],
         paymentMethods: [],
       };
       setOfferings((prev) =>
@@ -1065,9 +1058,9 @@ const CatalogAdmin = () => {
       setSelectedOfferingId(payload.id);
       setNewOffering({ title: "", subtitle: "", price_usd: "", cta_type: "contact" });
       setShowNewOfferingForm(false);
-      setStatus({ type: "success", message: "Offering created successfully." });
+      setStatus({ type: "success", message: "Product created successfully." });
     } catch (error) {
-      setStatus({ type: "error", message: error?.message || "Unable to create offering." });
+      setStatus({ type: "error", message: error?.message || "Unable to create product." });
     } finally {
       setIsCreatingOffering(false);
     }
@@ -1142,7 +1135,6 @@ const CatalogAdmin = () => {
         eyebrow: section.eyebrow || null,
         heading: section.heading || null,
         description: section.description || null,
-        description_secondary: section.descriptionSecondary || null,
         primary_cta_label: section.primaryCtaLabel || null,
         primary_cta_href: section.primaryCtaHref || null,
         secondary_cta_label: section.secondaryCtaLabel || null,
@@ -1150,7 +1142,6 @@ const CatalogAdmin = () => {
         supporting_eyebrow: section.supportingEyebrow || null,
         supporting_heading: section.supportingHeading || null,
         supporting_description: section.supportingDescription || null,
-        supporting_note: section.supportingNote || null,
         form_heading: section.formHeading || null,
         form_description: section.formDescription || null,
         form_submit_label: section.formSubmitLabel || null,
@@ -1396,7 +1387,7 @@ const CatalogAdmin = () => {
             >
               <ToggleGroupItem value="dashboard">Dashboard</ToggleGroupItem>
               <ToggleGroupItem value="site">Website</ToggleGroupItem>
-              <ToggleGroupItem value="offerings">Offerings</ToggleGroupItem>
+              <ToggleGroupItem value="offerings">Products</ToggleGroupItem>
               <ToggleGroupItem value="shared">Shared Checkout Content</ToggleGroupItem>
               <ToggleGroupItem value="reviews">Reviews</ToggleGroupItem>
             </ToggleGroup>
@@ -1810,15 +1801,8 @@ const CatalogAdmin = () => {
                             </label>
                             <label className="space-y-1 text-xs text-white/60">
                               <span>Description</span>
-                              <textarea value={selectedSiteSection.description || ""} onChange={(event) => updateSiteSection(selectedSiteSection.id, "description", event.target.value)} rows={4} className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
+                              <SimpleEditor value={selectedSiteSection.description || ""} onChange={(value) => updateSiteSection(selectedSiteSection.id, "description", value)} minHeightClass="min-h-[12rem]" />
                             </label>
-
-                            {selectedSiteSectionMeta.advancedFields?.includes("descriptionSecondary") ? (
-                              <label className="space-y-1 text-xs text-white/60">
-                                <span>Secondary paragraph</span>
-                                <textarea value={selectedSiteSection.descriptionSecondary || ""} onChange={(event) => updateSiteSection(selectedSiteSection.id, "descriptionSecondary", event.target.value)} rows={4} className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
-                              </label>
-                            ) : null}
 
                             <div className="flex flex-col gap-3 sm:flex-row">
                               <label className="flex-1 space-y-1 text-xs text-white/60">
@@ -1860,13 +1844,7 @@ const CatalogAdmin = () => {
                                   {selectedSiteSectionMeta.advancedFields.includes("supportingDescription") ? (
                                     <label className="space-y-1 text-xs text-white/60">
                                       <span>Supporting description</span>
-                                      <textarea value={selectedSiteSection.supportingDescription || ""} onChange={(event) => updateSiteSection(selectedSiteSection.id, "supportingDescription", event.target.value)} rows={3} className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
-                                    </label>
-                                  ) : null}
-                                  {selectedSiteSectionMeta.advancedFields.includes("supportingNote") ? (
-                                    <label className="space-y-1 text-xs text-white/60">
-                                      <span>Supporting note</span>
-                                      <textarea value={selectedSiteSection.supportingNote || ""} onChange={(event) => updateSiteSection(selectedSiteSection.id, "supportingNote", event.target.value)} rows={3} className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
+                                      <SimpleEditor value={selectedSiteSection.supportingDescription || ""} onChange={(value) => updateSiteSection(selectedSiteSection.id, "supportingDescription", value)} minHeightClass="min-h-[10rem]" />
                                     </label>
                                   ) : null}
                                   {selectedSiteSectionMeta.advancedFields.includes("formHeading") ? (
@@ -1878,7 +1856,7 @@ const CatalogAdmin = () => {
                                   {selectedSiteSectionMeta.advancedFields.includes("formDescription") ? (
                                     <label className="space-y-1 text-xs text-white/60">
                                       <span>Form description</span>
-                                      <textarea value={selectedSiteSection.formDescription || ""} onChange={(event) => updateSiteSection(selectedSiteSection.id, "formDescription", event.target.value)} rows={3} className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
+                                      <SimpleEditor value={selectedSiteSection.formDescription || ""} onChange={(value) => updateSiteSection(selectedSiteSection.id, "formDescription", value)} minHeightClass="min-h-[10rem]" />
                                     </label>
                                   ) : null}
                                   {selectedSiteSectionMeta.advancedFields.includes("formSubmitLabel") ? (
@@ -1890,7 +1868,7 @@ const CatalogAdmin = () => {
                                   {selectedSiteSectionMeta.advancedFields.includes("formDisclaimer") ? (
                                     <label className="space-y-1 text-xs text-white/60">
                                       <span>Form disclaimer</span>
-                                      <textarea value={selectedSiteSection.formDisclaimer || ""} onChange={(event) => updateSiteSection(selectedSiteSection.id, "formDisclaimer", event.target.value)} rows={3} className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
+                                      <SimpleEditor value={selectedSiteSection.formDisclaimer || ""} onChange={(value) => updateSiteSection(selectedSiteSection.id, "formDisclaimer", value)} minHeightClass="min-h-[8rem]" />
                                     </label>
                                   ) : null}
                                   {selectedSiteSectionMeta.advancedFields.includes("formAction") ? (
@@ -1901,7 +1879,7 @@ const CatalogAdmin = () => {
                                   ) : null}
                                   {selectedSiteSectionMeta.advancedFields.includes("featuredOfferingId") ? (
                                     <label className="space-y-1 text-xs text-white/60">
-                                      <span>Featured offering</span>
+                                      <span>Featured product</span>
                                       <select value={selectedSiteSection.featuredOfferingId || ""} onChange={(event) => updateSiteSection(selectedSiteSection.id, "featuredOfferingId", event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white">
                                         <option value="" className="bg-gray-900">None</option>
                                         {offerings.map((offering) => (
@@ -1957,7 +1935,7 @@ const CatalogAdmin = () => {
                                         {selectedSiteSectionMeta.fields.includes("description") ? (
                                           <label className="space-y-1 text-xs text-white/60">
                                             <span>Description</span>
-                                            <textarea value={item.description || ""} onChange={(event) => updateSiteSectionItem(item.key, "description", event.target.value)} rows={3} className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white" />
+                                            <SimpleEditor value={item.description || ""} onChange={(value) => updateSiteSectionItem(item.key, "description", value)} minHeightClass="min-h-[8rem]" />
                                           </label>
                                         ) : null}
                                         {selectedSiteSectionMeta.fields.includes("label") ? (
@@ -2080,10 +2058,10 @@ const CatalogAdmin = () => {
                 <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.12),transparent_32%),linear-gradient(180deg,rgba(7,12,22,0.94),rgba(9,16,28,0.96))] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.24)]">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="max-w-3xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.34em] text-teal-200/80">Offerings studio</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.34em] text-teal-200/80">Products studio</p>
                       <h2 className="mt-3 text-2xl font-semibold text-white">Manage what customers see, how they pay, and how each offer is fulfilled.</h2>
                       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/65">
-                        The editor below is organised around storefront copy, fulfilment mode, and publishing status. Internal fields are tucked behind clearer labels so adding a new offering feels like managing a product, not editing a table row.
+                        The editor below is organised around storefront copy, fulfilment mode, and publishing status. Internal fields are tucked behind clearer labels so adding a new product feels like managing a product, not editing a table row.
                       </p>
                     </div>
                     <div className="flex flex-1 flex-wrap gap-3">
@@ -2092,7 +2070,7 @@ const CatalogAdmin = () => {
                         <p className="mt-2 text-2xl font-semibold text-white">{sections.length}</p>
                       </div>
                       <div className="min-w-[160px] flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-                        <p className="text-xs uppercase tracking-[0.2em] text-white/45">Offers</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-white/45">Products</p>
                         <p className="mt-2 text-2xl font-semibold text-white">{offerings.length}</p>
                       </div>
                       <div className="min-w-[160px] flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
@@ -2109,7 +2087,7 @@ const CatalogAdmin = () => {
                       onClick={() => setShowNewSectionForm((prev) => !prev)}
                       className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100"
                     >
-                      {showNewSectionForm ? "Hide new type" : "Add new offering type"}
+                      {showNewSectionForm ? "Hide new type" : "Add new product type"}
                     </button>
                     <button
                       type="button"
@@ -2117,7 +2095,7 @@ const CatalogAdmin = () => {
                       className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
                       disabled={!selectedSectionId}
                     >
-                      {showNewOfferingForm ? "Hide new offering" : "Add new offering"}
+                      {showNewOfferingForm ? "Hide new product" : "Add new product"}
                     </button>
                   </div>
 
@@ -2125,7 +2103,7 @@ const CatalogAdmin = () => {
                     <div className="flex flex-col gap-4 xl:flex-row">
                       {showNewSectionForm ? (
                         <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add offering type</p>
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add product type</p>
                           <div className="mt-4 space-y-3">
                             <label className="block space-y-1 text-xs text-white/60">
                               <span>Type title</span>
@@ -2138,12 +2116,11 @@ const CatalogAdmin = () => {
                             </label>
                             <label className="block space-y-1 text-xs text-white/60">
                               <span>Description</span>
-                              <textarea
+                              <SimpleEditor
                                 value={newSection.description}
-                                onChange={(event) => updateNewSection("description", event.target.value)}
-                                rows={3}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                placeholder="Short description for this offering type"
+                                onChange={(value) => updateNewSection("description", value)}
+                                placeholder="Short description for this product type"
+                                minHeightClass="min-h-[10rem]"
                               />
                             </label>
                             <div className="flex flex-wrap gap-3">
@@ -2153,7 +2130,7 @@ const CatalogAdmin = () => {
                                 disabled={isCreatingSection}
                                 className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
                               >
-                                {isCreatingSection ? "Creating..." : "Add offering type"}
+                                {isCreatingSection ? "Creating..." : "Add product type"}
                               </button>
                               <button
                                 type="button"
@@ -2169,7 +2146,7 @@ const CatalogAdmin = () => {
 
                       {showNewOfferingForm ? (
                         <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add offering to selected type</p>
+                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add product to selected type</p>
                           <div className="mt-4 space-y-3">
                             <label className="block space-y-1 text-xs text-white/60">
                               <span>Selected type</span>
@@ -2178,7 +2155,7 @@ const CatalogAdmin = () => {
                               </div>
                             </label>
                             <label className="block space-y-1 text-xs text-white/60">
-                              <span>Offering title</span>
+                              <span>Product title</span>
                               <input
                                 value={newOffering.title}
                                 onChange={(event) => updateNewOffering("title", event.target.value)}
@@ -2230,7 +2207,7 @@ const CatalogAdmin = () => {
                                 disabled={isCreatingOffering || !selectedSectionId}
                                 className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
                               >
-                                {isCreatingOffering ? "Creating..." : "Add offering"}
+                                {isCreatingOffering ? "Creating..." : "Add product"}
                               </button>
                               <button
                                 type="button"
@@ -2340,7 +2317,7 @@ const CatalogAdmin = () => {
                         </p>
                       </div>
                       <p className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
-                        {offeringsForSelectedSection.length} offering{offeringsForSelectedSection.length === 1 ? "" : "s"} in this type
+                        {offeringsForSelectedSection.length} product{offeringsForSelectedSection.length === 1 ? "" : "s"} in this type
                       </p>
                     </div>
                     {selectedSection ? (
@@ -2358,11 +2335,11 @@ const CatalogAdmin = () => {
                         </div>
                         <label className="block space-y-1 text-xs text-white/60">
                           <span>Description</span>
-                          <textarea
+                          <SimpleEditor
                             value={selectedSection.description || ""}
-                            onChange={(event) => updateSectionEditor("description", event.target.value)}
-                            rows={3}
-                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                            onChange={(value) => updateSectionEditor("description", value)}
+                            placeholder="Add paragraphs, lists, and formatted copy for this product type."
+                            minHeightClass="min-h-[10rem]"
                           />
                         </label>
                         <div className="space-y-3 border-t border-white/10 pt-3">
@@ -2387,12 +2364,11 @@ const CatalogAdmin = () => {
                           </label>
                           <label className="block space-y-1 text-xs text-white/60">
                             <span>Hero Description</span>
-                            <textarea
+                            <SimpleEditor
                               value={selectedSection.hero_description || ""}
-                              onChange={(event) => updateSectionEditor("hero_description", event.target.value)}
-                              rows={4}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                              onChange={(value) => updateSectionEditor("hero_description", value)}
                               placeholder="Hi, I'm Nehal Patel - a manifestation coach, energy reader, and your guide to quantum leaping into your dream reality..."
+                              minHeightClass="min-h-[12rem]"
                             />
                           </label>
                           <label className="block space-y-1 text-xs text-white/60">
@@ -2450,7 +2426,7 @@ const CatalogAdmin = () => {
                             disabled={isSavingSection}
                             className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
                           >
-                            {isSavingSection ? "Saving..." : "Save offering type"}
+                            {isSavingSection ? "Saving..." : "Save product type"}
                           </button>
                         </div>
                       </div>
@@ -2470,22 +2446,13 @@ const CatalogAdmin = () => {
                                 {editor.is_active ? "Live" : "Draft"}
                               </span>
                             </div>
-                            <h3 className="mt-5 text-3xl font-semibold text-white">{editor.title || "Untitled offering"}</h3>
+                            <h3 className="mt-5 text-3xl font-semibold text-white">{editor.title || "Untitled product"}</h3>
                             {editor.subtitle ? (
                               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">{editor.subtitle}</p>
                             ) : null}
                             <p className="mt-5 max-w-2xl text-sm leading-relaxed text-white/72">
-                              {editor.summary || "Add a summary. This is the main storefront copy shown on offering cards and reused on the detail page."}
+                              {editor.summary || "Add a summary. This is the main storefront copy shown on product cards and reused on the detail page."}
                             </p>
-                            {fromLines(editor.highlightsText).length ? (
-                              <div className="mt-6 flex flex-col gap-2">
-                                {fromLines(editor.highlightsText).slice(0, 3).map((highlight) => (
-                                  <div key={highlight} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/75">
-                                    {highlight}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : null}
                           </div>
                           <div className="border-t border-white/10 p-6 text-sm text-white/65 lg:w-[340px] lg:border-l lg:border-t-0">
                             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Storefront preview guide</p>
@@ -2533,41 +2500,74 @@ const CatalogAdmin = () => {
                             </div>
 
                             <label className="mt-3 block space-y-1 text-xs text-white/60">
-                              <span>Summary</span>
+                              <span className="inline-flex items-center gap-1.5">
+                                Summary
+                                <InfoHint text="Shown on offer cards and reused as the opening copy on the detail page." />
+                              </span>
                               <textarea
                                 value={editor.summary || ""}
                                 onChange={(event) => updateEditor("summary", event.target.value)}
                                 rows={3}
                                 className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                               />
-                              <span className="block text-[11px] text-white/40">Shown on offer cards and reused as the opening copy on the detail page.</span>
                             </label>
 
                             <label className="mt-3 block space-y-1 text-xs text-white/60">
-                              <span>Long description</span>
-                              <textarea
+                              <span className="inline-flex items-center gap-1.5">
+                                Long description
+                                <InfoHint text="Use this for the detailed story, transformation, or delivery explanation." />
+                              </span>
+                              <SimpleEditor
                                 value={editor.long_description || ""}
-                                onChange={(event) => updateEditor("long_description", event.target.value)}
-                                rows={6}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                onChange={(value) => updateEditor("long_description", value)}
+                                minHeightClass="min-h-[12rem]"
+                                placeholder="Use paragraphs, bullet lists, and emphasis for the full offer story."
                               />
-                              <span className="block text-[11px] text-white/40">Use this for the detailed story, transformation, or delivery explanation.</span>
                             </label>
+
+                            <div className="mt-3 space-y-2">
+                              <span className="inline-flex items-center gap-1.5 text-xs text-white/60">
+                                Product image
+                                <InfoHint text="This image is used on storefront cards and product detail sections." />
+                              </span>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <label className="inline-flex cursor-pointer items-center rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleOfferingImageUpload}
+                                  />
+                                  {uploadingTarget === "offering-image" ? "Uploading..." : "Upload product image"}
+                                </label>
+                                {editor.image_url ? (
+                                  <a
+                                    href={editor.image_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-sm text-white/55 underline-offset-4 hover:text-white hover:underline"
+                                  >
+                                    Preview image
+                                  </a>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            {[
+                              ["image_url", "Image URL"],
+                              ["image_alt", "Image alt"],
+                            ].map(([key, label]) => (
+                              <label key={key} className="mt-3 block space-y-1 text-xs text-white/60">
+                                <span>{label}</span>
+                                <input
+                                  value={editor[key] ?? ""}
+                                  onChange={(event) => updateEditor(key, event.target.value)}
+                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                />
+                              </label>
+                            ))}
                           </div>
 
-                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Highlights and benefits</p>
-                            <label className="mt-4 block space-y-1 text-xs text-white/60">
-                              <span>Highlights (one per line)</span>
-                              <textarea
-                                value={editor.highlightsText || ""}
-                                onChange={(event) => updateEditor("highlightsText", event.target.value)}
-                                rows={6}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              />
-                              <span className="block text-[11px] text-white/40">These render as the key benefits list on the storefront.</span>
-                            </label>
-                          </div>
                         </div>
 
                         <div className="min-w-0 space-y-4">
@@ -2675,70 +2675,18 @@ const CatalogAdmin = () => {
                                 />
                               </label>
                               <label className="space-y-1 text-xs text-white/60">
-                                <span>Fallback helper message</span>
+                                <span className="inline-flex items-center gap-1.5">
+                                  Fallback helper message
+                                  <InfoHint text="Shown when checkout or booking cannot be completed automatically." />
+                                </span>
                                 <textarea
                                   value={editor.checkout_fallback_message || ""}
                                   onChange={(event) => updateEditor("checkout_fallback_message", event.target.value)}
                                   rows={3}
                                   className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                                 />
-                                <span className="block text-[11px] text-white/40">Shown when checkout or booking cannot be completed automatically.</span>
                               </label>
 
-                              <div className="space-y-2">
-                                <span className="block text-xs text-white/60">Upload image</span>
-                                <div className="flex flex-wrap items-center gap-3">
-                                  <label className="inline-flex cursor-pointer items-center rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={handleOfferingImageUpload}
-                                    />
-                                    {uploadingTarget === "offering-image" ? "Uploading..." : "Upload offering image"}
-                                  </label>
-                                  {editor.image_url ? (
-                                    <a
-                                      href={editor.image_url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-sm text-white/55 underline-offset-4 hover:text-white hover:underline"
-                                    >
-                                      Preview image
-                                    </a>
-                                  ) : null}
-                                </div>
-                              </div>
-                              {[
-                                ["image_url", "Image URL"],
-                                ["image_alt", "Image alt"],
-                              ].map(([key, label]) => (
-                                <label key={key} className="space-y-1 text-xs text-white/60">
-                                  <span>{label}</span>
-                                  <input
-                                    value={editor[key] ?? ""}
-                                    onChange={(event) => updateEditor(key, event.target.value)}
-                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                  />
-                                </label>
-                              ))}
-                              <label className="space-y-1 text-xs text-white/60">
-                                <span>Offering type</span>
-                                <select
-                                  value={editor.section_id || ""}
-                                  onChange={(event) => {
-                                    updateEditor("section_id", event.target.value);
-                                    setSelectedSectionId(event.target.value);
-                                  }}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                >
-                                  {sections.map((section) => (
-                                    <option key={section.id} value={section.id} className="bg-gray-900">
-                                      {section.title}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
                               <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
                                 <input
                                   type="checkbox"
@@ -2759,16 +2707,16 @@ const CatalogAdmin = () => {
                           disabled={isSavingOffering}
                           className="rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 disabled:opacity-60"
                         >
-                          {isSavingOffering ? "Saving..." : "Save offering"}
+                          {isSavingOffering ? "Saving..." : "Save product"}
                         </button>
                         <p className="text-sm text-white/45">
-                          Edits are scoped to the selected offering only.
+                          Edits are scoped to the selected product only.
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/60">
-                      No offerings found for this type yet.
+                      No products found for this type yet.
                     </div>
                   )}
                 </div>
@@ -2848,20 +2796,19 @@ const CatalogAdmin = () => {
                                   updateGlobalEditor("faqs", nextFaqs);
                                 }}
                                 className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                placeholder="What is the purpose of this offering?"
+                                placeholder="What is the purpose of this product?"
                               />
                             </label>
                             <label className="block space-y-1">
                               <span className="text-xs font-medium text-white/70">Answer</span>
-                              <textarea
+                              <SimpleEditor
                                 value={faq.answer || ""}
-                                onChange={(e) => {
+                                onChange={(value) => {
                                   const nextFaqs = [...globalEditor.faqs];
-                                  nextFaqs[index] = { ...faq, answer: e.target.value };
+                                  nextFaqs[index] = { ...faq, answer: value };
                                   updateGlobalEditor("faqs", nextFaqs);
                                 }}
-                                rows={3}
-                                className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                minHeightClass="min-h-[8rem]"
                                 placeholder="Write the answer here..."
                               />
                             </label>
@@ -2888,7 +2835,7 @@ const CatalogAdmin = () => {
                 <div className="mb-5">
                   <h2 className="text-lg font-semibold text-white">Reviews</h2>
                   <p className="mt-1 text-xs text-white/60">
-                    Manage multiple reviews for home testimonials and offering-specific buy pages.
+                    Manage multiple reviews for home testimonials and product-specific buy pages.
                   </p>
                 </div>
                 <div className="space-y-4">
@@ -2912,13 +2859,13 @@ const CatalogAdmin = () => {
                               className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                             >
                               <option value="home" className="bg-gray-900">Home</option>
-                              <option value="buy" className="bg-gray-900">Buy (offering specific)</option>
+                              <option value="buy" className="bg-gray-900">Buy (product specific)</option>
                               <option value="global" className="bg-gray-900">Buy (global)</option>
                             </select>
                           </label>
 
                           <label className="space-y-1 text-xs text-white/60">
-                            <span>Offering type</span>
+                            <span>Product type</span>
                             <select
                               value={review.section_id || ""}
                               onChange={(event) =>
@@ -2942,7 +2889,7 @@ const CatalogAdmin = () => {
                           </label>
 
                           <label className="space-y-1 text-xs text-white/60">
-                            <span>Offering (optional)</span>
+                            <span>Product (optional)</span>
                             <select
                               value={review.offering_id || ""}
                               onChange={(event) => updateReviewEditor(index, "offering_id", event.target.value)}
@@ -3041,11 +2988,10 @@ const CatalogAdmin = () => {
 
                         <label className="space-y-1 text-xs text-white/60">
                           <span>Quote</span>
-                          <textarea
+                          <SimpleEditor
                             value={review.quote || ""}
-                            onChange={(event) => updateReviewEditor(index, "quote", event.target.value)}
-                            rows={3}
-                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                            onChange={(value) => updateReviewEditor(index, "quote", value)}
+                            minHeightClass="min-h-[8rem]"
                           />
                         </label>
 

@@ -1,17 +1,18 @@
-import { useLayoutEffect } from 'react';
+import { Suspense, lazy, useLayoutEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Home } from './pages/storefront/Home';
 import { ThankYou } from './pages/storefront/ThankYou';
 import { ErrorPage } from './pages/storefront/ErrorPage';
 import Buy from './pages/storefront/Buy';
 import AuthPage from './pages/auth/AuthPage';
-import CatalogAdmin from './pages/admin/CatalogAdmin';
 import { TooltipProvider } from './components/ui/tooltip';
 import { AuthProvider } from './context/AuthContext';
 import { SiteSettingsProvider } from './context/SiteSettingsContext';
 import { ToastProvider } from './context/ToastContext';
 import { loadSavedTheme } from './utils/themeGenerator';
 import './styles/globals.css';
+
+const CatalogAdmin = lazy(() => import('./pages/admin/CatalogAdmin'));
 
 // Apply any saved theme at startup
 loadSavedTheme();
@@ -64,7 +65,20 @@ function App() {
                     <Route path="/buy/:productId/:status" element={<Buy />} />
                     <Route path="/sign-in" element={<AuthPage mode="signin" />} />
                     <Route path="/sign-up" element={<AuthPage mode="signup" />} />
-                    <Route path="/admin" element={<CatalogAdmin />} />
+                    <Route
+                      path="/admin"
+                      element={
+                        <Suspense
+                          fallback={
+                            <div className="flex min-h-[60vh] items-center justify-center px-6 text-sm text-slate-500">
+                              Loading admin...
+                            </div>
+                          }
+                        >
+                          <CatalogAdmin />
+                        </Suspense>
+                      }
+                    />
                     <Route path="/thank-you" element={<ThankYou />} />
                     <Route path="*" element={<ErrorPage />} />
                   </Routes>
