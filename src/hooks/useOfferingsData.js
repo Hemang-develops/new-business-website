@@ -18,14 +18,16 @@ export const useOfferingsData = () => {
 
     const loadCatalog = async () => {
       try {
-        const resolved = await getOfferingsCatalog();
+        const resolved = await getOfferingsCatalog({ forceRefresh: true });
         if (isMounted) {
           setCatalog(resolved);
         }
       } catch (loadError) {
         if (isMounted) {
           setError(loadError);
-          setCatalog(emptyCatalog);
+          // Fall back to non-forced cached data if available
+          const fallback = await getOfferingsCatalog().catch(() => emptyCatalog);
+          setCatalog(fallback || emptyCatalog);
         }
       } finally {
         if (isMounted) {

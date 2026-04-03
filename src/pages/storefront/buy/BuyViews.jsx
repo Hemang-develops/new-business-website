@@ -12,7 +12,7 @@ import { useToast } from "../../../context/ToastContext";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../supabase-client";
 import { Skeleton } from "../../../components/ui/skeleton";
-import BookingEmbed from "../../../components/storefront/BookingEmbed";
+import OfferingHero from "../../../components/storefront/OfferingHero";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -379,36 +379,7 @@ export const BuyListView = ({ buySections = [] }) => {
   }, []);
   return (
     <main className="relative z-10">
-      <section
-        id="hero"
-        className="relative flex min-h-[60vh] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-gray-950 to-black px-6 py-24"
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.2),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.25),transparent_60%)]" />
-        <div className="relative mx-auto flex max-w-4xl flex-col items-center text-center">
-          <span className="rounded-full border border-white/20 px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-white/70">
-            {activeSection ? "Offering type" : "High Frequencies 11 shop"}
-          </span>
-          <h1 className="mt-6 text-4xl font-bold leading-tight sm:text-5xl">
-            {activeSection
-              ? activeSection.title
-              : "Choose the portal that matches the future you've already claimed."}
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg text-white/70">
-            {activeSection
-              ? activeSection.description
-              : "Every offering below delivers the exact energy, affirmations, and strategy you requested. Follow your intuition, click through for details, and I will deliver everything straight to your inbox within 24 hours."}
-          </p>
-          {activeSection ? (
-            <Link
-              to="/#programs"
-              className="mt-8 inline-flex items-center gap-2 rounded-full border border-teal-300/40 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-200 transition hover:border-teal-200 hover:bg-teal-300/20"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to offerings
-            </Link>
-          ) : null}
-        </div>
-      </section>
+      {activeSection && <OfferingHero section={activeSection} />}
 
       {buySections.map((section) => (
         <section key={section.id} id={section.id} className="bg-gray-950 py-16">

@@ -1,4 +1,5 @@
 import { Instagram, Mail, Music2, ShoppingBag, Youtube } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
 
 const iconMap = {
@@ -9,24 +10,49 @@ const iconMap = {
   "shopping-bag": ShoppingBag,
 };
 
-const FooterGroup = ({ title, links }) => (
-  <div className="min-w-[160px] flex-1">
-    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/88">{title}</p>
-    <div className="mt-5 flex flex-col gap-4">
-      {links.map((link) => (
-        <a
-          key={`${title}-${link.key}`}
-          href={link.href}
-          target={link.href?.startsWith("http") ? "_blank" : undefined}
-          rel={link.href?.startsWith("http") ? "noopener noreferrer" : undefined}
-          className="text-[1.02rem] text-white/62 transition hover:text-brand-primary-light"
-        >
-          {link.label}
-        </a>
-      ))}
+const FooterGroup = ({ title, links }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLinkClick = (event, href) => {
+    if (href.startsWith('#')) {
+      event.preventDefault();
+      if (location.pathname !== "/") {
+        navigate({ pathname: "/", hash: href });
+      } else {
+        const target = document.querySelector(href);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    }
+  };
+
+  return (
+    <div className="min-w-[160px] flex-1">
+      <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/88">{title}</p>
+      <div className="mt-5 flex flex-col gap-4">
+        {links.map((link) => {
+          const isAnchorLink = link.href?.startsWith('#');
+          const LinkComponent = isAnchorLink ? 'button' : 'a';
+
+          return (
+            <LinkComponent
+              key={`${title}-${link.key}`}
+              href={!isAnchorLink ? link.href : undefined}
+              onClick={isAnchorLink ? (e) => handleLinkClick(e, link.href) : undefined}
+              target={!isAnchorLink && link.href?.startsWith("http") ? "_blank" : undefined}
+              rel={!isAnchorLink && link.href?.startsWith("http") ? "noopener noreferrer" : undefined}
+              className="text-[1.02rem] text-white/62 transition hover:text-brand-primary-light text-left"
+            >
+              {link.label}
+            </LinkComponent>
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Footer = () => {
   const { settings, getLinks } = useSiteSettings();

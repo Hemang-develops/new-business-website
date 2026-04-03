@@ -663,6 +663,26 @@ const CatalogAdmin = () => {
     }
   };
 
+  const handleHeroImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !selectedSection) {
+      return;
+    }
+
+    setUploadingTarget("hero-image");
+    setStatus({ type: "idle", message: "" });
+    try {
+      const publicUrl = await uploadImageToStorage(file, `sections/${selectedSection.id}/hero`);
+      updateSectionEditor("hero_image_url", publicUrl);
+      setStatus({ type: "success", message: "Hero image uploaded successfully." });
+    } catch (error) {
+      setStatus({ type: "error", message: error?.message || "Unable to upload hero image." });
+    } finally {
+      setUploadingTarget("");
+    }
+  };
+
   const handleProfileImageUpload = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -888,6 +908,12 @@ const CatalogAdmin = () => {
         manual_support_label: selectedSection.manual_support_label || null,
         manual_support_link: selectedSection.manual_support_link || null,
         payment_methods: fromLines(selectedSection.paymentMethodsText),
+        hero_title: selectedSection.hero_title || null,
+        hero_subtitle: selectedSection.hero_subtitle || null,
+        hero_description: selectedSection.hero_description || null,
+        hero_image_url: selectedSection.hero_image_url || null,
+        hero_cta_label: selectedSection.hero_cta_label || null,
+        hero_cta_href: selectedSection.hero_cta_href || null,
         sort_order: Number(selectedSection.sort_order || 0),
         is_active: Boolean(selectedSection.is_active),
       };
@@ -2339,6 +2365,76 @@ const CatalogAdmin = () => {
                             className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                           />
                         </label>
+                        <div className="space-y-3 border-t border-white/10 pt-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Hero Section</p>
+                          <label className="block space-y-1 text-xs text-white/60">
+                            <span>Hero Title</span>
+                            <input
+                              value={selectedSection.hero_title || ""}
+                              onChange={(event) => updateSectionEditor("hero_title", event.target.value)}
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                              placeholder="Meet Your Manifestation Coach"
+                            />
+                          </label>
+                          <label className="block space-y-1 text-xs text-white/60">
+                            <span>Hero Subtitle</span>
+                            <input
+                              value={selectedSection.hero_subtitle || ""}
+                              onChange={(event) => updateSectionEditor("hero_subtitle", event.target.value)}
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                              placeholder="High-Frequency Coaching & Mentorship"
+                            />
+                          </label>
+                          <label className="block space-y-1 text-xs text-white/60">
+                            <span>Hero Description</span>
+                            <textarea
+                              value={selectedSection.hero_description || ""}
+                              onChange={(event) => updateSectionEditor("hero_description", event.target.value)}
+                              rows={4}
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                              placeholder="Hi, I'm Nehal Patel - a manifestation coach, energy reader, and your guide to quantum leaping into your dream reality..."
+                            />
+                          </label>
+                          <label className="block space-y-1 text-xs text-white/60">
+                            <span>Hero Image</span>
+                            <div className="flex items-center gap-3">
+                              <label className="inline-flex cursor-pointer items-center rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100">
+                                <input type="file" accept="image/*" className="hidden" onChange={handleHeroImageUpload} />
+                                {uploadingTarget === "hero-image" ? "Uploading..." : "Upload hero image"}
+                              </label>
+                              {selectedSection.hero_image_url ? (
+                                <a
+                                  href={selectedSection.hero_image_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-sm text-white/55 underline-offset-4 hover:text-white hover:underline"
+                                >
+                                  View current image
+                                </a>
+                              ) : null}
+                            </div>
+                          </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="block space-y-1 text-xs text-white/60">
+                              <span>CTA Label</span>
+                              <input
+                                value={selectedSection.hero_cta_label || ""}
+                                onChange={(event) => updateSectionEditor("hero_cta_label", event.target.value)}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                placeholder="Explore Offerings"
+                              />
+                            </label>
+                            <label className="block space-y-1 text-xs text-white/60">
+                              <span>CTA Link</span>
+                              <input
+                                value={selectedSection.hero_cta_href || ""}
+                                onChange={(event) => updateSectionEditor("hero_cta_href", event.target.value)}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                placeholder="#offerings"
+                              />
+                            </label>
+                          </div>
+                        </div>
                         <div className="flex flex-wrap items-center gap-3">
                           <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
                             <input

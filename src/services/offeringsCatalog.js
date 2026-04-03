@@ -95,6 +95,12 @@ const buildCatalog = (sections, offerings, sharedContent, reviewMap) => {
         ...section,
         title: section.title || "",
         description: section.description || "",
+        heroTitle: section.hero_title || section.title || "",
+        heroSubtitle: section.hero_subtitle || "",
+        heroDescription: section.hero_description || section.description || "",
+        heroImageUrl: section.hero_image_url || undefined,
+        heroCtaLabel: section.hero_cta_label || "Explore Offerings",
+        heroCtaHref: section.hero_cta_href || `#${section.id}`,
         items: [],
       },
     ])
@@ -131,7 +137,7 @@ const fetchCatalogFromSupabase = async () => {
   const [sectionsRes, offeringsRes, sharedContentRes, reviewsRes] = await Promise.all([
     supabase
       .from(sectionsTable)
-      .select("id,title,description,cta_label,action_link,checkout_fallback_message,purchase_label,purchase_link,manual_support_label,manual_support_link,payment_methods,sort_order,is_active")
+      .select("id,title,description,cta_label,action_link,checkout_fallback_message,purchase_label,purchase_link,manual_support_label,manual_support_link,payment_methods,sort_order,is_active,hero_title,hero_subtitle,hero_description,hero_image_url,hero_cta_label,hero_cta_href")
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),
     supabase
@@ -254,11 +260,12 @@ const fetchCatalogFromSupabase = async () => {
   return buildCatalog(sectionsRes.data || [], offeringsRes.data || [], sharedContent, reviewMap);
 };
 
-export const getOfferingsCatalog = async () => {
-  if (cachedCatalogData) {
+export const getOfferingsCatalog = async ({ forceRefresh = false } = {}) => {
+  if (!forceRefresh && cachedCatalogData) {
     return cachedCatalogData;
   }
-  if (inflightCatalogPromise) {
+
+  if (!forceRefresh && inflightCatalogPromise) {
     return inflightCatalogPromise;
   }
 
@@ -270,4 +277,9 @@ export const getOfferingsCatalog = async () => {
   })();
 
   return inflightCatalogPromise;
+};
+
+export const clearOfferingsCatalogCache = () => {
+  cachedCatalogData = null;
+  inflightCatalogPromise = null;
 };

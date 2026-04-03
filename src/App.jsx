@@ -2,6 +2,7 @@ import { useLayoutEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Home } from './pages/storefront/Home';
 import { ThankYou } from './pages/storefront/ThankYou';
+import { ErrorPage } from './pages/storefront/ErrorPage';
 import Buy from './pages/storefront/Buy';
 import AuthPage from './pages/auth/AuthPage';
 import CatalogAdmin from './pages/admin/CatalogAdmin';
@@ -65,6 +66,7 @@ function App() {
                     <Route path="/sign-up" element={<AuthPage mode="signup" />} />
                     <Route path="/admin" element={<CatalogAdmin />} />
                     <Route path="/thank-you" element={<ThankYou />} />
+                    <Route path="*" element={<ErrorPage />} />
                   </Routes>
                 </main>
               </div>

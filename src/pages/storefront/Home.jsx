@@ -82,6 +82,21 @@ export function Home() {
     };
   }, [browserRegion]);
 
+  if (settings.isLoading) {
+    return (
+      <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
+        <Navigation />
+        <main className="relative z-10 flex min-h-[calc(100vh-4rem)] items-center justify-center">
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-white/20 bg-black/50 p-8 text-center">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-brand-primary-light" />
+            <p className="text-white/80">Loading site content...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
       <Navigation />
