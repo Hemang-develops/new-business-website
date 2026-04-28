@@ -1,9 +1,49 @@
 import { supabase } from "../supabase-client";
 
-const sectionsTable = import.meta.env.VITE_SUPABASE_SECTIONS_TABLE || "storefront_sections";
-const offeringsTable = import.meta.env.VITE_SUPABASE_OFFERINGS_TABLE || "storefront_offerings";
-const globalContentTable = import.meta.env.VITE_SUPABASE_GLOBAL_CONTENT_TABLE || "storefront_global_content";
-const reviewsTable = import.meta.env.VITE_SUPABASE_REVIEWS_TABLE || "storefront_reviews";
+import {
+  sectionsTable,
+  offeringsTable,
+  globalContentTable,
+  reviewsTable,
+} from "../pages/admin/catalogAdminHelpers";
+
+/**
+ * @typedef {Object} CheckoutOption
+ * @property {string} name
+ * @property {string} defaultCurrency
+ * @property {string} successPath
+ * @property {string} cancelPath
+ * @property {Record<string, {label: string, amount: string, unitAmount: number, mode: string}>} currencies
+ * @property {string} productId
+ */
+
+/**
+ * @typedef {Object} CatalogOffering
+ * @property {string} id
+ * @property {string} title
+ * @property {string|undefined} imageUrl
+ * @property {string} imageAlt
+ * @property {string|undefined} subtitle
+ * @property {string} summary
+ * @property {string|undefined} longDescription
+ * @property {{usd: string}|undefined} price
+ * @property {string} ctaType
+ * @property {string|undefined} ctaLabel
+ * @property {string|undefined} actionLink
+ * @property {CheckoutOption|null} checkoutOptions
+ * @property {Array<any>} paymentMethods
+ * @property {any} booking
+ * @property {Array<any>} reviews
+ * @property {any} successStory
+ */
+
+/**
+ * @typedef {Object} StorefrontCatalog
+ * @property {string} source
+ * @property {Array<any>} buySections
+ * @property {Record<string, CatalogOffering>} offeringsIndex
+ * @property {string[]} offeringSupportOptions
+ */
 
 let cachedCatalogData = null;
 let inflightCatalogPromise = null;
@@ -13,6 +53,41 @@ const mapPrice = (row) => (row.price_usd ? { usd: String(row.price_usd) } : unde
 const sortBy = (list, key = "sort_order") =>
   [...(list || [])].sort((a, b) => Number(a?.[key] || 0) - Number(b?.[key] || 0));
 
+const parseUsdPrice = (value) => {
+  const numeric = Number(String(value || "").replace(/[^0-9.]/g, ""));
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+};
+
+const formatUsdAmount = (amount) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+  }).format(amount);
+
+const buildCheckoutOptionsFromPrice = (row) => {
+  const priceUsd = parseUsdPrice(row.price_usd);
+  if (priceUsd == null) {
+    return null;
+  }
+  const amount = formatUsdAmount(priceUsd);
+  return {
+    name: row.title || row.id,
+    defaultCurrency: "usd",
+    successPath: `/buy/${row.id}/status/success`,
+    cancelPath: `/buy/${row.id}/status/cancel`,
+    currencies: {
+      usd: {
+        label: `Pay ${amount} USD`,
+        amount,
+        unitAmount: Math.round(priceUsd * 100),
+        mode: "payment",
+      },
+    },
+    productId: row.id,
+  };
+};
+
 const mapOffering = (row, section, sharedContent, reviewMap) => {
   const detailsSections = sortBy(row.detail_sections).map((section) => ({
     ...(section.heading ? { heading: section.heading } : {}),
@@ -20,12 +95,14 @@ const mapOffering = (row, section, sharedContent, reviewMap) => {
     ...(section.detail_items?.length ? { items: sortBy(section.detail_items).map((entry) => entry.text) } : {}),
   }));
 
-  const checkoutOptions = Array.isArray(row.checkout) ? row.checkout[0]?.config || null : row.checkout?.config || null;
+  const storedCheckoutOptions = Array.isArray(row.checkout) ? row.checkout[0]?.config || null : row.checkout?.config || null;
 
   const offeringSpecificReviews = reviewMap.byOffering[row.id] || [];
   const sharedBuyReviews = reviewMap.sharedBuy || [];
   const mergedReviews = [...offeringSpecificReviews, ...sharedBuyReviews];
-  const ctaType = row.cta_type || (checkoutOptions ? "checkout" : "contact");
+  const ctaType = row.cta_type || (storedCheckoutOptions ? "checkout" : "contact");
+  const checkoutOptions =
+    storedCheckoutOptions || (ctaType === "checkout" || ctaType === "booking" ? buildCheckoutOptionsFromPrice(row) : null);
   const booking = row.booking_enabled
     ? {
         enabled: Boolean(row.booking_enabled),
@@ -98,7 +175,7 @@ const buildCatalog = (sections, offerings, sharedContent, reviewMap) => {
         heroSubtitle: section.hero_subtitle || "",
         heroDescription: section.hero_description || section.description || "",
         heroImageUrl: section.hero_image_url || undefined,
-        heroCtaLabel: section.hero_cta_label || "Explore Offerings",
+        heroCtaLabel: section.hero_cta_label || "Details here",
         heroCtaHref: section.hero_cta_href || `#${section.id}`,
         items: [],
       },
@@ -258,6 +335,11 @@ const fetchCatalogFromSupabase = async () => {
   return buildCatalog(sectionsRes.data || [], offeringsRes.data || [], sharedContent, reviewMap);
 };
 
+/**
+ * Fetches the complete catalog.
+ * @param {{ forceRefresh?: boolean }} [options]
+ * @returns {Promise<StorefrontCatalog>}
+ */
 export const getOfferingsCatalog = async ({ forceRefresh = false } = {}) => {
   if (!forceRefresh && cachedCatalogData) {
     return cachedCatalogData;

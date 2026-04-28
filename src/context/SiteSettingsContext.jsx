@@ -1,11 +1,13 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { supabase } from "../supabase-client";
 import { defaultSiteSettings, normalizeSiteSettingsFromRows, siteThemeCssVariables } from "../services/siteSettings";
 
-const globalContentTable = import.meta.env.VITE_SUPABASE_GLOBAL_CONTENT_TABLE || "storefront_global_content";
-const siteSectionsTable = import.meta.env.VITE_SUPABASE_SITE_SECTIONS_TABLE || "storefront_site_sections";
-const siteSectionItemsTable = import.meta.env.VITE_SUPABASE_SITE_SECTION_ITEMS_TABLE || "storefront_site_section_items";
-const siteLinksTable = import.meta.env.VITE_SUPABASE_SITE_LINKS_TABLE || "storefront_site_links";
+import {
+  globalContentTable,
+  siteSectionsTable,
+  siteSectionItemsTable,
+  siteLinksTable,
+} from "../pages/admin/catalogAdminHelpers";
 
 const SiteSettingsContext = createContext({
   settings: null,
@@ -30,7 +32,7 @@ export const SiteSettingsProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const refreshSettings = async () => {
+  const refreshSettings = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -68,25 +70,26 @@ export const SiteSettingsProvider = ({ children }) => {
         throw linksRes.error;
       }
 
-      setSettings(
-        normalizeSiteSettingsFromRows({
-          global: globalRes.data || {},
-          sections: sectionsRes.data || [],
-          sectionItems: itemsRes.data || [],
-          links: linksRes.data || [],
-        }),
-      );
+      const rawData = {
+        global: globalRes.data || {},
+        sections: sectionsRes.data || [],
+        sectionItems: itemsRes.data || [],
+        links: linksRes.data || [],
+      };
+      setSettings(normalizeSiteSettingsFromRows(rawData));
+      return rawData;
     } catch (loadError) {
       setSettings(null);
       setError(loadError);
+      throw loadError;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshSettings();
-  }, []);
+  }, [refreshSettings]);
 
   useEffect(() => {
     if (settings?.theme) {
@@ -108,7 +111,7 @@ export const SiteSettingsProvider = ({ children }) => {
       getLinks: (groupKey) =>
         settings?.links?.filter((link) => link.groupKey === groupKey && link.enabled) || [],
     }),
-    [error, isLoading, settings],
+    [error, isLoading, settings, refreshSettings],
   );
 
   return <SiteSettingsContext.Provider value={value}>{children}</SiteSettingsContext.Provider>;

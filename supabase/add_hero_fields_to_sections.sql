@@ -34,6 +34,6 @@ SET
     WHEN id = 'energy-readings' THEN 'Hi, I''m Nehal Patel - an intuitive energy reader and tarot practitioner. I provide clear, actionable guidance to help you navigate your spiritual journey and make decisions aligned with your highest good.'
     ELSE 'Hi, I''m Nehal Patel - your manifestation guide and energy healer. Let me help you step into the reality you''ve been dreaming of.'
   END,
-  hero_cta_label = 'Explore Offerings',
+  hero_cta_label = 'Details here',
   hero_cta_href = ''
 WHERE id IN ('coaching', 'custom-meditation', 'meditations', 'digital', 'energy-readings');

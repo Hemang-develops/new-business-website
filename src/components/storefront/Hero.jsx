@@ -1,81 +1,122 @@
-import { useEffect, useState } from "react";
+import { useRef } from "react";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
-import { profilePic } from "../../utils";
+import { useGsapHover, useGsapReveal } from "../../hooks/useGsapMotion";
+
 import RichTextContent from "../ui/RichTextContent";
 
 const Hero = () => {
-  const [isVisible, setIsVisible] = useState(false);
+  const heroRef = useRef(null);
   const { settings, getSection, getSectionItems } = useSiteSettings();
   const heroSection = getSection("hero");
   const heroProofs = getSectionItems("hero");
 
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
+  useGsapReveal(heroRef, [heroSection?.id, heroProofs.length]);
+  useGsapHover(heroRef, "[data-gsap-hover]", [heroProofs.length]);
 
   return (
     <section
+      ref={heroRef}
       id="hero"
-      className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden bg-gray-950 text-white"
+      className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden py-16"
+      style={{
+        background: `linear-gradient(135deg, var(--site-brand-dark, #030406) 0%, #080a0f 100%)`,
+      }}
     >
-      <div className="absolute inset-0 bg-fixed bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.22),transparent_60%)]" />
-      <div className="absolute inset-0 bg-fixed bg-gradient-to-br from-indigo-900/40 via-gray-950 to-black mix-blend-screen" />
-
-      <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10 px-6 py-8 lg:flex-row lg:items-center lg:py-12">
+      {/* Dynamic Background Orchestration */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
-          className={`space-y-8 transition-all duration-1000 ease-out ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
-        >
-          {/* <span className="inline-flex items-center rounded-full border border-white/20 px-4 py-1 text-xs font-medium uppercase tracking-[0.4em] text-white/70">
-            High Frequencies 11
-          </span> */}
-          {heroSection?.eyebrow ? (
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-white/60">{heroSection.eyebrow}</p>
-          ) : null}
-          <h1 className="text-4xl font-bold leading-tight sm:text-6xl">{heroSection?.heading}</h1>
-          <RichTextContent value={heroSection?.description} className="max-w-2xl text-lg text-white/70" />
-          <div className="flex flex-wrap gap-4">
+          className="absolute -top-[10%] -left-[10%] h-[700px] w-[700px] rounded-full blur-[150px] opacity-10"
+          style={{ backgroundColor: 'var(--site-brand-primary)' }}
+        />
+        <div
+          className="absolute -bottom-[10%] -right-[10%] h-[600px] w-[600px] rounded-full blur-[120px] opacity-15"
+          style={{ backgroundColor: 'var(--site-brand-secondary)' }}
+        />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.05] mix-blend-overlay" />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-6xl px-6 flex flex-col lg:flex-row lg:items-center gap-12 lg:gap-16">
+
+        {/* Left Content Column */}
+        <div className="flex-1 space-y-8" data-gsap-reveal>
+          {/* <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-teal-300/20 bg-teal-300/5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
+            </span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
+              {heroSection?.eyebrow || "Introduction"}
+            </p>
+          </div> */}
+
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.1]">
+            {heroSection?.heading}
+          </h1>
+
+          <RichTextContent
+            value={heroSection?.description}
+            className="max-w-xl text-lg leading-relaxed text-white/50 font-medium"
+          />
+
+          <div className="flex flex-wrap gap-5">
             <a
               href={heroSection?.primaryCtaHref || "#programs"}
-              className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand-primary-light bg-brand-primary px-8 py-3 text-base font-semibold text-brand-dark shadow-xl shadow-brand-primary/45 transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-brand-primary-light hover:shadow-brand-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary-light focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+              data-gsap-hover
+              className="inline-flex h-14 items-center justify-center rounded-2xl bg-teal-300 px-10 text-sm font-bold uppercase tracking-widest text-black transition-all hover:bg-teal-200 hover:-translate-y-1 active:scale-95 shadow-[0_20px_40px_rgba(45,212,191,0.2)]"
             >
-              {heroSection?.primaryCtaLabel || "Explore offerings"}
+              {heroSection?.primaryCtaLabel || "Details here"}
             </a>
             <a
               href={heroSection?.secondaryCtaHref || "#contact"}
-              className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/35 bg-white/5 px-8 py-3 text-base font-semibold text-white/90 backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-primary-light hover:bg-white/10 hover:text-brand-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary-light focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+              data-gsap-hover
+              className="inline-flex h-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-10 text-sm font-bold uppercase tracking-widest text-white transition-all hover:bg-white/[0.08] hover:border-white/20 hover:-translate-y-1 active:scale-95 backdrop-blur-xl"
             >
-              {heroSection?.secondaryCtaLabel || "Book a discovery call"}
+              {heroSection?.secondaryCtaLabel || "Contact"}
             </a>
           </div>
-          <div className="flex flex-wrap gap-6 pt-6">
+
+          {/* Value Proof Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
             {heroProofs.map((item) => (
-              <div key={item.title} className="w-full sm:w-1/3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-                <p className="text-base font-semibold text-white">{item.title}</p>
-                <RichTextContent value={item.description} className="mt-2 leading-relaxed" />
+              <div
+                key={item.key}
+                data-gsap-hover
+                className="group rounded-3xl border border-white/5 bg-white/[0.02] p-6 transition-all duration-300 hover:border-teal-300/30"
+              >
+                <p className="text-lg font-bold text-white mb-2 group-hover:text-teal-300 transition-colors">
+                  {item.title}
+                </p>
+                <div className="text-xs font-medium text-white/40 leading-relaxed group-hover:text-white/60">
+                  <RichTextContent value={item.description} />
+                </div>
               </div>
             ))}
           </div>
         </div>
 
+        {/* Right Media Column */}
         <div
-          className={`mx-auto flex justify-center transition-all duration-1000 ease-out delay-200 lg:mx-0 ${
-            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-          }`}
+          className="lg:w-[40%] flex justify-center"
+          data-gsap-reveal
+          data-gsap-delay="0.2"
         >
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-400 via-blue-500 to-purple-600 blur-3xl opacity-60" />
-            <div className="relative rounded-[36px] border border-white/10 bg-white/10 p-4 backdrop-blur">
+          <div className="relative group">
+            {/* Dynamic Glow Aura */}
+            <div
+              className="absolute -inset-10 rounded-full blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity duration-700 animate-pulse"
+              style={{ backgroundColor: 'var(--site-brand-primary)' }}
+            />
+
+            <div className="relative rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-4 backdrop-blur-2xl shadow-2xl overflow-hidden">
               <img
-                src={settings.profile.imageUrl || profilePic}
-                alt={settings.profile.imageAlt}
-                width={384}
-                height={384}
-                className="h-80 w-80 rounded-[28px] object-cover shadow-2xl lg:h-96 lg:w-96"
+                src={settings.profile?.imageUrl || "https://ui-avatars.com/api/?name=Admin&background=020617&color=fff"}
+                alt={settings.profile?.imageAlt || "Profile"}
+                className="h-72 w-72 rounded-[2rem] object-cover shadow-2xl lg:h-[380px] lg:w-full min-w-[280px] transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute left-1/2 top-full mt-4 w-max -translate-x-1/2 rounded-full bg-white/10 px-6 py-3 text-sm font-medium text-white backdrop-blur">
-                {settings.profile.roleLabel}
+
+              {/* Floating Role Label */}
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-max rounded-full border border-teal-300/20 bg-gray-950/90 px-8 py-3 text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300 shadow-2xl backdrop-blur-md">
+                {settings.profile?.roleLabel || "Founder"}
               </div>
             </div>
           </div>

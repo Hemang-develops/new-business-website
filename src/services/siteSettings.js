@@ -10,7 +10,7 @@ export const defaultSiteSections = [
     heading: "Quantum manifestation coaching for visionaries ready to lead themselves.",
     description:
       "Hey love, I'm Nehal Patel. I help you manifest with integrity-honoring both the mystical and the practical. Together we create a sustainable, regulated, joyful path to your next level.",
-    primaryCtaLabel: "Explore offerings",
+    primaryCtaLabel: "Details here",
     primaryCtaHref: "#programs",
     secondaryCtaLabel: "Book a discovery call",
     secondaryCtaHref: "#contact",
