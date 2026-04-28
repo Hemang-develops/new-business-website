@@ -4,6 +4,25 @@ import { Link, useNavigate } from "react-router-dom";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../services/marketData";
 import { roundUpAestheticAmount } from "../../services/pricing";
 
+const richTextToPlainText = (value) => {
+  const html = String(value || "").trim();
+  if (!html) {
+    return "";
+  }
+
+  const withSpacing = html
+    .replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, " ")
+    .replace(/<br\s*\/?>/gi, " ");
+
+  if (typeof document !== "undefined") {
+    const element = document.createElement("div");
+    element.innerHTML = withSpacing;
+    return (element.textContent || element.innerText || "").replace(/\s+/g, " ").trim();
+  }
+
+  return withSpacing.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+};
+
 function HorizontalCard({
   image,
   imageAlt = "card-image",
@@ -25,10 +44,11 @@ function HorizontalCard({
   const [localCurrency, setLocalCurrency] = useState("USD");
   const [usdRates, setUsdRates] = useState(null);
   const navigate = useNavigate();
+  const plainDescription = useMemo(() => richTextToPlainText(description), [description]);
 
-  const shouldTruncate = description && description.length > maxDescriptionLength;
-  const displayDescription =
-    shouldTruncate && !isExpanded ? `${description.slice(0, maxDescriptionLength)}...` : description;
+  const shouldTruncate = plainDescription && plainDescription.length > maxDescriptionLength;
+  const collapsedDescription =
+    shouldTruncate ? `${plainDescription.slice(0, maxDescriptionLength)}...` : plainDescription;
 
   const toggleExpanded = () => setIsExpanded(!isExpanded);
   const isExternalLink =
@@ -209,15 +229,18 @@ function HorizontalCard({
             <p className="mb-2 text-xs font-semibold text-gray-300 md:mb-3 md:text-sm">{subtitle}</p>
           )}
 
-          {description && (
+          {plainDescription && (
             <div className="mb-3 md:mb-4">
-              <p className="text-xs font-medium leading-relaxed text-gray-300 md:text-sm">
-                {displayDescription}
-              </p>
+              <div className={`${shouldTruncate && isExpanded ? "max-h-32 overflow-y-auto pr-2" : "min-h-[3.75rem]"}`}>
+                <p className="text-xs font-medium leading-relaxed text-gray-300 md:text-sm">
+                  {isExpanded ? plainDescription : collapsedDescription}
+                </p>
+              </div>
 
               {shouldTruncate && (
                 <button
                   onClick={toggleExpanded}
+                  aria-expanded={isExpanded}
                   className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-400 transition-colors hover:text-blue-300 md:text-sm"
                 >
                   {isExpanded ? (

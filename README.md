@@ -93,6 +93,24 @@ Requirement:
 8. user inventory (admin)
 10. old content should not be shown after modified but loader should be shown then new data
 11. pages break after refresh due to page api not found
+12. scroll issue 
+13. white screen due to lazy loading
+14. Show more issue with card
+15. explore offering => Details here 
+16. email going twice
+17. ADD EMAIL IN TEMPLATE FOR ISSUES 
+18. drip content
+19. reminder email
+
+
+
+Courses --->  
+        |--> Booking (meeting)                                            
+        |                                                       |--> with out Modules ------------------|
+        |--> Content ---> Normal (all at once access)---------------------|                             |-------> Types (youtube video/ rich text/ video or audio (uploaded))/ external link
+                     |                                                    |----------> Modules-----------
+                     |                                                    |                             
+                     |--> Drip content (access in interval of days)-------|       
 
 ## Cal.com booking sync
 

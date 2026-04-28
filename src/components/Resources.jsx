@@ -1,15 +1,19 @@
-import { useReveal } from '../hooks/useReveal';
+import { useRef } from "react";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { useGsapHover, useGsapReveal } from "../hooks/useGsapMotion";
 import RichTextContent from "./ui/RichTextContent";
 
 const Resources = () => {
+  const resourcesRef = useRef(null);
   const { getSection, getSectionItems } = useSiteSettings();
   const resourcesSection = getSection("resources");
   const resources = getSectionItems("resources");
+  useGsapReveal(resourcesRef, [resources.length]);
+  useGsapHover(resourcesRef, "[data-gsap-hover]", [resources.length]);
   return (
-    <section id="resources" className="min-h-[calc(100vh-4rem)] bg-gray-950 py-4 pt-16 text-white lg:py-8">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="text-center">
+    <section ref={resourcesRef} id="resources" className="min-h-[calc(100vh-4rem)] bg-gray-950 py-4 pt-16 text-white lg:py-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="text-center" data-gsap-reveal data-parallax-content data-parallax-depth="0.35">
           <p className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-400">{resourcesSection?.eyebrow}</p>
           <h2 className="mt-4 text-4xl font-bold text-white sm:text-5xl">
             {resourcesSection?.heading}
@@ -19,15 +23,13 @@ const Resources = () => {
 
         <div className="mt-16 grid auto-rows-fr gap-6 md:grid-cols-2">
           {resources.map((resource) => {
-            const [ref, visible] = useReveal({ threshold: 0.2 });
             return (
               <a
                 key={resource.key}
-                ref={ref}
                 href={resource.href}
-                className={`group flex h-full flex-col justify-between rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl shadow-black/20 backdrop-blur transition-all duration-700 ease-out hover:-translate-y-2 hover:border-blue-400 ${
-                  visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-                }`}
+                data-gsap-reveal
+                data-gsap-hover
+                className="group flex h-full flex-col justify-between rounded-3xl border border-white/10 bg-white/5 p-8 shadow-xl shadow-black/20 backdrop-blur hover:border-blue-400"
                 target={resource.href.startsWith("http") ? "_blank" : undefined}
                 rel={resource.href.startsWith("http") ? "noopener noreferrer" : undefined}
               >

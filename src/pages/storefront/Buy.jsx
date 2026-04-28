@@ -6,6 +6,9 @@ import { useOfferingsData } from "../../hooks/useOfferingsData";
 import FAQSection from "../../components/storefront/FAQSection";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
 import SiteLoadingScreen from "../../components/storefront/SiteLoadingScreen";
+import { useToast } from "../../context/ToastContext";
+import { useEffect, useRef } from "react";
+import { supabase } from "../../supabase-client";
 
 const Buy = () => {
   const { buySections, offeringsIndex, isLoading } = useOfferingsData();
@@ -13,10 +16,21 @@ const Buy = () => {
   const { productId, sectionId, status: statusParam } = useParams();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const toast = useToast();
   const selectedSection = sectionId ? buySections.find((section) => section.id === sectionId) : null;
   const isDetailRoute = Boolean(productId);
   const product = productId ? offeringsIndex[productId] : null;
   const checkoutStatus = statusParam || searchParams.get("status");
+  const courseAccessUrl = searchParams.get("courseAccess");
+  const sessionId = searchParams.get("session_id");
+  const processedStripeSessionRef = useRef("");
+
+  // For courses with direct access URL, redirect immediately
+  useEffect(() => {
+    if (checkoutStatus === "success" && courseAccessUrl && isDetailRoute && product) {
+      window.location.href = courseAccessUrl;
+    }
+  }, [checkoutStatus, courseAccessUrl, isDetailRoute, product]);
 
   if (siteError) {
     return (
@@ -45,7 +59,12 @@ const Buy = () => {
         isLoading ? (
           <BuyDetailViewSkeleton />
         ) : product ? (
-          <BuyDetailView item={product} checkoutStatus={checkoutStatus} offeringsIndex={offeringsIndex} />
+          <BuyDetailView
+            item={product}
+            checkoutStatus={checkoutStatus}
+            courseAccessUrl={courseAccessUrl}
+            offeringsIndex={offeringsIndex}
+          />
         ) : (
           <UnknownProduct />
         )

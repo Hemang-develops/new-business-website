@@ -1,5 +1,7 @@
 import Cal from "@calcom/embed-react";
 import { ArrowRight, ExternalLink } from "lucide-react";
+import { useMemo } from "react";
+import { useAuth } from "../../context/AuthContext";
 
 const toCalLink = (bookingUrl) => {
   if (!bookingUrl) {
@@ -15,15 +17,29 @@ const toCalLink = (bookingUrl) => {
 };
 
 const BookingEmbed = ({ item }) => {
+  const { user, isAuthenticated } = useAuth();
   const booking = item.booking;
+  const isSynced = booking?.status === "synced" && booking?.url;
+  const calLink = isSynced ? toCalLink(booking.url) : "";
+  const bookingLabel = booking?.ctaLabel || item.ctaLabel || "Book now";
+  const sessionFormatLabel = "Google Meet session";
+  const attendeeName = isAuthenticated
+    ? [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || user?.name || ""
+    : "";
+  const attendeeEmail = isAuthenticated ? user?.email || "" : "";
+  const calConfig = useMemo(
+    () => ({
+      layout: "month_view",
+      name: attendeeName,
+      email: attendeeEmail,
+    }),
+    [attendeeEmail, attendeeName],
+  );
+  const calEmbedKey = `${calLink}:${attendeeName}:${attendeeEmail}`;
+
   if (!booking?.enabled) {
     return null;
   }
-
-  const isSynced = booking.status === "synced" && booking.url;
-  const calLink = isSynced ? toCalLink(booking.url) : "";
-  const bookingLabel = booking.ctaLabel || item.ctaLabel || "Book now";
-  const sessionFormatLabel = "Google Meet session";
 
   return (
     <section className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8 text-white/90 shadow-2xl backdrop-blur">
@@ -40,10 +56,11 @@ const BookingEmbed = ({ item }) => {
         <>
           <div className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80">
             <Cal
+              key={calEmbedKey}
               calLink={calLink}
               className="min-h-[720px] w-full"
               style={{ width: "100%", minHeight: "720px", overflow: "hidden" }}
-              config={{ layout: "month_view" }}
+              config={calConfig}
             />
           </div>
           <a

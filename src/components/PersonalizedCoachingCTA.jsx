@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { useGsapHover, useGsapReveal } from "../hooks/useGsapMotion";
 import { getBrowserRegion, getCountries, getUsdRates } from "../services/marketData";
 import { roundUpAestheticAmount } from "../services/pricing";
 import { useOfferingsData } from "../hooks/useOfferingsData";
@@ -14,6 +15,7 @@ const fallbackCountryData = [
 ];
 
 const PersonalizedCoachingCTA = () => {
+  const coachingRef = useRef(null);
   const { getSection, getSectionItems, settings } = useSiteSettings();
   const { offeringsIndex } = useOfferingsData();
   const coachingSection = getSection("coaching");
@@ -94,55 +96,100 @@ const PersonalizedCoachingCTA = () => {
     ? `/buy/${coachingSection.featuredOfferingId}`
     : coachingSection?.primaryCtaHref || "#programs";
 
+  useGsapReveal(coachingRef, [coachingBenefits.length, featuredOffering?.id]);
+  useGsapHover(coachingRef, "[data-gsap-hover]", [featuredOffering?.id]);
+
   return (
     <section
+      ref={coachingRef}
       id="coaching"
-      className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gradient-to-br from-purple-900/30 via-gray-950 to-black py-4 pt-16 text-white lg:py-8"
+      className="relative min-h-screen overflow-hidden py-20 lg:py-24"
+      style={{
+        background: `linear-gradient(to bottom, var(--site-brand-dark, #030406), #0a0a0a)`,
+      }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(244,114,182,0.18),transparent_55%),radial-gradient(circle_at_bottom,_rgba(56,189,248,0.18),transparent_65%)]" />
+      {/* Dynamic Background Effects */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div 
+          className="absolute -top-[10%] right-[10%] h-[700px] w-[700px] rounded-full blur-[150px] opacity-10"
+          style={{ backgroundColor: 'var(--site-brand-primary)' }}
+        />
+        <div 
+          className="absolute -bottom-[10%] left-[10%] h-[600px] w-[600px] rounded-full blur-[120px] opacity-10"
+          style={{ backgroundColor: 'var(--site-brand-secondary)' }}
+        />
+      </div>
+
       <div className="relative mx-auto w-full max-w-6xl px-6">
-        <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.45em] text-pink-200">{coachingSection?.eyebrow}</p>
-            <h2 className="text-4xl font-bold leading-tight sm:text-5xl">{coachingSection?.heading}</h2>
-            <RichTextContent value={coachingSection?.description} className="text-lg text-white/75" />
-          </div>
-          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/10 p-8 backdrop-blur">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-pink-200">
-              {coachingSection?.supportingEyebrow || "Investment"}
-            </p>
-            <div className="mt-4 flex items-baseline gap-3">
-              <p className="text-4xl font-bold">{localInvestmentLabel || usdInvestmentLabel}</p>
+        <div className="flex flex-col gap-12 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl space-y-6" data-gsap-reveal>
+            <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-teal-300/20 bg-teal-300/5 mb-4">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
+              </span>
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
+                {coachingSection?.eyebrow || "Immersion"}
+              </p>
             </div>
-            <RichTextContent
-              value={
-                coachingSection?.supportingDescription ||                "<p>30 days • private Voxer/email support • personalised meditations</p>"
-              }
-              className="mt-4 text-sm text-white/70"
+
+            <h2 className="text-4xl font-bold tracking-tight text-white sm:text-6xl leading-[1.1]">
+              {coachingSection?.heading}
+            </h2>
+            
+            <RichTextContent 
+              value={coachingSection?.description} 
+              className="text-lg leading-relaxed text-white/50 font-medium" 
             />
-            <Link
-              to={coachingHref}
-              className="mt-6 inline-flex w-full items-center justify-center rounded-full border-2 border-pink-200/90 bg-pink-500 px-6 py-3 text-sm font-semibold uppercase tracking-[0.32em] text-white shadow-xl shadow-pink-500/45 transition-all hover:-translate-y-0.5 hover:border-white hover:bg-pink-400 hover:shadow-pink-400/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-200 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-            >
-              {coachingSection?.primaryCtaLabel || "Become a new you here"}
-            </Link>
+          </div>
+
+          {/* Investment Card */}
+          <div className="w-full max-w-sm rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-8 md:p-12 backdrop-blur-2xl shadow-2xl overflow-hidden group" data-gsap-reveal>
+            <div className="absolute inset-0 bg-gradient-to-br from-teal-300/[0.03] to-transparent pointer-events-none" />
+            
+            <div className="relative">
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 mb-4">
+                {coachingSection?.supportingEyebrow || "Investment"}
+              </p>
+              
+              <div className="mt-4 flex items-baseline gap-3">
+                <p className="text-5xl font-bold text-white tracking-tight">
+                  {localInvestmentLabel || usdInvestmentLabel}
+                </p>
+              </div>
+
+              <RichTextContent
+                value={coachingSection?.supportingDescription || "<p>30 days • private Voxer/email support • personalised meditations</p>"}
+                className="mt-8 text-sm leading-relaxed text-white/40 font-medium"
+              />
+
+              <Link
+                to={coachingHref}
+                data-gsap-hover
+                className="mt-10 inline-flex w-full h-14 items-center justify-center rounded-2xl bg-teal-300 text-sm font-bold uppercase tracking-widest text-black transition-all hover:bg-teal-200 hover:-translate-y-1 active:scale-95 shadow-[0_20px_40px_rgba(45,212,191,0.2)]"
+              >
+                {coachingSection?.primaryCtaLabel || "Become a new you"}
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="mt-14 grid gap-12 lg:grid-cols-[1.5fr,1fr]">
-          <div className="space-y-8">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-10 shadow-2xl shadow-pink-500/10">
-              <p className="text-sm font-semibold uppercase tracking-[0.35em] text-pink-200">What&apos;s included</p>
-              <h3 className="mt-4 text-2xl font-semibold">
-                {featuredOffering?.title || "Become a new you coaching immersion"}
+        <div className="mt-24 grid gap-12 lg:grid-cols-[1.6fr,1fr]">
+          {/* Benefits Card */}
+          <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-8 md:p-16 shadow-2xl backdrop-blur-xl" data-gsap-reveal>
+            <div className="relative">
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 mb-8">What&apos;s included</p>
+              <h3 className="text-3xl font-bold text-white mb-12">
+                {featuredOffering?.title || "Personalised Coaching Immersion"}
               </h3>
-              <div className="mt-6 grid gap-6 md:grid-cols-2">
+              
+              <div className="grid gap-12 md:grid-cols-2">
                 {benefitColumns.map((column, columnIndex) => (
-                  <ul key={columnIndex} className="space-y-4 text-white/80">
+                  <ul key={columnIndex} className="space-y-6">
                     {column.map((item) => (
-                      <li key={item.key} className="flex items-start gap-3">
-                        <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-pink-300" />
-                        <span>{item.title}</span>
+                      <li key={item.key} className="flex items-start gap-4">
+                        <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-300 shadow-[0_0_10px_rgba(45,212,191,0.8)]" />
+                        <span className="text-base font-medium text-white/60 leading-relaxed">{item.title}</span>
                       </li>
                     ))}
                   </ul>
@@ -151,21 +198,27 @@ const PersonalizedCoachingCTA = () => {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-pink-200">Have questions?</p>
-              <p className="mt-3 text-base text-white/75">
-                Email:
-                <a className="ml-2 text-white underline" href={`mailto:${settings.brand.supportEmail}`}>
+          {/* Support Card */}
+          <div className="flex flex-col gap-6">
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-8 md:p-12 text-center backdrop-blur-xl shadow-2xl" data-gsap-reveal>
+              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 mb-6">Inquiry</p>
+              <p className="text-lg font-medium text-white/60 mb-8 leading-relaxed">
+                Have questions about this immersion? Reach out directly.
+              </p>
+              <div className="space-y-6">
+                <a 
+                  href={`mailto:${settings.brand.supportEmail}`}
+                  className="block text-xl font-bold text-white hover:text-teal-300 transition-colors"
+                >
                   {settings.brand.supportEmail}
                 </a>
-              </p>
-              <a
-                href={`mailto:${settings.brand.supportEmail}?subject=Personalised%20Coaching%20Inquiry`}
-                className="mt-4 inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:border-pink-300 hover:text-pink-200"
-              >
-                Email me here
-              </a>
+                <a
+                  href={`mailto:${settings.brand.supportEmail}?subject=Personalised%20Coaching%20Inquiry`}
+                  className="inline-flex h-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-8 text-[11px] font-bold uppercase tracking-widest text-white transition-all hover:bg-white/[0.08] hover:border-white/20 active:scale-95"
+                >
+                  Send Inquiry
+                </a>
+              </div>
             </div>
           </div>
         </div>

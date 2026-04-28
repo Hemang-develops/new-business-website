@@ -134,10 +134,6 @@ const PaymentSection = ({ item }) => {
   const [usdRates, setUsdRates] = useState(null);
   const estimatedBaseAmountInInr = useMemo(() => {
     const usdUnitAmount = rawPackageOptions[0]?.currencies?.usd?.unitAmount;
-    const inrUnitAmount = rawPackageOptions[0]?.currencies?.inr?.unitAmount;
-    if (typeof inrUnitAmount === "number") {
-      return inrUnitAmount / 100;
-    }
     if (typeof usdUnitAmount === "number" && usdRates?.INR) {
       return (usdUnitAmount / 100) * usdRates.INR;
     }
@@ -414,8 +410,8 @@ const PaymentSection = ({ item }) => {
     }
     return resolved.filter((instruction) => !/support button below/i.test(instruction));
   }, [backupLink, manualInstructions, upiInstructionLabel]);
-  const successPath = `/buy/${item.id}?status=success`;
-  const cancelPath = `/buy/${item.id}?status=cancel`;
+  const successPath = `/buy/${item.id}/success`;
+  const cancelPath = `/buy/${item.id}/cancel`;
   const canUseRazorpay = hasCheckout && presentmentCurrency === "inr" && typeof presentmentUnitAmount === "number";
 
   useEffect(() => {
@@ -593,6 +589,12 @@ const PaymentSection = ({ item }) => {
                     signature: response.razorpay_signature,
                     successPath,
                     cancelPath,
+                    email: email.trim(),
+                    userId: user?.id || null,
+                    firstName: firstName.trim(),
+                    lastName: lastName.trim(),
+                    fullName: `${firstName.trim()} ${lastName.trim()}`.trim(),
+                    packageId: selectedPackage?.id || null,
                   },
                 });
 
@@ -604,7 +606,16 @@ const PaymentSection = ({ item }) => {
                   throw new Error(verifyData?.error || "Razorpay payment verification failed.");
                 }
 
-                window.location.href = successPath;
+                const accessUrl = verifyData?.courseAccess?.accessUrl;
+                if (accessUrl) {
+                  // For courses, redirect directly to course access
+                  window.location.href = accessUrl;
+                } else {
+                  // For regular products, redirect to success page
+                  window.location.href = accessUrl
+                    ? `${successPath}?courseAccess=${encodeURIComponent(accessUrl)}`
+                    : successPath;
+                }
                 resolve(true);
               } catch (verificationError) {
                 reject(verificationError);
@@ -643,6 +654,7 @@ const PaymentSection = ({ item }) => {
           lastName: lastName.trim(),
           fullName: `${firstName.trim()} ${lastName.trim()}`.trim(),
           email: email.trim(),
+          userId: user?.id || null,
           country,
           returnUrl: window.location.href,
           cancelUrl: window.location.href,
@@ -659,7 +671,23 @@ const PaymentSection = ({ item }) => {
       }
 
       if (data?.url) {
+        console.log("[PaymentSection] Stripe checkout created - email:", email.trim(), 'product:', item.id, 'session:', data?.session_id);
         toast.info("Redirecting you to secure Stripe checkout.", "Redirecting");
+        
+        // Store session info in sessionStorage for later retrieval (persists through redirect)
+        if (data?.session_id) {
+          const normalizedEmail = email.trim().toLowerCase();
+          sessionStorage.setItem("stripe_session_id", data.session_id);
+          sessionStorage.setItem("product_id", item.id);
+          sessionStorage.setItem("customer_email", normalizedEmail);
+          if (user?.id) {
+            sessionStorage.setItem("customer_user_id", user.id);
+          } else {
+            sessionStorage.removeItem("customer_user_id");
+          }
+          console.log("[PaymentSection] Stored in sessionStorage - email:", normalizedEmail);
+        }
+        
         window.location.href = data.url;
         return;
       }

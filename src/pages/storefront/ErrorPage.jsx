@@ -1,16 +1,17 @@
 import Navigation from '../../components/Navigation';
 import Footer from '../../components/common/Footer';
-import { useEffect, useState } from 'react';
+import { useRef } from 'react';
+import { useGsapHover, useGsapPulse, useGsapReveal } from '../../hooks/useGsapMotion';
 
 export function ErrorPage() {
-  const [isVisible, setIsVisible] = useState(false);
+  const pageRef = useRef(null);
 
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
+  useGsapReveal(pageRef);
+  useGsapPulse(pageRef);
+  useGsapHover(pageRef);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
+    <div ref={pageRef} className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-fixed bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.22),transparent_60%)]" />
       <div className="absolute inset-0 bg-fixed bg-gradient-to-br from-indigo-900/40 via-gray-950 to-black mix-blend-screen" />
@@ -20,11 +21,7 @@ export function ErrorPage() {
       <main className="relative z-10 flex min-h-[calc(100vh-8rem)] items-center justify-center px-6 py-16">
         <div className="mx-auto max-w-4xl text-center">
           {/* Animated Content */}
-          <div
-            className={`transition-all duration-1000 ease-out ${
-              isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-            }`}
-          >
+          <div data-gsap-reveal>
             {/* 404 Number */}
             <div className="mb-8">
               <h1 className="text-8xl font-bold bg-gradient-to-r from-brand-primary-light via-brand-secondary to-brand-accent bg-clip-text text-transparent sm:text-9xl">
@@ -45,7 +42,8 @@ export function ErrorPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
                 href="/"
-                className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand-primary-light bg-brand-primary px-8 py-3 text-base font-semibold text-brand-dark shadow-xl shadow-brand-primary/45 transition-all duration-300 hover:-translate-y-0.5 hover:border-white hover:bg-brand-primary-light hover:shadow-brand-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary-light focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
+                data-gsap-hover
+                className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand-primary-light bg-brand-primary px-8 py-3 text-base font-semibold text-brand-dark shadow-xl shadow-brand-primary/45 hover:border-white hover:bg-brand-primary-light hover:shadow-brand-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary-light focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
               >
                 Return Home
               </a>
@@ -60,9 +58,9 @@ export function ErrorPage() {
             {/* Decorative Elements */}
             <div className="mt-16 flex justify-center">
               <div className="flex space-x-2">
-                <div className="h-2 w-2 rounded-full bg-brand-primary-light animate-pulse" style={{ animationDelay: '0s' }}></div>
-                <div className="h-2 w-2 rounded-full bg-brand-secondary animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                <div className="h-2 w-2 rounded-full bg-brand-accent animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                <div data-gsap-pulse className="h-2 w-2 rounded-full bg-brand-primary-light"></div>
+                <div data-gsap-pulse data-gsap-delay="0.2" className="h-2 w-2 rounded-full bg-brand-secondary"></div>
+                <div data-gsap-pulse data-gsap-delay="0.4" className="h-2 w-2 rounded-full bg-brand-accent"></div>
               </div>
             </div>
           </div>

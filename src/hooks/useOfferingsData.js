@@ -18,7 +18,7 @@ export const useOfferingsData = () => {
 
     const loadCatalog = async () => {
       try {
-        const resolved = await getOfferingsCatalog({ forceRefresh: true });
+        const resolved = await getOfferingsCatalog();
         if (isMounted) {
           setCatalog(resolved);
         }
