@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import worldMap from "../assets/world.svg";
 import { useToast } from "../context/ToastContext";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { useOfferingsData } from "../hooks/useOfferingsData";
+import { useGsapReveal } from "../hooks/useGsapMotion";
 import { Skeleton } from "./ui/skeleton";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -17,6 +18,7 @@ const initialFormState = {
 };
 
 const Contact = () => {
+  const contactRef = useRef(null);
   const { getSection, getLinks } = useSiteSettings();
   const contactSection = getSection("contact");
   const { offeringSupportOptions, isLoading } = useOfferingsData();
@@ -24,6 +26,8 @@ const Contact = () => {
   const [formValues, setFormValues] = useState(initialFormState);
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
   const contactMethods = getLinks("contact");
+  
+  useGsapReveal(contactRef);
 
   const supportOptions = [...(offeringSupportOptions || []), "Custom collaboration"];
 
@@ -45,9 +49,7 @@ const Contact = () => {
     try {
       const response = await fetch("/api/contact/submit", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formValues),
       });
 
@@ -64,174 +66,166 @@ const Contact = () => {
       toast.success(data?.message || "Thank you for sharing. I will be in touch shortly.", "Message sent");
       setFormValues(initialFormState);
     } catch (error) {
-      const message =
-        error?.message ||
-        "We were unable to send your message. Please double-check your details and try again.";
-      setSubmissionState({
-        status: "error",
-        message,
-      });
+      const message = error?.message || "We were unable to send your message. Please try again.";
+      setSubmissionState({ status: "error", message });
       toast.error(message);
     }
   };
 
   return (
     <section
+      ref={contactRef}
       id="contact"
-      className="relative overflow-hidden bg-gradient-to-b from-gray-950 via-[#101827] to-gray-950 py-16 text-white md:py-24"
+      className="relative overflow-hidden py-20 lg:py-24"
+      style={{
+        background: `linear-gradient(to bottom, var(--site-brand-dark, #030406), #0a0a0a)`,
+      }}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(20,184,166,0.16),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.12),transparent_32%)]" />
+      {/* Background Ambient Glows */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div 
+          className="absolute -top-[10%] right-[10%] h-[500px] w-[500px] rounded-full blur-[120px] opacity-10"
+          style={{ backgroundColor: 'var(--site-brand-primary)' }}
+        />
+        <div 
+          className="absolute -bottom-[5%] left-[5%] h-[400px] w-[400px] rounded-full blur-[100px] opacity-10"
+          style={{ backgroundColor: 'var(--site-brand-secondary)' }}
+        />
+      </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 md:px-6">
-        <div className="flex flex-col gap-10 lg:flex-row lg:items-center">
-          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03] px-6 py-8 shadow-[0_30px_90px_rgba(0,0,0,0.32)] backdrop-blur md:px-10 md:py-12 lg:flex-[1.05]">
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),transparent_35%,transparent_65%,rgba(20,184,166,0.12))]" />
+      <div className="relative mx-auto max-w-6xl px-6">
+        <div className="flex flex-col gap-16 lg:flex-row lg:items-start">
+          
+          {/* Left Column: Intro & Interactive Map */}
+          <div className="lg:w-[55%]" data-gsap-reveal>
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-teal-300/[0.03] to-transparent pointer-events-none" />
 
-            <div className="relative">
-              <div className="flex flex-row items-center gap-4">
-
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 shadow-[0_12px_30px_rgba(0,0,0,0.28)]">
-                  <div className="flex h-full w-full items-center justify-center rounded-[0.9rem] bg-slate-950/70">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-6 w-6 text-sky-400"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M22 7.535v9.465a3 3 0 0 1-2.824 2.995L19 20H5a3 3 0 0 1-2.995-2.824L2 17V7.535l9.445 6.297.116.066a1 1 0 0 0 .878 0l.116-.066L22 7.535Z"
-                        fill="currentColor"
-                        strokeWidth="0"
-                      />
-                      <path
-                        d="M19 4c1.08 0 2.027.57 2.555 1.427L12 11.797 2.445 5.427A2.999 2.999 0 0 1 4.799 4L5 3.993h14Z"
-                        fill="currentColor"
-                        strokeWidth="0"
-                      />
-                    </svg>
-                  </div>
+              <div className="relative">
+                <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-teal-300/20 bg-teal-300/5 mb-8">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
+                  </span>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
+                    {contactSection?.eyebrow || "Contact"}
+                  </p>
                 </div>
 
-                <p className="text-sm font-semibold uppercase tracking-[0.35em] text-brand-primary">
-                  {contactSection?.eyebrow}
-                </p>
-              </div>
-              <h2 className="mt-4 max-w-xl bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl">
-                {contactSection?.heading}
-              </h2>
-              <RichTextContent value={contactSection?.description} className="mt-6 max-w-xl text-base leading-7 text-white/70" />
-
-              <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-white/55">
-                {contactMethods.map((method, index) => (
-                  <div key={method.label} className="flex items-center gap-3">
-                    <a
-                      href={method.href}
-                      className="transition-colors hover:text-brand-primary-light"
-                      target={method.href.startsWith("http") ? "_blank" : "_self"}
-                      rel={method.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                    >
-                      {method.value}
-                    </a>
-                    {index < contactMethods.length - 1 && <span className="h-1 w-1 rounded-full bg-white/35" />}
-                  </div>
-                ))}
-              </div>
-
-              <div className="relative mt-4 flex min-h-[320px] items-center justify-center overflow-hidden rounded-[1.75rem] border border-white/10 bg-gradient-to-b from-slate-950/60 to-slate-900/30 px-4 [perspective:1000px] sm:min-h-[380px]">
-                <div className="pointer-events-none absolute left-1/2 top-8 z-20 flex -translate-x-1/2 flex-col items-center">
-                  <div className="rounded-full border border-sky-400/30 bg-slate-950/90 px-4 py-1 text-xs font-medium text-white shadow-[0_0_30px_rgba(56,100,248,0.18)]">
-                    I am here
-                  </div>
-                  <div className="relative mt-4 h-24 w-px bg-gradient-to-b from-sky-400/0 via-sky-400 to-sky-400/0">
-                    <span className="absolute left-1/2 top-full h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-300 shadow-[0_0_18px_rgba(125,211,252,0.9)]" />
-                  </div>
-                </div>
-                <div className="pointer-events-none absolute left-1/2 top-[38%] h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-400/10 blur-2xl" />
-                <div className="pointer-events-none absolute left-1/2 top-[62%] h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-300/15" />
-                <img
-                  src={worldMap}
-                  alt="world map"
-                  className="relative z-10 w-full max-w-[520px] opacity-90 [filter:drop-shadow(0_24px_40px_rgba(15,23,42,0.7))]"
+                <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl mb-8 leading-[1.1]">
+                  {contactSection?.heading}
+                </h2>
+                
+                <RichTextContent 
+                  value={contactSection?.description} 
+                  className="text-lg leading-relaxed text-white/50 max-w-xl font-medium mb-10" 
                 />
+
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm font-semibold text-white/30 mb-12">
+                  {contactMethods.map((method, index) => (
+                    <div key={method.label} className="flex items-center gap-8">
+                      <a
+                        href={method.href}
+                        className="transition-colors hover:text-teal-300 flex items-center gap-2"
+                        target={method.href.startsWith("http") ? "_blank" : "_self"}
+                        rel={method.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal-300/40" />
+                        {method.value}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Localized Presence Map */}
+                <div className="relative min-h-[380px] rounded-[2rem] border border-teal-300/10 bg-black/40 overflow-hidden shadow-inner group">
+                  <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
+                    <div className="rounded-full border border-teal-300/30 bg-gray-950/90 px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest text-teal-300 shadow-[0_0_20px_rgba(45,212,191,0.2)]">
+                      Current Presence
+                    </div>
+                    <div className="relative mt-4 h-16 w-px mx-auto bg-gradient-to-b from-transparent via-teal-300 to-transparent">
+                      <span className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-teal-300 shadow-[0_0_10px_rgba(45,212,191,0.8)]" />
+                    </div>
+                  </div>
+                  
+                  <img
+                    src={worldMap}
+                    alt="presence map"
+                    className="absolute inset-0 w-full h-full object-contain opacity-20 transition-opacity duration-500 group-hover:opacity-40"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-b from-[#0b1424] via-[#0f172a] to-[#111827] p-4 text-white shadow-[0_30px_90px_rgba(0,0,0,0.35)] sm:p-8 lg:flex-[0.95]">
-            <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(148,163,184,0.16)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.16)_1px,transparent_1px)] [background-position:center] [background-size:22px_22px]" />
+          {/* Right Column: Contact Form */}
+          <div className="lg:flex-1" data-gsap-reveal delay="0.2">
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+              <h3 className="text-2xl font-bold text-white mb-3">
+                {contactSection?.formHeading || "Share your intentions"}
+              </h3>
+              <RichTextContent 
+                value={contactSection?.formDescription || "This form lands directly in my inbox."} 
+                className="text-sm leading-relaxed text-white/40 mb-10 font-medium" 
+              />
 
-            <div className="relative z-10">
-              <h3 className="text-2xl font-semibold text-white">{contactSection?.formHeading || "Share your intentions"}</h3>
-              <RichTextContent value={contactSection?.formDescription ||
-                "This form lands directly in my inbox. Share your story, desires, and what kind of support you are calling in."} className="mt-3 max-w-xl text-sm leading-6 text-gray-300" />
-
-              <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-                <div>
-                  <label className="mb-2 inline-block text-sm font-medium text-gray-300">Name</label>
+              <form className="space-y-6" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 ml-1">Name</label>
                   <Input
                     type="text"
                     name="name"
                     required
                     value={formValues.name}
                     onChange={handleChange}
-                    className="border-white/10 bg-white/5 placeholder:text-gray-500 focus-visible:border-blue-400 focus-visible:ring-blue-400/20"
+                    className="h-12 border-white/5 bg-white/[0.03] rounded-xl focus-visible:border-teal-300 focus-visible:ring-teal-300/10 transition-all"
                     placeholder="Your name"
-                    autoComplete="name"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 inline-block text-sm font-medium text-gray-300">Email</label>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 ml-1">Email</label>
                   <Input
                     type="email"
                     name="email"
                     required
                     value={formValues.email}
                     onChange={handleChange}
-                    className="border-white/10 bg-white/5 placeholder:text-gray-500 focus-visible:border-blue-400 focus-visible:ring-blue-400/20"
+                    className="h-12 border-white/5 bg-white/[0.03] rounded-xl focus-visible:border-teal-300 focus-visible:ring-teal-300/10 transition-all"
                     placeholder="you@example.com"
-                    autoComplete="email"
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 inline-block text-sm font-medium text-gray-300">Desired Support</label>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 ml-1">Desired Support</label>
                   {isLoading ? (
-                    <Skeleton className="h-11 w-full rounded-xl" />
+                    <Skeleton className="h-12 w-full rounded-xl" />
                   ) : (
                     <select
                       name="support"
                       required
                       value={formValues.support}
                       onChange={handleChange}
-                      className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20"
+                      className="h-12 w-full rounded-xl border border-white/5 bg-white/[0.03] px-4 text-sm text-white/70 outline-none transition-all focus:border-teal-300 focus:ring-1 focus:ring-teal-300/10 appearance-none"
                     >
-                      <option value="" disabled className="bg-slate-900 text-white">
-                        Select the offering you are interested in
-                      </option>
-                      {supportOptions.map((option) => (
-                        <option key={option} value={option} className="bg-slate-900 text-white">
-                          {option}
-                        </option>
+                      <option value="" disabled className="bg-[#0a0a0a]">Select your path</option>
+                      {supportOptions.map((option, index) => (
+                        <option key={`${option}-${index}`} value={option} className="bg-[#0a0a0a]">{option}</option>
                       ))}
                     </select>
                   )}
                 </div>
 
-                <div>
-                  <label className="mb-2 inline-block text-sm font-medium text-gray-300">Message</label>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 ml-1">Message</label>
                   <Textarea
                     name="message"
-                    rows={5}
+                    rows={4}
                     required
                     value={formValues.message}
                     onChange={handleChange}
-                    className="border-white/10 bg-white/5 placeholder:text-gray-500 focus-visible:border-blue-400 focus-visible:ring-blue-400/20"
+                    className="border-white/5 bg-white/[0.03] rounded-2xl focus-visible:border-teal-300 focus-visible:ring-teal-300/10 transition-all"
                     placeholder="Tell me about the future you are calling in."
                   />
                 </div>
@@ -239,24 +233,24 @@ const Contact = () => {
                 <button
                   type="submit"
                   disabled={submissionState.status === "submitting"}
-                  aria-label={submissionState.status === "submitting" ? "Sending message" : "Send message"}
-                  className="inline-flex w-full items-center justify-center rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/30 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-white/70"
+                  className="w-full h-14 rounded-2xl bg-teal-300 text-black font-bold text-sm uppercase tracking-widest transition-all hover:bg-teal-200 hover:-translate-y-0.5 active:scale-95 disabled:bg-white/10 disabled:text-white/30 disabled:translate-y-0"
                 >
                   {submissionState.status === "submitting" ? "Sending..." : contactSection?.formSubmitLabel || "Send message"}
                 </button>
               </form>
 
-              <div className="mt-4 min-h-[1.5rem]" aria-live="polite">
-                {submissionState.status === "success" && (
-                  <p className="text-sm font-medium text-teal-300">{submissionState.message}</p>
-                )}
-                {submissionState.status === "error" && (
-                  <p className="text-sm font-medium text-rose-300">{submissionState.message}</p>
-                )}
-              </div>
+              {submissionState.message && (
+                <div className={`mt-6 p-4 rounded-xl text-center text-xs font-bold uppercase tracking-wider ${
+                  submissionState.status === 'success' ? 'bg-teal-300/10 text-teal-300' : 'bg-rose-500/10 text-rose-400'
+                }`}>
+                  {submissionState.message}
+                </div>
+              )}
 
-              <RichTextContent value={contactSection?.formDisclaimer ||
-                "By submitting this form you agree to receive occasional updates about High Frequencies 11 offerings. You can opt out at any time."} className="mt-6 text-sm text-gray-400" />
+              <RichTextContent 
+                value={contactSection?.formDisclaimer} 
+                className="mt-8 text-[11px] text-white/20 text-center leading-relaxed" 
+              />
             </div>
           </div>
         </div>

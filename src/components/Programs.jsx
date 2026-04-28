@@ -1,21 +1,17 @@
+import { useRef } from "react";
 import HorizontalCard from "./common/HorizontalCard";
-import { useReveal } from "../hooks/useReveal";
 import { useOfferingsData } from "../hooks/useOfferingsData";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { useGsapReveal } from "../hooks/useGsapMotion";
 import { Skeleton } from "./ui/skeleton";
 
 const ProgramItem = ({ group }) => {
-  const [ref, visible] = useReveal({ threshold: 0.2 });
   const previewTitles = group.items.slice(0, 3).map((item) => item.title).join(", ");
   const imageSource = group.items.find((item) => item.imageUrl)?.imageUrl || "";
   const imageAlt = group.items.find((item) => item.imageUrl)?.imageAlt || group.title;
 
   return (
-    <div
-      ref={ref}
-      className={`h-full transition-all duration-700 ease-out ${visible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
-        }`}
-    >
+    <div className="h-full" data-gsap-reveal>
       <HorizontalCard
         image={imageSource}
         imageAlt={imageAlt}
@@ -32,7 +28,7 @@ const ProgramItem = ({ group }) => {
 };
 
 const ProgramSkeleton = () => (
-  <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-xl shadow-black/20 backdrop-blur transition-all duration-300 ease-in-out md:flex-row">
+  <div className="flex h-full w-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-xl shadow-black/20 backdrop-blur md:flex-row">
     <div className="h-48 w-full shrink-0 md:h-auto md:w-2/5">
       <Skeleton className="h-full w-full rounded-none" />
     </div>
@@ -55,24 +51,58 @@ const ProgramSkeleton = () => (
 );
 
 const Programs = () => {
+  const programsRef = useRef(null);
   const { buySections, isLoading } = useOfferingsData();
   const { getSection } = useSiteSettings();
   const programsSection = getSection("programs");
+  
+  useGsapReveal(programsRef, [isLoading, buySections.length]);
 
   return (
-    <section id="programs" className="min-h-[calc(100vh-4rem)] bg-gray-950 py-4 pt-16 text-white lg:py-8">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-blue-400">{programsSection?.eyebrow}</p>
-          <h2 className="mt-4 text-4xl font-bold text-white sm:text-5xl">
+    <section 
+      ref={programsRef} 
+      id="programs" 
+      className="relative min-h-screen overflow-hidden py-20 lg:py-24"
+      style={{
+        background: `linear-gradient(to bottom, var(--site-brand-dark, #030406), #0a0a0a)`,
+      }}
+    >
+      {/* Dynamic Background Accents */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div 
+          className="absolute -bottom-[20%] left-[10%] h-[500px] w-[500px] rounded-full blur-[120px] opacity-10"
+          style={{ backgroundColor: 'var(--site-brand-primary)' }}
+        />
+        <div 
+          className="absolute top-[10%] right-[5%] h-[400px] w-[400px] rounded-full blur-[100px] opacity-5"
+          style={{ backgroundColor: 'var(--site-brand-secondary)' }}
+        />
+      </div>
+
+      <div className="relative mx-auto max-w-6xl px-6">
+        <div className="max-w-3xl" data-gsap-reveal>
+          <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-teal-300/20 bg-teal-300/5 mb-8">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
+            </span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
+              {programsSection?.eyebrow || "Offerings"}
+            </p>
+          </div>
+          
+          <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl mb-6 leading-[1.1]">
             {programsSection?.heading}
           </h2>
-          <p className="mx-auto mt-6 max-w-3xl text-lg text-gray-300">
+          
+          <div className="h-1 w-20 bg-teal-300/50 mb-8 rounded-full" />
+          
+          <p className="text-lg leading-relaxed text-white/50 max-w-2xl font-medium">
             {programsSection?.description}
           </p>
         </div>
 
-        <div className="mt-16 grid auto-rows-fr gap-8 md:grid-cols-2">
+        <div className="mt-20 grid grid-cols-1 gap-8 md:grid-cols-2">
           {isLoading ? (
             <>
               <ProgramSkeleton />
