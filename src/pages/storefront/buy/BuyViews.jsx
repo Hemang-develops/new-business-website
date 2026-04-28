@@ -14,6 +14,8 @@ import { supabase } from "../../../supabase-client";
 import { Skeleton } from "../../../components/ui/skeleton";
 import OfferingHero from "../../../components/storefront/OfferingHero";
 import RichTextContent from "../../../components/ui/RichTextContent";
+import BookingEmbed from "@/components/storefront/BookingEmbed";
+import { reviewsTable } from "../../admin/catalogAdminHelpers";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -21,8 +23,6 @@ const fallbackCountryData = [
   { name: "Canada", code: "CA", currencies: ["CAD"] },
   { name: "United Kingdom", code: "GB", currencies: ["GBP"] },
 ];
-const reviewsTable = import.meta.env.VITE_SUPABASE_REVIEWS_TABLE || "storefront_reviews";
-
 
 const BookingNextStepBanner = ({ item }) => (
   <div className="rounded-3xl border border-teal-300/40 bg-teal-300/10 p-6 text-sm leading-relaxed text-teal-50 shadow-inner backdrop-blur">
@@ -33,6 +33,35 @@ const BookingNextStepBanner = ({ item }) => (
   </div>
 );
 
+const CourseAccessBanner = ({ accessUrl }) => {
+  if (!accessUrl) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-3xl border border-teal-300/40 bg-teal-300/10 p-6 text-sm leading-relaxed text-teal-50 shadow-inner backdrop-blur">
+      <p className="text-xs font-semibold uppercase tracking-[0.3em]">Course access ready</p>
+      <p className="mt-3">
+        Your private course link is ready. It has also been sent to your email.
+      </p>
+      <a
+        href={accessUrl}
+        className="mt-5 inline-flex rounded-full border border-teal-200/50 bg-teal-200 px-5 py-2 text-sm font-semibold text-gray-950"
+      >
+        Open your course
+      </a>
+    </div>
+  );
+};
+const PaymentSuccessBanner = () => (
+  <div className="rounded-3xl border-2 border-teal-300 bg-teal-300/20 p-8 text-center text-white shadow-lg backdrop-blur">
+    <div className="mb-4 text-4xl">✅</div>
+    <h3 className="text-xl font-bold text-teal-100">Payment Successful!</h3>
+    <p className="mt-2 text-base">
+      Your order for this offering has been confirmed. Check your email for the receipt and download links.
+    </p>
+  </div>
+);
 const DetailSection = ({ detailsSections }) => {
   if (!detailsSections?.length) {
     return null;
@@ -106,7 +135,7 @@ const SuccessStory = ({ successStory, reviews }) => {
               {entry.author ? <p className="mt-1 text-sm font-semibold text-white/70">{entry.author}</p> : null}
             </div>
           </div>
-          <p className="mt-5 text-lg leading-relaxed text-white/90">"{entry.quote}"</p>
+          <p className="mt-5 text-lg leading-relaxed text-white/90">"{entry.quote?.replace(/<[^>]*>?/gm, '')}"</p>
           {entry.imageUrl ? (
             <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
               <img
@@ -164,7 +193,7 @@ const OfferCard = ({ item, displayPriceLabel }) => {
           to={`/buy/${item.id}`}
           className="inline-flex items-center gap-2 rounded-full border border-teal-300/40 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-200 transition hover:border-teal-200 hover:bg-teal-300/20"
         >
-          {item.ctaLabel || "Explore offering"}
+          {item.ctaLabel || "Details here"}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -322,7 +351,7 @@ const ReviewSubmissionForm = ({ itemId }) => {
 };
 
 export const BuyListView = ({ buySections = [] }) => {
-  useSmoothScroll();
+  // useSmoothScroll();
   const browserRegion = useMemo(() => getBrowserRegion(), []);
   const [localCurrency, setLocalCurrency] = useState("USD");
   const [usdRates, setUsdRates] = useState(null);
@@ -366,7 +395,7 @@ export const BuyListView = ({ buySections = [] }) => {
 
       {buySections.map((section) => (
         <section key={section.id} id={section.id} className="bg-gray-950 py-16">
-          <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto max-w-6xl">
             <div className="text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-teal-300">{section.title}</p>
               <RichTextContent value={section.description} className="mt-4 text-lg text-white/70" />
@@ -392,7 +421,7 @@ export const BuyListView = ({ buySections = [] }) => {
                         description={item.summary || item.longDescription || ""}
                         priceLabel={displayPriceLabel || (item.priceLabel === "0" ? "" : item.priceLabel)}
                         buttonLink={`/buy/${item.id}`}
-                        buttonText={item.ctaLabel || "Explore offering"}
+                        buttonText={item.ctaLabel || "Details here"}
                         maxDescriptionLength={240}
                         clickableCard
                       />
@@ -409,12 +438,41 @@ export const BuyListView = ({ buySections = [] }) => {
   );
 };
 
-export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => {
+export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offeringsIndex = {} }) => {
   const navigate = useNavigate();
   const [hasImageError, setHasImageError] = useState(false);
   const toast = useToast();
+  const { user, isAuthenticated } = useAuth();
+  const [userCourseAccess, setUserCourseAccess] = useState(null);
+  const [isLoadingCourse, setIsLoadingCourse] = useState(false);
   const lastCheckoutToastRef = useRef("");
   const { section } = offeringsIndex[item.id];
+
+  // Check if user already has access to this course
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email) {
+      console.log("[BuyDetailView] Not checking course access - isAuthenticated:", isAuthenticated, 'user?.email:', user?.email);
+      return;
+    }
+
+    const checkCourseAccess = async () => {
+      setIsLoadingCourse(true);
+      console.log("[BuyDetailView] Checking course access for email:", user.email, 'offering ID:', item.id);
+      try {
+        const { getUserCourseByOfferingId } = await import("../../../services/userCourses");
+        const access = await getUserCourseByOfferingId(user.email, item.id, user.id);
+        console.log("[BuyDetailView] Course access result:", access);
+        setUserCourseAccess(access);
+      } catch (error) {
+        console.error("[BuyDetailView] Error checking course access:", error);
+      } finally {
+        setIsLoadingCourse(false);
+      }
+    };
+
+    checkCourseAccess();
+  }, [isAuthenticated, user?.email, item.id]);
+
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       navigate(-1);
@@ -450,7 +508,7 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
     <main className="relative z-10">
       <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-gray-950 to-black px-6 py-24">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.28),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.32),transparent_60%)]" />
-        <div className="relative mx-auto flex max-w-5xl flex-col gap-6">
+        <div className="relative mx-auto flex max-w-6xl flex-col gap-6">
           <button
             type="button"
             onClick={handleBack}
@@ -478,8 +536,11 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
       </section>
 
       <section className="bg-gray-950 px-6 pb-24 pt-12">
-        <div className="mx-auto max-w-5xl space-y-10">
+        <div className="mx-auto max-w-6xl space-y-10">
           {bookingUnlocked && hasCheckout ? <BookingNextStepBanner item={item} /> : null}
+          {String(checkoutStatus || "").toLowerCase() === "success" && !courseAccessUrl ? (
+            <PaymentSuccessBanner />
+          ) : null}
           <div className="flex flex-col gap-10">
             <div className="space-y-8 lg:flex-1">
               <SuccessStory successStory={item.successStory} reviews={item.reviews} />
@@ -502,7 +563,26 @@ export const BuyDetailView = ({ item, checkoutStatus, offeringsIndex = {} }) => 
             </div>
 
             <div className="lg:flex-[1.1]">
-              {bookingEnabled ? (
+              {userCourseAccess ? (
+                <section className="space-y-6 rounded-3xl border border-teal-300/40 bg-teal-300/10 p-8 text-white/90 shadow-2xl backdrop-blur">
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-semibold text-white">✓ Course Access Active</h3>
+                    <p className="text-sm text-white/80">You already have access to this course! Open it anytime using the button below.</p>
+                    {userCourseAccess.expiresAt && (
+                      <p className="text-xs text-white/60">
+                        Access valid until: {new Date(userCourseAccess.expiresAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <a
+                    href={userCourseAccess.accessUrl}
+                    className="inline-flex w-full justify-center items-center gap-2 rounded-full bg-teal-300 px-6 py-3 text-sm font-semibold text-gray-900 shadow-lg transition hover:-translate-y-0.5 hover:bg-teal-200"
+                  >
+                    Open Course
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </section>
+              ) : bookingEnabled ? (
                 bookingUnlocked ? (
                   <BookingEmbed item={item} />
                 ) : (
@@ -589,7 +669,7 @@ export const BuyListViewSkeleton = () => (
     </section>
 
     <section className="bg-gray-950 py-16">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-center text-center">
           <Skeleton className="mb-4 h-4 w-24" />
           <Skeleton className="h-5 w-1/2" />
@@ -607,7 +687,7 @@ export const BuyDetailViewSkeleton = () => (
   <main className="relative z-10">
     <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-gray-950 to-black px-6 py-24">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.28),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.32),transparent_60%)]" />
-      <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-6">
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-6">
         <Skeleton className="h-8 w-24 rounded-full" />
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-10 w-2/3 sm:h-12" />
@@ -621,7 +701,7 @@ export const BuyDetailViewSkeleton = () => (
     </section>
 
     <section className="bg-gray-950 px-6 pb-24 pt-12">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-10">
         <div className="flex flex-col gap-10 lg:flex-row">
           <div className="w-full space-y-8 lg:flex-1">
             <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
