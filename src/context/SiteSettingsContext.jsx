@@ -3,7 +3,7 @@ import { supabase } from "../supabase-client";
 import { defaultSiteSettings, normalizeSiteSettingsFromRows, siteThemeCssVariables } from "../services/siteSettings";
 
 import {
-  globalContentTable,
+  siteSettingsView,
   siteSectionsTable,
   siteSectionItemsTable,
   siteLinksTable,
@@ -32,14 +32,14 @@ export const SiteSettingsProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const refreshSettings = useCallback(async () => {
+  const refreshSettings = useCallback(async ({ throwOnError = false } = {}) => {
     setIsLoading(true);
     setError(null);
     try {
       const [globalRes, sectionsRes, itemsRes, linksRes] = await Promise.all([
         supabase
-          .from(globalContentTable)
-          .select("brand_nav_title,brand_full_title,brand_footer_tagline,brand_shop_label,brand_shop_href,brand_support_email,theme_primary,theme_primary_light,theme_secondary,theme_accent,theme_dark,profile_image_url,profile_image_alt,profile_role_label,footer_intro_eyebrow,footer_intro_heading,footer_status_label,footer_terms_label,footer_terms_href,footer_privacy_label,footer_privacy_href,newsletter_form_action,faqs")
+          .from(siteSettingsView)
+          .select("*")
           .eq("id", 1)
           .maybeSingle(),
         supabase
@@ -79,16 +79,20 @@ export const SiteSettingsProvider = ({ children }) => {
       setSettings(normalizeSiteSettingsFromRows(rawData));
       return rawData;
     } catch (loadError) {
-      setSettings(null);
+      console.warn("Site settings load failed:", loadError);
+      setSettings(defaultSiteSettings);
       setError(loadError);
-      throw loadError;
+      if (throwOnError) {
+        throw loadError;
+      }
+      return null;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refreshSettings();
+    void refreshSettings();
   }, [refreshSettings]);
 
   useEffect(() => {

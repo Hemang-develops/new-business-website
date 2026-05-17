@@ -3,6 +3,10 @@ import { supabase } from "../../supabase-client";
 import {
   defaultCalcomHostId,
   checkoutConfigsTable,
+  brandSettingsTable,
+  themeSettingsTable,
+  footerSettingsTable,
+  faqSettingsTable,
   fromLines,
   globalContentTable,
   offeringsTable,
@@ -44,6 +48,12 @@ const buildCheckoutConfig = ({ id, title, priceUsd }) => {
     },
     productId: id,
   };
+};
+
+const assertNoError = (error) => {
+  if (error) {
+    throw error;
+  }
 };
 
 const persistCheckoutConfig = async ({ id, title, priceUsd, enabled }) => {
@@ -444,16 +454,17 @@ export default function useCatalogAdminSaves({
     setIsSavingGlobal(true);
     setStatus({ type: "idle", message: "" });
     try {
-      const payload = {
+      const sharedContentPayload = {
         id: 1,
         manual_instructions: fromLines(globalEditor.manualInstructionsText),
         legal_notes: fromLines(globalEditor.legalNotesText),
         closing_notes: fromLines(globalEditor.closingNotesText),
-        faqs: globalEditor.faqs || [],
       };
-      const { error } = await supabase.from(globalContentTable).upsert(payload);
-      if (error) {
-        throw error;
+
+      const { error: sharedContentError } = await supabase.from(globalContentTable).upsert(sharedContentPayload);
+
+      if (sharedContentError) {
+        throw sharedContentError;
       }
       setStatus({ type: "success", message: "Shared content saved successfully." });
     } catch (error) {
@@ -467,36 +478,54 @@ export default function useCatalogAdminSaves({
     setIsSavingSite(true);
     setStatus({ type: "idle", message: "" });
     try {
-      const globalPayload = {
+      const brandPayload = {
         id: 1,
-        brand_nav_title: siteSettingsEditor.brand.navTitle,
-        brand_full_title: siteSettingsEditor.brand.fullTitle,
-        brand_footer_tagline: siteSettingsEditor.brand.footerTagline,
-        brand_shop_label: siteSettingsEditor.brand.shopLabel,
-        brand_shop_href: siteSettingsEditor.brand.shopHref,
-        brand_support_email: siteSettingsEditor.brand.supportEmail,
-        theme_primary: siteSettingsEditor.theme.primary,
-        theme_primary_light: siteSettingsEditor.theme.primaryLight,
-        theme_secondary: siteSettingsEditor.theme.secondary,
-        theme_accent: siteSettingsEditor.theme.accent,
-        theme_dark: siteSettingsEditor.theme.dark,
+        nav_title: siteSettingsEditor.brand.navTitle,
+        full_title: siteSettingsEditor.brand.fullTitle,
+        footer_tagline: siteSettingsEditor.brand.footerTagline,
+        shop_label: siteSettingsEditor.brand.shopLabel,
+        shop_href: siteSettingsEditor.brand.shopHref,
+        support_email: siteSettingsEditor.brand.supportEmail,
         profile_image_url: siteSettingsEditor.profile.imageUrl,
         profile_image_alt: siteSettingsEditor.profile.imageAlt,
         profile_role_label: siteSettingsEditor.profile.roleLabel,
-        footer_intro_eyebrow: siteSettingsEditor.footer.introEyebrow,
-        footer_intro_heading: siteSettingsEditor.footer.introHeading,
-        footer_status_label: siteSettingsEditor.footer.statusLabel,
-        footer_terms_label: siteSettingsEditor.footer.termsLabel,
-        footer_terms_href: siteSettingsEditor.footer.termsHref,
-        footer_privacy_label: siteSettingsEditor.footer.privacyLabel,
-        footer_privacy_href: siteSettingsEditor.footer.privacyHref,
+      };
+      const themePayload = {
+        id: 1,
+        primary_color: siteSettingsEditor.theme.primary,
+        primary_light_color: siteSettingsEditor.theme.primaryLight,
+        secondary_color: siteSettingsEditor.theme.secondary,
+        accent_color: siteSettingsEditor.theme.accent,
+        dark_color: siteSettingsEditor.theme.dark,
+      };
+      const footerPayload = {
+        id: 1,
+        intro_eyebrow: siteSettingsEditor.footer.introEyebrow,
+        intro_heading: siteSettingsEditor.footer.introHeading,
+        status_label: siteSettingsEditor.footer.statusLabel,
+        terms_label: siteSettingsEditor.footer.termsLabel,
+        terms_href: siteSettingsEditor.footer.termsHref,
+        privacy_label: siteSettingsEditor.footer.privacyLabel,
+        privacy_href: siteSettingsEditor.footer.privacyHref,
         newsletter_form_action:
           siteSettingsEditor.sections.find((section) => section.id === "newsletter")?.formAction || null,
       };
-      const { error: globalError } = await supabase.from(globalContentTable).upsert(globalPayload);
-      if (globalError) {
-        throw globalError;
-      }
+      const faqPayload = {
+        id: 1,
+        faqs: Array.isArray(siteSettingsEditor.faqs) ? siteSettingsEditor.faqs : [],
+      };
+
+      const [{ error: brandError }, { error: themeError }, { error: footerError }, { error: faqError }] = await Promise.all([
+        supabase.from(brandSettingsTable).upsert(brandPayload),
+        supabase.from(themeSettingsTable).upsert(themePayload),
+        supabase.from(footerSettingsTable).upsert(footerPayload),
+        supabase.from(faqSettingsTable).upsert(faqPayload),
+      ]);
+
+      assertNoError(brandError);
+      assertNoError(themeError);
+      assertNoError(footerError);
+      assertNoError(faqError);
 
       const sectionRows = siteSettingsEditor.sections.map((section, index) => ({
         key: section.id,
@@ -526,14 +555,10 @@ export default function useCatalogAdminSaves({
       const { error: sectionsError } = await supabase.from(siteSectionsTable).upsert(sectionRows, {
         onConflict: "key",
       });
-      if (sectionsError) {
-        throw sectionsError;
-      }
+      assertNoError(sectionsError);
 
       const { error: deleteItemsError } = await supabase.from(siteSectionItemsTable).delete().not("key", "is", null);
-      if (deleteItemsError) {
-        throw deleteItemsError;
-      }
+      assertNoError(deleteItemsError);
       if (siteSettingsEditor.sectionItems.length) {
         const itemRows = siteSettingsEditor.sectionItems.map((item, index) => ({
           key: item.key,
@@ -550,15 +575,11 @@ export default function useCatalogAdminSaves({
           is_enabled: Boolean(item.enabled),
         }));
         const { error: itemsError } = await supabase.from(siteSectionItemsTable).insert(itemRows);
-        if (itemsError) {
-          throw itemsError;
-        }
+        assertNoError(itemsError);
       }
 
       const { error: deleteLinksError } = await supabase.from(siteLinksTable).delete().not("key", "is", null);
-      if (deleteLinksError) {
-        throw deleteLinksError;
-      }
+      assertNoError(deleteLinksError);
       if (siteSettingsEditor.links.length) {
         const linkRows = siteSettingsEditor.links.map((link, index) => ({
           key: link.key,
@@ -571,12 +592,10 @@ export default function useCatalogAdminSaves({
           is_enabled: Boolean(link.enabled),
         }));
         const { error: linksError } = await supabase.from(siteLinksTable).insert(linkRows);
-        if (linksError) {
-          throw linksError;
-        }
+        assertNoError(linksError);
       }
 
-      await refreshSettings();
+      await refreshSettings({ throwOnError: true });
       setStatus({ type: "success", message: "Website settings saved successfully." });
     } catch (error) {
       setStatus({ type: "error", message: error?.message || "Unable to save website settings." });
