@@ -342,7 +342,7 @@ const AuthForm = ({ mode = "signin" }) => {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl backdrop-blur sm:p-8">
+      <section className="mx-auto w-full max-w-xl rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl backdrop-blur sm:p-8">
         <p className="mb-6 text-xs font-semibold uppercase tracking-[0.3em] text-white/50">
           {isSignUp ? "Create account" : "Sign in"}
         </p>

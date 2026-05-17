@@ -114,38 +114,60 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
 
-    // We only use the listener. It handles the initial load AND subsequent changes.
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only proceed if the component is still mounted
+    const applySession = async (session) => {
       if (!isMounted) return;
 
-      // 1. Handle User Mapping
-      const currentUser = session?.user ? mapSupabaseUser(session.user) : null;
-      setUser(currentUser);
+      setUser(mapSupabaseUser(session?.user));
 
-      // 2. Handle Admin Check (only if we have a user)
-      if (session?.user) {
-        supabase.rpc('is_storefront_admin')
-          .then(({ data: isAdminData }) => {
-            if (isMounted) setIsAdmin(!!isAdminData);
-          })
-          .catch(() => {
-            if (isMounted) setIsAdmin(false);
-          })
-          .finally(() => {
-            if (isMounted) setIsLoading(false);
-          });
-      } else {
+      if (!session?.user) {
         setIsAdmin(false);
         setIsLoading(false);
+        return;
       }
+
+      try {
+        const { data: isAdminData } = await supabase.rpc("is_storefront_admin");
+        if (isMounted) {
+          setIsAdmin(!!isAdminData);
+        }
+      } catch (err) {
+        console.warn("Admin check failed:", err);
+        if (isMounted) {
+          setIsAdmin(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    const loadInitialSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          throw error;
+        }
+        await applySession(data.session);
+      } catch (err) {
+        console.warn("Session load failed:", err);
+        if (isMounted) {
+          setUser(null);
+          setIsAdmin(false);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadInitialSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      void applySession(session);
     });
 
     return () => {
       isMounted = false;
-      if (authListener?.subscription) {
-        authListener.subscription.unsubscribe();
-      }
+      authListener?.subscription?.unsubscribe();
     };
   }, []);
 

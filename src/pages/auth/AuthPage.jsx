@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../../components/Navigation";
 import Footer from "../../components/common/Footer";
+import { Skeleton } from "../../components/ui/skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import AuthForm from "./AuthForm";
@@ -21,6 +22,55 @@ import UserProfile from "./UserProfile";
  *  session, and our useAuth hook updates isAuthenticated → true.
  *  We then navigate to /#programs programmatically (safe — no querySelector).
  */
+const AuthPageSkeleton = () => (
+  <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[1.1fr,1fr]" aria-busy="true" aria-live="polite">
+    <span className="sr-only">Checking your session and preparing your account page.</span>
+
+    <section className="space-y-8">
+      <Skeleton className="h-4 w-36 rounded-full bg-teal-200/20" />
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-4/5 bg-white/10 sm:h-14" />
+        <Skeleton className="h-12 w-2/3 bg-white/10 sm:h-14" />
+      </div>
+      <div className="max-w-2xl space-y-3">
+        <Skeleton className="h-4 w-full bg-white/5" />
+        <Skeleton className="h-4 w-5/6 bg-white/5" />
+        <Skeleton className="h-4 w-3/5 bg-white/5" />
+      </div>
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <Skeleton className="h-4 w-44 rounded-full bg-white/10" />
+        <div className="mt-5 space-y-3">
+          <Skeleton className="h-4 w-full bg-white/5" />
+          <Skeleton className="h-4 w-11/12 bg-white/5" />
+          <Skeleton className="h-4 w-4/5 bg-white/5" />
+        </div>
+      </div>
+    </section>
+
+    <section className="mx-auto w-full max-w-xl rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl backdrop-blur sm:p-8">
+      <Skeleton className="mb-8 h-4 w-28 rounded-full bg-white/10" />
+      <div className="mb-6 flex items-center gap-4">
+        <Skeleton className="h-16 w-16 shrink-0 rounded-full bg-teal-300/20" />
+        <div className="flex-1 space-y-3">
+          <Skeleton className="h-5 w-1/2 bg-white/10" />
+          <Skeleton className="h-4 w-3/4 bg-white/5" />
+        </div>
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-12 w-full rounded-xl bg-white/5" />
+        <Skeleton className="h-12 w-full rounded-xl bg-white/5" />
+        <Skeleton className="h-12 w-full rounded-full bg-teal-300/20" />
+      </div>
+      <div className="mt-6 flex items-center gap-3">
+        <Skeleton className="h-px flex-1 bg-white/10" />
+        <Skeleton className="h-3 w-8 bg-white/10" />
+        <Skeleton className="h-px flex-1 bg-white/10" />
+      </div>
+      <Skeleton className="mt-6 h-12 w-full rounded-full bg-white/5" />
+    </section>
+  </div>
+);
+
 const AuthPage = ({ mode = "signin" }) => {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
   const toast = useToast();
@@ -51,9 +101,7 @@ const AuthPage = ({ mode = "signin" }) => {
       <main className="relative z-10 px-6 pb-24 pt-32">
         <div className={`mx-auto ${isAdmin ? "max-w-6xl" : "w-full"}`}>
           {isLoading ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
-              Checking your session…
-            </div>
+            <AuthPageSkeleton />
           ) : isAuthenticated ? (
             <UserProfile />
           ) : (
