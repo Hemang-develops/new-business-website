@@ -228,6 +228,22 @@ const MyCoursesPage = ({ embedded = false }) => {
                       </p>
                     ) : null}
 
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                        <span>Progress</span>
+                        <span>{course.progressPercent || 0}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-teal-300 transition-all duration-300"
+                          style={{ width: `${course.progressPercent || 0}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-white/45">
+                        {course.completedLessons || 0} of {course.totalLessons || 0} lessons completed
+                      </p>
+                    </div>
+
                     <div className="mt-auto flex flex-col gap-2 pt-5 text-xs text-white/50 sm:flex-row sm:flex-wrap">
                       <p className="inline-flex items-center gap-2">
                         <CalendarDays className="h-4 w-4 text-white/35" />

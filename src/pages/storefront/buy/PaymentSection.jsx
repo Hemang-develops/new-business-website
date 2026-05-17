@@ -97,7 +97,7 @@ const PaymentSection = ({ item }) => {
   const checkoutOptions = item.checkoutOptions;
   const manualInstructions = item.manualInstructions || [];
   const legalNotes = item.legalNotes || [];
-  const backupLink = item.manualSupport?.link || item.purchase?.link || item.actionLink;
+  const backupLink = '#contact';
   const backupLabel =
     item.manualSupport?.label || item.purchase?.label || item.ctaLabel || "Email for support";
   const paypalLink = item.paypalLink || import.meta.env.VITE_PAYPAL_ME_LINK || DEFAULT_PAYPAL_LINK;

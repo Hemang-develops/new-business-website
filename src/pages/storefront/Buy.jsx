@@ -9,6 +9,7 @@ import SiteLoadingScreen from "../../components/storefront/SiteLoadingScreen";
 import { useToast } from "../../context/ToastContext";
 import { useEffect, useRef } from "react";
 import { supabase } from "../../supabase-client";
+import Contact from "@/components/Contact";
 
 const Buy = () => {
   const { buySections, offeringsIndex, isLoading } = useOfferingsData();
@@ -80,6 +81,7 @@ const Buy = () => {
         <UnknownSection />
       )}
       <FAQSection />
+      <Contact />
       <Footer />
     </div>
   );

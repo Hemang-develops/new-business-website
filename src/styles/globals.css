@@ -298,3 +298,48 @@ button {
     --tw-gradient-to: var(--site-brand-accent) var(--tw-gradient-to-position) !important;
   }
 }
+
+/* Cinematic Noise Animation */
+@keyframes noise {
+  0%, 100% { transform:translate(0,0) }
+  10% { transform:translate(-1%,-1%) }
+  20% { transform:translate(-2%,1%) }
+  30% { transform:translate(1%,-2%) }
+  40% { transform:translate(-1%,3%) }
+  50% { transform:translate(-2%,1%) }
+  60% { transform:translate(3%,0) }
+  70% { transform:translate(0,2%) }
+  80% { transform:translate(-3%,1%) }
+  90% { transform:translate(1%,3%) }
+}
+
+.animate-noise {
+  animation: noise 0.5s infinite;
+}
+
+/* Global Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--site-brand-primary, #06b6d4);
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+

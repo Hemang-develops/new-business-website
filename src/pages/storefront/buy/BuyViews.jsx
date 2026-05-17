@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 import { useSmoothScroll } from "../../../hooks/useSmoothScroll";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
 import { formatAmountFromMajor, getRoundedLocalizedUsdAmount } from "../../../services/pricing";
@@ -9,13 +14,15 @@ import HorizontalCard from "../../../components/common/HorizontalCard";
 import { Input } from "../../../components/ui/input";
 import { Textarea } from "../../../components/ui/textarea";
 import { useToast } from "../../../context/ToastContext";
-import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../supabase-client";
 import { Skeleton } from "../../../components/ui/skeleton";
 import OfferingHero from "../../../components/storefront/OfferingHero";
+import { useGsapReveal } from "../../../hooks/useGsapMotion";
 import RichTextContent from "../../../components/ui/RichTextContent";
 import BookingEmbed from "@/components/storefront/BookingEmbed";
 import { reviewsTable } from "../../admin/catalogAdminHelpers";
+import Comments from "@/components/Comments";
+import { useAuth } from "@/context/AuthContext";
 
 const fallbackCountryData = [
   { name: "India", code: "IN", currencies: ["INR"] },
@@ -201,155 +208,6 @@ const OfferCard = ({ item, displayPriceLabel }) => {
   );
 };
 
-const ReviewSubmissionForm = ({ itemId }) => {
-  const { user, isAuthenticated } = useAuth();
-  const toast = useToast();
-  const [formValues, setFormValues] = useState({
-    name: user?.name || "",
-    heading: "",
-    quote: "",
-    imageUrl: "",
-    imageAlt: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!isAuthenticated || !user?.name) {
-      return;
-    }
-    setFormValues((previous) => ({
-      ...previous,
-      name: previous.name || user.name,
-    }));
-  }, [isAuthenticated, user]);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormValues((previous) => ({ ...previous, [name]: value }));
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!formValues.name.trim() || !formValues.quote.trim()) {
-      toast.error("Add your name and review before submitting.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        placement: "buy",
-        offering_id: itemId,
-        heading: formValues.heading.trim() || "Client review",
-        quote: formValues.quote.trim(),
-        author: formValues.name.trim(),
-        image_url: formValues.imageUrl.trim() || null,
-        image_alt: formValues.imageAlt.trim() || null,
-        sort_order: 999,
-        is_active: false,
-      };
-
-      const { error } = await supabase.from(reviewsTable).insert(payload);
-      if (error) {
-        throw error;
-      }
-
-      toast.success("Your review was submitted and is now waiting for approval.", "Review received");
-      setFormValues({
-        name: isAuthenticated && user?.name ? user.name : "",
-        heading: "",
-        quote: "",
-        imageUrl: "",
-        imageAlt: "",
-      });
-    } catch (error) {
-      toast.error(error?.message || "We could not submit your review right now. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/80 shadow-xl backdrop-blur sm:p-8">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-teal-200/80">Leave a review</p>
-        <h3 className="text-2xl font-semibold text-white">Share your experience</h3>
-        <p className="text-sm leading-relaxed text-white/65">
-          Your review helps future clients choose the right offering. New submissions are reviewed before they go live.
-        </p>
-      </div>
-
-      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-white/70">
-            <span className="font-semibold text-white">Your name</span>
-            <Input
-              name="name"
-              value={formValues.name}
-              onChange={handleChange}
-              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
-              placeholder="Your name"
-            />
-          </label>
-          <label className="space-y-2 text-sm text-white/70">
-            <span className="font-semibold text-white">Short heading</span>
-            <Input
-              name="heading"
-              value={formValues.heading}
-              onChange={handleChange}
-              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
-              placeholder="What shifted for you"
-            />
-          </label>
-        </div>
-
-        <label className="space-y-2 text-sm text-white/70">
-          <span className="font-semibold text-white">Your review</span>
-          <Textarea
-            name="quote"
-            value={formValues.quote}
-            onChange={handleChange}
-            rows={5}
-            className="border-white/10 bg-black/30 focus-visible:border-teal-300"
-            placeholder="Share your experience with this offering."
-          />
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-white/70">
-            <span className="font-semibold text-white">Review image URL</span>
-            <Input
-              name="imageUrl"
-              value={formValues.imageUrl}
-              onChange={handleChange}
-              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
-              placeholder="https://..."
-            />
-          </label>
-          <label className="space-y-2 text-sm text-white/70">
-            <span className="font-semibold text-white">Image alt text</span>
-            <Input
-              name="imageAlt"
-              value={formValues.imageAlt}
-              onChange={handleChange}
-              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
-              placeholder="Describe the image"
-            />
-          </label>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="inline-flex items-center rounded-full border border-teal-300/40 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 transition hover:border-teal-200 hover:bg-teal-300/20 disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {isSubmitting ? "Submitting..." : "Submit review"}
-        </button>
-      </form>
-    </section>
-  );
-};
-
 export const BuyListView = ({ buySections = [] }) => {
   // useSmoothScroll();
   const browserRegion = useMemo(() => getBrowserRegion(), []);
@@ -504,36 +362,101 @@ export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offerings
   const bookingEnabled = Boolean(item.booking?.enabled);
   const bookingUnlocked = bookingEnabled && (!hasCheckout || String(checkoutStatus || "").toLowerCase() === "success");
 
+  const detailHeroRef = useRef(null);
+
+  useGsapReveal(detailHeroRef, [item.id]);
+
+  useGSAP(
+    () => {
+      const root = detailHeroRef.current;
+      if (!root) return;
+
+      gsap.to(root.querySelector("[data-hero-parallax]"), {
+        y: 60,
+        ease: "none",
+        scrollTrigger: {
+          trigger: root,
+          start: "top top",
+          end: "bottom top",
+          scrub: true,
+        },
+      });
+    },
+    { scope: detailHeroRef, dependencies: [item.id] },
+  );
+
   return (
     <main className="relative z-10">
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-gray-950 to-black px-6 py-24">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.28),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.32),transparent_60%)]" />
-        <div className="relative mx-auto flex max-w-6xl flex-col gap-6">
+      <section
+        ref={detailHeroRef}
+        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-gray-950 to-black px-6 py-20 lg:py-32"
+      >
+        {/* Cinematic Animated Noise Overlay */}
+        <div
+          className="absolute inset-0 z-[1] opacity-[0.05] pointer-events-none mix-blend-overlay animate-noise"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+        />
+
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.15),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.15),transparent_60%)]" />
+
+        <div className="relative z-10 mx-auto flex max-w-6xl flex-col gap-10">
           <button
             type="button"
             onClick={handleBack}
-            className="inline-flex items-center gap-2 self-start rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-teal-300 hover:text-teal-200"
+            className="inline-flex items-center gap-2 self-start rounded-full border border-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-teal-300 hover:text-teal-200 backdrop-blur"
           >
             <ArrowLeft className="h-4 w-4" /> Back
           </button>
-          <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.35em] text-teal-200/80">
-            {section?.title}
-          </span>
-          <h1 className="text-4xl font-bold text-white sm:text-5xl">{item.title}</h1>
-          {item.imageUrl && !hasImageError ? (
-            <div className="max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-black/20">
-              <img
-                src={item.imageUrl}
-                alt={item.imageAlt || item.title}
-                className="h-72 w-full object-cover sm:h-96"
-                loading="lazy"
-                onError={() => setHasImageError(true)}
-              />
+
+          <div className="relative group overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.03] shadow-[0_40px_100px_rgba(0,0,0,0.5)] transition-all duration-1000">
+            <div className="relative w-full aspect-[4/5] sm:aspect-[16/9] lg:aspect-[16/7] overflow-hidden">
+              <div className="absolute inset-0" data-hero-parallax>
+                {item.imageUrl && !hasImageError ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.imageAlt || item.title}
+                    className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-[1.02]"
+                    loading="lazy"
+                    onError={() => setHasImageError(true)}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-slate-900" />
+                )}
+              </div>
+
+              {/* Premium Gradient Overlay for Readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/40 to-transparent opacity-90 lg:opacity-95" />
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-950/30 via-transparent to-transparent" />
+
+              {/* Content Overlay - Positioned at the bottom */}
+              <div className="absolute inset-0 flex flex-col justify-end p-8 sm:p-12 lg:p-10">
+                <span
+                  className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.4em] text-teal-200/80 mb-6 backdrop-blur-xl px-4 py-1.5 rounded-full border border-white/5 w-fit"
+                  data-gsap-reveal
+                  data-gsap-delay="0.2"
+                >
+                  {section?.title}
+                </span>
+                <h1
+                  className="text-4xl font-bold text-white sm:text-6xl lg:text-7xl leading-[1.1] tracking-tighter"
+                  data-gsap-reveal
+                  data-gsap-delay="0.3"
+                >
+                  {item.title}
+                </h1>
+              </div>
             </div>
-          ) : null}
-          <RichTextContent value={item.longDescription || item.summary} className="max-w-3xl text-lg text-white/75" />
+          </div>
+
+          <RichTextContent
+            value={item.longDescription || item.summary}
+            className="max-w-4xl text-lg sm:text-xl leading-relaxed text-white/60 font-medium tracking-tight"
+            data-gsap-reveal
+            data-gsap-delay="0.4"
+          />
         </div>
       </section>
+
 
       <section className="bg-gray-950 px-6 pb-24 pt-12">
         <div className="mx-auto max-w-6xl space-y-10">
@@ -592,7 +515,7 @@ export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offerings
                 <PaymentSection item={item} />
               )}
             </div>
-            <ReviewSubmissionForm itemId={item.id} />
+            {isAuthenticated && <Comments itemId={item.id} />}
           </div>
         </div>
       </section>
@@ -656,14 +579,23 @@ export const OfferCardSkeleton = () => (
 
 export const BuyListViewSkeleton = () => (
   <main className="relative z-10">
-    <section className="relative flex min-h-[60vh] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-gray-950 to-black px-6 py-24">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.2),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.25),transparent_60%)]" />
-      <div className="relative mx-auto flex w-full max-w-4xl flex-col items-center text-center">
-        <Skeleton className="h-6 w-32 rounded-full" />
-        <Skeleton className="mt-6 h-12 w-3/4 sm:h-16" />
-        <div className="mt-6 w-full max-w-2xl space-y-3">
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="mx-auto h-5 w-5/6" />
+    <section className="relative overflow-hidden bg-gray-950 py-12 lg:py-24">
+      <div className="relative mx-auto max-w-6xl px-6">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+          <div className="order-2 space-y-6 lg:order-1">
+            <Skeleton className="h-6 w-32 rounded-full bg-white/10" />
+            <Skeleton className="h-16 w-3/4 bg-white/10" />
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full bg-white/5" />
+              <Skeleton className="h-4 w-5/6 bg-white/5" />
+            </div>
+            <Skeleton className="h-14 w-40 rounded-2xl bg-teal-300/20" />
+          </div>
+          <div className="order-1 lg:order-2">
+            <div className="rounded-[2.5rem] border border-white/5 bg-white/5 p-4">
+              <Skeleton className="aspect-[4/5] w-full rounded-2xl bg-white/5" />
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -685,17 +617,19 @@ export const BuyListViewSkeleton = () => (
 
 export const BuyDetailViewSkeleton = () => (
   <main className="relative z-10">
-    <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-gray-950 to-black px-6 py-24">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.28),transparent_55%),radial-gradient(circle_at_bottom,_rgba(192,132,252,0.32),transparent_60%)]" />
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <Skeleton className="h-8 w-24 rounded-full" />
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-10 w-2/3 sm:h-12" />
-        <Skeleton className="h-72 w-full max-w-3xl rounded-3xl border-none sm:h-96" />
-        <div className="w-full max-w-3xl space-y-3">
-          <Skeleton className="h-5 w-full" />
-          <Skeleton className="h-5 w-5/6" />
-          <Skeleton className="h-5 w-4/6" />
+    <section className="relative overflow-hidden bg-gray-950 px-6 py-20 lg:py-32">
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-10">
+        <Skeleton className="h-8 w-24 rounded-full bg-white/10" />
+        <div className="relative w-full aspect-[4/5] sm:aspect-[16/9] lg:aspect-[16/7] overflow-hidden rounded-[2rem] bg-white/5 border border-white/10">
+          <div className="absolute inset-0 flex flex-col justify-end p-8 sm:p-12 lg:p-20 space-y-4">
+            <Skeleton className="h-4 w-32 bg-white/10" />
+            <Skeleton className="h-12 w-2/3 sm:h-20 bg-white/10" />
+          </div>
+        </div>
+        <div className="w-full max-w-4xl space-y-3">
+          <Skeleton className="h-5 w-full bg-white/5" />
+          <Skeleton className="h-5 w-5/6 bg-white/5" />
+          <Skeleton className="h-5 w-4/6 bg-white/5" />
         </div>
       </div>
     </section>

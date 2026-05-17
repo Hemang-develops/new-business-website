@@ -75,13 +75,37 @@ export const getUserCourseAccess = async (userEmail, userId) => {
 
     // Get course details for each access
     const courseIds = [...new Set(courseAccess.map(a => a.course_id))];
-    const { data: courses, error: coursesError } = await supabase
-      .from("storefront_courses")
-      .select("id, title, description, offering_id, is_active")
-      .in("id", courseIds);
+    const [
+      { data: courses, error: coursesError },
+      { data: courseItems, error: itemsError },
+      { data: userProgress, error: progressError },
+    ] = await Promise.all([
+      supabase
+        .from("storefront_courses")
+        .select("id, title, description, offering_id, is_active")
+        .in("id", courseIds),
+      supabase
+        .from("storefront_course_items")
+        .select("id, course_id")
+        .in("course_id", courseIds)
+        .eq("is_active", true),
+      userId
+        ? supabase
+          .from("storefront_user_course_progress")
+          .select("course_id, item_id, completed_at")
+          .eq("user_id", userId)
+          .in("course_id", courseIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
 
     if (coursesError) {
       console.error("[userCourses] Error fetching courses:", coursesError);
+    }
+    if (itemsError) {
+      console.error("[userCourses] Error fetching course items:", itemsError);
+    }
+    if (progressError) {
+      console.error("[userCourses] Error fetching course progress:", progressError);
     }
 
     const courseMap = {};
@@ -89,10 +113,29 @@ export const getUserCourseAccess = async (userEmail, userId) => {
       courseMap[course.id] = course;
     });
 
+    const itemCountByCourseId = {};
+    (courseItems || []).forEach((item) => {
+      itemCountByCourseId[item.course_id] = (itemCountByCourseId[item.course_id] || 0) + 1;
+    });
+
+    const completedCountByCourseId = {};
+    (userProgress || []).forEach((entry) => {
+      if (!entry.completed_at) {
+        return;
+      }
+      completedCountByCourseId[entry.course_id] = (completedCountByCourseId[entry.course_id] || 0) + 1;
+    });
+
     const result = (courseAccess || [])
       .filter(access => courseMap[access.course_id]) // Only include if course exists
       .map((access) => {
         const course = courseMap[access.course_id];
+        const totalLessons = itemCountByCourseId[access.course_id] || 0;
+        const completedLessons = completedCountByCourseId[access.course_id] || 0;
+        const progressPercent = totalLessons > 0
+          ? Math.round((completedLessons / totalLessons) * 100)
+          : 0;
+
         return {
           id: access.id,
           courseId: access.course_id,
@@ -104,6 +147,9 @@ export const getUserCourseAccess = async (userEmail, userId) => {
           courseTitle: course?.title || "Course",
           courseDescription: course?.description,
           isActive: !access.expires_at || new Date(access.expires_at) > new Date(),
+          totalLessons,
+          completedLessons,
+          progressPercent,
         };
       });
     

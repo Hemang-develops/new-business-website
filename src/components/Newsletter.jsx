@@ -55,6 +55,26 @@ const Newsletter = () => {
 
             <form
               className="mx-auto flex w-full max-w-xl flex-col gap-4 sm:flex-row"
+              onSubmit={async (e) => {
+                const formData = new FormData(e.currentTarget);
+                const email = formData.get("email");
+                if (!email) return;
+
+                // Save to Supabase for Admin management
+                try {
+                  const { supabase } = await import("../supabase-client");
+                  await supabase.from("storefront_newsletter_signups").insert([{ 
+                    email: String(email).toLowerCase(),
+                    created_at: new Date().toISOString()
+                  }]);
+                } catch (err) {
+                  console.warn("Could not save to Supabase:", err.message);
+                }
+                
+                // Formspree submission continues via standard action/method if desired, 
+                // but we can also manually fetch it here or just let it submit.
+                // Here we let it submit naturally to Formspree after saving to Supabase.
+              }}
               action={newsletterSection?.formAction || "https://formspree.io/f/xovqwaaw"}
               method="POST"
             >

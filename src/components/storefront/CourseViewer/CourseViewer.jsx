@@ -5,9 +5,11 @@ import CourseAchievement from './CourseAchievement';
 import { Menu } from 'lucide-react';
 import { supabase } from '../../../supabase-client';
 import { useToast } from '../../../context/ToastContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const CourseViewer = ({ course, modules, items, access }) => {
   const toast = useToast();
+  const { user } = useAuth();
   const [selectedItemId, setSelectedItemId] = useState(() => {
     // Select first unlocked item by default
     const firstUnlocked = items.find(item => item.isUnlocked);
@@ -31,21 +33,36 @@ const CourseViewer = ({ course, modules, items, access }) => {
     return (completedCount / localItems.length) * 100;
   }, [localItems]);
 
+  const nextUnlockedItem = useMemo(() => {
+    if (!selectedItem) return null;
+    const currentIndex = localItems.findIndex(item => item.id === selectedItem.id);
+    if (currentIndex === -1) return null;
+
+    return localItems.slice(currentIndex + 1).find(item => item.isUnlocked) || null;
+  }, [localItems, selectedItem]);
+
   const handleCompleteLesson = async () => {
-    if (!selectedItem || selectedItem.isCompleted) return;
+    if (!selectedItem || selectedItem.isCompleted) return true;
+    if (!user?.id) {
+      toast.error("Please sign in again to save course progress.");
+      return false;
+    }
 
     try {
       // 1. Update progress in DB
-      const { error } = await supabase
+      const { data: savedProgress, error } = await supabase
         .from('storefront_user_course_progress')
         .upsert({
           course_id: course.id,
           item_id: selectedItem.id,
           completed_at: new Date().toISOString(),
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        }, { onConflict: 'user_id,item_id' });
+          user_id: user.id,
+        }, { onConflict: 'user_id,item_id' })
+        .select('user_id, course_id, item_id, completed_at')
+        .single();
 
       if (error) throw error;
+      console.log('[CourseViewer] Saved progress row:', savedProgress);
 
       // 2. Update local state
       const updatedItems = localItems.map(item => 
@@ -76,10 +93,43 @@ const CourseViewer = ({ course, modules, items, access }) => {
 
       setLocalItems(finalItems);
       toast.success("Lesson marked as completed!");
+      return true;
 
     } catch (error) {
       console.error("Error completing lesson:", error);
       toast.error("Failed to save progress.");
+      return false;
+    }
+  };
+
+  const handleAdvanceToNextItem = async () => {
+    if (!selectedItem) return;
+
+    if (!selectedItem.isCompleted) {
+      const didComplete = await handleCompleteLesson();
+      if (!didComplete) {
+        console.log("Could not complete current lesson, cannot advance to next item.");
+        return;
+      }
+    }
+
+    const latestItems = selectedItem.isCompleted
+      ? localItems
+      : localItems.map(item => {
+        if (item.id === selectedItem.id) {
+          return { ...item, isCompleted: true };
+        }
+        if (item.unlockOnCompletionId === selectedItem.id) {
+          return { ...item, isUnlocked: true };
+        }
+        return item;
+      });
+
+    const currentIndex = latestItems.findIndex(item => item.id === selectedItem.id);
+    const nextItem = latestItems.slice(currentIndex + 1).find(item => item.isUnlocked);
+
+    if (nextItem) {
+      setSelectedItemId(nextItem.id);
     }
   };
 
@@ -128,6 +178,8 @@ const CourseViewer = ({ course, modules, items, access }) => {
         <CourseContent 
           item={selectedItem} 
           onComplete={handleCompleteLesson}
+          onNextItem={handleAdvanceToNextItem}
+          nextItem={nextUnlockedItem}
         />
       </div>
 

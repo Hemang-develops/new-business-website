@@ -17,7 +17,7 @@ const Hero = () => {
     <section
       ref={heroRef}
       id="hero"
-      className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden py-16"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden"
       style={{
         background: `linear-gradient(135deg, var(--site-brand-dark, #030406) 0%, #080a0f 100%)`,
       }}
@@ -35,7 +35,7 @@ const Hero = () => {
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.05] mix-blend-overlay" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-6xl px-6 flex flex-col lg:flex-row lg:items-center gap-12 lg:gap-16">
+      <div className="relative z-10 mx-auto max-w-6xl px-6 flex flex-col lg:flex-row lg:items-center gap-12 lg:gap-16 pt-10">
 
         {/* Left Content Column */}
         <div className="flex-1 space-y-8" data-gsap-reveal>

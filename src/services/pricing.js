@@ -20,20 +20,21 @@ export const roundUpAestheticAmount = (amount, currencyCode) => {
   const absolute = Math.abs(amount);
   let step = 1;
 
-  if (upperCurrency === "INR") {
-    if (absolute < 500) step = 10;
-    else if (absolute < 2000) step = 50;
-    else if (absolute < 10000) step = 100;
-    else if (absolute < 50000) step = 500;
-    else step = 1000;
-  } else {
-    if (absolute < 20) step = 1;
-    else if (absolute < 100) step = 5;
-    else if (absolute < 500) step = 10;
-    else if (absolute < 2000) step = 25;
-    else if (absolute < 10000) step = 50;
-    else step = 100;
-  }
+  // dont need aesthetically pleasing number for now
+  // if (upperCurrency === "INR") {
+  //   if (absolute < 500) step = 10;
+  //   else if (absolute < 2000) step = 50;
+  //   else if (absolute < 10000) step = 100;
+  //   else if (absolute < 50000) step = 500;
+  //   else step = 1000;
+  // } else {
+  //   if (absolute < 20) step = 1;
+  //   else if (absolute < 100) step = 5;
+  //   else if (absolute < 500) step = 10;
+  //   else if (absolute < 2000) step = 25;
+  //   else if (absolute < 10000) step = 50;
+  //   else step = 100;
+  // }
 
   return Math.ceil(amount / step) * step;
 };

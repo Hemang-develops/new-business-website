@@ -24,6 +24,22 @@ const getAdminClient = () => {
   });
 };
 
+const getRequestUser = async (supabase: ReturnType<typeof createClient>, request: Request) => {
+  const authorization = request.headers.get("authorization") || "";
+  const token = authorization.replace("Bearer ", "").trim();
+
+  if (!token) {
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error) {
+    return null;
+  }
+
+  return data.user ?? null;
+};
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return json(200, { ok: true });
@@ -40,9 +56,10 @@ Deno.serve(async (request) => {
     }
 
     const supabase = getAdminClient();
+    const requestUser = await getRequestUser(supabase, request);
     const { data: access, error: accessError } = await supabase
       .from("storefront_course_access")
-      .select("id,course_id,offering_id,customer_email,customer_name,starts_at,expires_at,revoked_at")
+      .select("id,user_id,course_id,offering_id,customer_email,customer_name,starts_at,expires_at,revoked_at")
       .eq("access_token", normalizedToken)
       .maybeSingle();
 
@@ -57,6 +74,21 @@ Deno.serve(async (request) => {
     }
     if (access.expires_at && new Date(access.expires_at).getTime() < Date.now()) {
       return json(403, { error: "This course access period has ended." });
+    }
+
+    const normalizedAccessEmail = String(access.customer_email || "").trim().toLowerCase();
+    const normalizedRequestEmail = String(requestUser?.email || "").trim().toLowerCase();
+    const resolvedUserId =
+      access.user_id ||
+      (normalizedAccessEmail && normalizedRequestEmail && normalizedAccessEmail === normalizedRequestEmail
+        ? requestUser?.id || null
+        : null);
+
+    if (!access.user_id && resolvedUserId) {
+      await supabase
+        .from("storefront_course_access")
+        .update({ user_id: resolvedUserId })
+        .eq("id", access.id);
     }
 
     const [courseRes, modulesRes, itemsRes, progressRes] = await Promise.all([
@@ -78,10 +110,10 @@ Deno.serve(async (request) => {
         .eq("course_id", access.course_id)
         .eq("is_active", true)
         .order("sort_order", { ascending: true }),
-      access.user_id ? supabase
+      resolvedUserId ? supabase
         .from("storefront_user_course_progress")
         .select("item_id,completed_at,last_position_seconds")
-        .eq("user_id", access.user_id)
+        .eq("user_id", resolvedUserId)
         .eq("course_id", access.course_id) : Promise.resolve({ data: [] }),
     ]);
 

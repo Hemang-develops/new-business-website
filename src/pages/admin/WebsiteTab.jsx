@@ -28,6 +28,7 @@ const WebsiteTab = ({ state, actions }) => {
     removeSiteLink,
     removeSiteSectionItem,
     setSelectedSiteSectionId,
+    updateSiteFaqs,
     updateSiteFooter,
     updateSiteLink,
     updateSiteSection,
@@ -203,6 +204,83 @@ const WebsiteTab = ({ state, actions }) => {
                           />
                         </label>
                       ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Frequently asked questions</p>
+                        <p className="mt-1 text-xs text-white/55">
+                          These entries power the public website FAQ content and now save through the bounded settings tables.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateSiteFaqs([
+                            ...(siteSettingsEditor.faqs || []),
+                            { question: "New Question", answer: "The answer..." },
+                          ])
+                        }
+                        className="rounded-full border border-teal-300/40 bg-teal-300/10 px-3 py-1.5 text-xs font-semibold text-teal-100 transition hover:bg-teal-300/20"
+                      >
+                        Add FAQ
+                      </button>
+                    </div>
+
+                    <div className="mt-4 space-y-6">
+                      {siteSettingsEditor.faqs?.length ? (
+                        siteSettingsEditor.faqs.map((faq, index) => (
+                          <div key={index} className="relative space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextFaqs = [...(siteSettingsEditor.faqs || [])];
+                                nextFaqs.splice(index, 1);
+                                updateSiteFaqs(nextFaqs);
+                              }}
+                              className="absolute right-3 top-3 text-white/40 transition hover:text-rose-300"
+                              title="Delete FAQ"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                            <label className="block space-y-1">
+                              <span className="text-xs font-medium text-white/70">Question</span>
+                              <input
+                                type="text"
+                                value={faq.question || ""}
+                                onChange={(event) => {
+                                  const nextFaqs = [...(siteSettingsEditor.faqs || [])];
+                                  nextFaqs[index] = { ...faq, question: event.target.value };
+                                  updateSiteFaqs(nextFaqs);
+                                }}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                placeholder="What should visitors know first?"
+                              />
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="text-xs font-medium text-white/70">Answer</span>
+                              <SimpleEditor
+                                value={faq.answer || ""}
+                                onChange={(value) => {
+                                  const nextFaqs = [...(siteSettingsEditor.faqs || [])];
+                                  nextFaqs[index] = { ...faq, answer: value };
+                                  updateSiteFaqs(nextFaqs);
+                                }}
+                                minHeightClass="min-h-[8rem]"
+                                placeholder="Write the answer here..."
+                              />
+                            </label>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 p-5 text-sm text-white/50">
+                          No FAQs added yet.
+                        </div>
+                      )}
                     </div>
                   </div>
 

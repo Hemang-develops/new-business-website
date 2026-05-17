@@ -5,6 +5,8 @@
  */
 export const IS_PRODUCTION = import.meta.env.PROD && import.meta.env.VITE_APP_ENV !== 'dev';
 export const IS_DEV = !IS_PRODUCTION;
+export const STOREFRONT_ENV =
+  import.meta.env.VITE_STOREFRONT_ENV || import.meta.env.VITE_APP_ENV || (import.meta.env.PROD ? 'production' : 'development');
 
 export const bootstrapEnvironment = () => {
   if (IS_PRODUCTION) {
@@ -24,4 +26,6 @@ export const bootstrapEnvironment = () => {
   } else {
     console.log("%c🚀 Running in Development Mode", "color: #2dd4bf; font-size: 1.25rem; font-weight: bold;");
   }
+
+  console.log(`%cStorefront environment: ${STOREFRONT_ENV}`, "color: #60a5fa; font-size: 1rem;");
 };

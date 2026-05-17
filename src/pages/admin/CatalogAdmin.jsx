@@ -24,6 +24,10 @@ import { offeringModeMeta, siteSectionEditorMeta } from "./catalogAdminConfig";
 import {
   defaultCalcomHostId,
   adminNotificationsTable,
+  adminDashboardSummaryView,
+  offeringPerformanceAnalyticsView,
+  userLearningPathView,
+  contentAuditTrailView,
   courseAccessTable,
   courseItemsTable,
   coursesTable,
@@ -37,6 +41,9 @@ import {
   courseModulesTable,
   toLines,
 } from "./catalogAdminHelpers";
+import NewsletterTab from "./NewsletterTab";
+import AnalyticsTab from "./AnalyticsTab";
+import ContentAuditTab from "./ContentAuditTab";
 const CatalogAdmin = () => {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
   const { refreshSettings } = useSiteSettings();
@@ -53,6 +60,10 @@ const CatalogAdmin = () => {
   const [courseModules, setCourseModules] = useState([]);
   const [courseAccess, setCourseAccess] = useState([]);
   const [adminNotifications, setAdminNotifications] = useState([]);
+  const [dashboardSummaryViewData, setDashboardSummaryViewData] = useState(null);
+  const [offeringAnalytics, setOfferingAnalytics] = useState([]);
+  const [userLearningPaths, setUserLearningPaths] = useState([]);
+  const [contentAuditTrail, setContentAuditTrail] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [newCourseOfferingId, setNewCourseOfferingId] = useState("");
   const [isSavingCourse, setIsSavingCourse] = useState(false);
@@ -64,7 +75,6 @@ const CatalogAdmin = () => {
     manualInstructionsText: "",
     legalNotesText: "",
     closingNotesText: "",
-    faqs: [],
   });
   const [siteSettingsEditor, setSiteSettingsEditor] = useState(defaultSiteSettings);
   const [selectedSiteSectionId, setSelectedSiteSectionId] = useState("hero");
@@ -87,7 +97,10 @@ const CatalogAdmin = () => {
 
   const profileTabs = [
     { id: "dashboard", label: "Dashboard" },
+    { id: "analytics", label: "Analytics" },
+    { id: "content-audit", label: "Content Audit" },
     { id: "site", label: "Website" },
+    { id: "newsletter", label: "Newsletter" },
     { id: "offerings", label: "Products" },
     { id: "courses", label: "Courses" },
     { id: "shared", label: "Shared Checkout Content" },
@@ -148,6 +161,18 @@ const CatalogAdmin = () => {
       .filter(([, amount]) => amount > 0)
       .map(([currency, amount]) => `${currency} ${(amount / 100).toLocaleString()}`)
       .join(" / ");
+
+    if (dashboardSummaryViewData) {
+      return {
+        totalCourses: dashboardSummaryViewData.total_courses ?? courses.length,
+        activeCourseAccess: activeAccess.length,
+        totalCoursePurchases: courseAccess.length,
+        courseRevenueLabel: courseRevenueLabel || "No payments yet",
+        recentNotifications: adminNotifications.slice(0, 8),
+        dashboardSummaryViewData,
+      };
+    }
+
     return {
       totalCourses: courses.length,
       activeCourseAccess: activeAccess.length,
@@ -155,7 +180,7 @@ const CatalogAdmin = () => {
       courseRevenueLabel: courseRevenueLabel || "No payments yet",
       recentNotifications: adminNotifications.slice(0, 8),
     };
-  }, [adminNotifications, courseAccess, courses.length]);
+  }, [adminNotifications, courseAccess, courses.length, dashboardSummaryViewData]);
 
   useEffect(() => {
     if (!status.message) {
@@ -183,6 +208,11 @@ const CatalogAdmin = () => {
       let results;
       try {
         results = await Promise.all([
+          supabase
+            .from(globalContentTable)
+            .select("manual_instructions,legal_notes,closing_notes")
+            .eq("id", 1)
+            .maybeSingle(),
           supabase.from(sectionsTable).select("*").order("sort_order", { ascending: true }),
           supabase.from(offeringsTable).select("*").order("sort_order", { ascending: true }),
           supabase
@@ -196,7 +226,11 @@ const CatalogAdmin = () => {
           supabase.from(courseItemsTable).select("*").order("sort_order", { ascending: true }),
           supabase.from(courseAccessTable).select("*").order("created_at", { ascending: false }),
           supabase.from(adminNotificationsTable).select("*").order("created_at", { ascending: false }).limit(20),
-          refreshSettings(),
+          supabase.from(offeringPerformanceAnalyticsView).select("*"),
+          supabase.from(userLearningPathView).select("*").order("last_activity_at", { ascending: false }).limit(50),
+          supabase.from(contentAuditTrailView).select("*").order("changed_at", { ascending: false }).limit(100),
+          supabase.from(adminDashboardSummaryView).select("*").maybeSingle(),
+          refreshSettings({ throwOnError: true }),
         ]);
       } catch (err) {
         if (isMounted) {
@@ -207,6 +241,7 @@ const CatalogAdmin = () => {
       }
 
       const [
+        sharedContentRes,
         sectionsRes,
         offeringsRes,
         reviewsRes,
@@ -215,10 +250,15 @@ const CatalogAdmin = () => {
         courseItemsRes,
         courseAccessRes,
         adminNotificationsRes,
+        offeringAnalyticsRes,
+        userLearningPathRes,
+        contentAuditTrailRes,
+        adminDashboardSummaryViewRes,
         settingsData,
       ] = results;
 
       const firstError = [
+        sharedContentRes.error,
         sectionsRes.error,
         offeringsRes.error,
         reviewsRes.error,
@@ -227,6 +267,10 @@ const CatalogAdmin = () => {
         courseItemsRes.error,
         courseAccessRes.error,
         adminNotificationsRes.error,
+        offeringAnalyticsRes.error,
+        userLearningPathRes.error,
+        contentAuditTrailRes.error,
+        adminDashboardSummaryViewRes.error,
       ].find(Boolean);
 
       if (!isMounted) {
@@ -255,11 +299,11 @@ const CatalogAdmin = () => {
         mergedOfferings.find((entry) => entry.id === offeringId)?.section_id || "";
 
       const globalData = settingsData?.global || {};
+      const sharedContentData = sharedContentRes.data || {};
       setGlobalEditor({
-        manualInstructionsText: toLines(globalData.manual_instructions || []),
-        legalNotesText: toLines(globalData.legal_notes || []),
-        closingNotesText: toLines(globalData.closing_notes || []),
-        faqs: Array.isArray(globalData.faqs) ? globalData.faqs : [],
+        manualInstructionsText: toLines(sharedContentData.manual_instructions || []),
+        legalNotesText: toLines(sharedContentData.legal_notes || []),
+        closingNotesText: toLines(sharedContentData.closing_notes || []),
       });
       setSiteSettingsEditor(
         normalizeSiteSettingsFromRows({
@@ -296,6 +340,10 @@ const CatalogAdmin = () => {
       setCourseItems(courseItemsRes.data || []);
       setCourseAccess(courseAccessRes.data || []);
       setAdminNotifications(adminNotificationsRes.data || []);
+      setOfferingAnalytics(offeringAnalyticsRes.data || []);
+      setUserLearningPaths(userLearningPathRes.data || []);
+      setContentAuditTrail(contentAuditTrailRes.data || []);
+      setDashboardSummaryViewData(adminDashboardSummaryViewRes.data || null);
       if (!selectedCourseId && coursesRes.data?.length) {
         setSelectedCourseId(coursesRes.data[0].id);
       }
@@ -392,6 +440,11 @@ const CatalogAdmin = () => {
         ...prev[group],
         [key]: value,
       },
+    }));
+  const updateSiteFaqs = (value) =>
+    setSiteSettingsEditor((prev) => ({
+      ...prev,
+      faqs: value,
     }));
   const applyThemePreset = (theme) =>
     setSiteSettingsEditor((prev) => ({
@@ -873,6 +926,7 @@ const CatalogAdmin = () => {
     removeSiteLink,
     removeSiteSectionItem,
     setSelectedSiteSectionId,
+    updateSiteFaqs,
     updateSiteFooter,
     updateSiteLink,
     updateSiteSection,
@@ -974,7 +1028,7 @@ const CatalogAdmin = () => {
               <div
                 role="tablist"
                 aria-label="Account sections"
-                className="flex flex-row"
+                className="flex flex-row overflow-x-auto custom-scrollbar whitespace-nowrap pb-2 scroll-smooth"
               >
                 {profileTabs.map((tab) => {
                   const isActive = activeAdminTab === tab.id;
@@ -989,8 +1043,8 @@ const CatalogAdmin = () => {
                       id={`account-${tab.id}-tab`}
                       onClick={() => setActiveAdminTab(tab.id)}
                       className={`relative min-h-14 px-2 pr-4 pb-4 text-center text-xs font-semibold uppercase tracking-[0.35em] transition sm:text-sm ${isActive
-                          ? "text-teal-100"
-                          : "text-white/50 hover:text-white/80"
+                        ? "text-teal-100"
+                        : "text-white/50 hover:text-white/80"
                         }`}
                     >
                       {tab.label}
@@ -1006,7 +1060,17 @@ const CatalogAdmin = () => {
 
             {activeAdminTab === "dashboard" ? <AdminDashboard stats={dashboardStats} /> : null}
 
+            {activeAdminTab === "analytics" ? (
+              <AnalyticsTab offeringAnalytics={offeringAnalytics} userLearningPaths={userLearningPaths} />
+            ) : null}
+
+            {activeAdminTab === "content-audit" ? (
+              <ContentAuditTab contentAuditTrail={contentAuditTrail} />
+            ) : null}
+
             {activeAdminTab === "site" ? <WebsiteTab state={websiteState} actions={websiteActions} /> : null}
+
+            {activeAdminTab === "newsletter" ? <NewsletterTab /> : null}
 
             {activeAdminTab === "offerings" ? <ProductsTab state={productsState} actions={productsActions} /> : null}
 
@@ -1015,7 +1079,7 @@ const CatalogAdmin = () => {
             {activeAdminTab === "shared" ? <SharedContentTab state={sharedContentState} actions={sharedContentActions} /> : null}
 
             {activeAdminTab === "reviews" ? <ReviewsTab state={reviewsState} actions={reviewsActions} /> : null}
-            
+
             {activeAdminTab === "fulfillment" ? <FulfillmentTab /> : null}
           </div>
         ) : null}
@@ -1032,4 +1096,3 @@ const CatalogAdmin = () => {
 };
 
 export default CatalogAdmin;
-

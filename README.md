@@ -88,20 +88,28 @@ Requirement:
 9. calendly integration - > cal.com integration
 12. remove back to offerings button
 13. separate hero for offering pages
-
-7. add comment(review) in offerings(option to add image)
-8. user inventory (admin)
+14. Show more issue with card
 10. old content should not be shown after modified but loader should be shown then new data
 11. pages break after refresh due to page api not found
 12. scroll issue 
 13. white screen due to lazy loading
-14. Show more issue with card
-15. explore offering => Details here 
 16. email going twice
-17. ADD EMAIL IN TEMPLATE FOR ISSUES 
 18. drip content
-19. reminder email
+28. remove asthetic amounts
 
+7. add comment(review) in offerings(option to add image)
+8. user inventory (admin)
+15. explore offering => Details here 
+17. ADD EMAIL IN TEMPLATE FOR ISSUES 
+19. reminder email
+20. filter to show only products in which courses can be added
+21. add content or module needs to be intituitve
+22. newsletter feature in admin
+23. privacy policy, terms of service
+24. cookie policy
+25. a service that allows users to send a request to view/edit/delete their personal information stored on your website and/or app
+26. website have Global Privacy Control (GPC) enabled?
+27. faq not working
 
 
 Courses --->  

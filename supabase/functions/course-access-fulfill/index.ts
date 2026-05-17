@@ -327,13 +327,12 @@ Deno.serve(async (request) => {
         console.error("[Fulfill] Auth error:", authError.message);
       } else if (user?.email) {
         console.log("[Fulfill] User authenticated:", user.email);
-        const { data: admin } = await supabase
-          .from("storefront_admin_users")
-          .select("email")
-          .eq("email", user.email)
-          .maybeSingle();
-        
-        if (admin) {
+        const { data: isAdminData, error: isAdminError } = await supabase
+          .rpc("is_storefront_admin_email", { target_email: user.email });
+
+        if (isAdminError) {
+          console.error("[Fulfill] Admin lookup error:", isAdminError.message);
+        } else if (isAdminData) {
           isAdmin = true;
           console.log("[Fulfill] User verified as Admin.");
         } else {
