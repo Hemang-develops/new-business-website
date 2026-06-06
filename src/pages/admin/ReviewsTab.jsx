@@ -1,4 +1,5 @@
 import { createEmptyReview } from "./catalogAdminConfig";
+import ImageUploader from "@/components/ui/ImageUploader";
 
 const ReviewsTab = ({ state, actions }) => {
   const {
@@ -114,20 +115,11 @@ const ReviewsTab = ({ state, actions }) => {
                       onChange={(event) => updateReviewEditor(index, "image_url", event.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                     />
-                    <label
-                      className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-teal-300/50 bg-teal-300/10 text-base text-teal-100 transition hover:bg-teal-300/20"
-                      title={uploadingTarget === `review-image-${index}` ? "Uploading image" : "Upload image"}
-                    >
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(event) => handleReviewImageUpload(event, index)}
-                      />
-                      <span aria-hidden="true">
-                        {uploadingTarget === `review-image-${index}` ? "..." : "\u2191"}
-                      </span>
-                    </label>
+                    <ImageUploader
+                      label={uploadingTarget === `review-image-${index}` ? "Uploading..." : "Upload image"}
+                      disabled={uploadingTarget === `review-image-${index}`}
+                      onPick={(file) => handleReviewImageUpload(file, index)}
+                    />
                     {review.image_url ? (
                       <a
                         href={review.image_url}

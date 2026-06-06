@@ -1,6 +1,7 @@
 import { Wand2 } from "lucide-react";
 import { SimpleEditor } from "../../components/tiptap-templates/simple/simple-editor";
 import { generateRandomTheme } from "../../utils/themeGenerator";
+import ImageUploader from "@/components/ui/ImageUploader";
 import { siteLinkGroupMeta, themeFieldMeta, themePresets } from "./catalogAdminConfig";
 
 const WebsiteTab = ({ state, actions }) => {
@@ -113,10 +114,11 @@ const WebsiteTab = ({ state, actions }) => {
                     <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Profile media</p>
                     <div className="mt-4 flex flex-col gap-3">
                       <div className="flex flex-wrap items-center gap-3">
-                        <label className="inline-flex cursor-pointer items-center rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100">
-                          <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} />
-                          {uploadingTarget === "site-profile-image" ? "Uploading..." : "Upload profile image"}
-                        </label>
+                        <ImageUploader
+                          label={uploadingTarget === "site-profile-image" ? "Uploading..." : "Upload profile image"}
+                          disabled={uploadingTarget === "site-profile-image"}
+                          onPick={handleProfileImageUpload}
+                        />
                         {siteSettingsEditor.profile.imageUrl ? (
                           <a
                             href={siteSettingsEditor.profile.imageUrl}

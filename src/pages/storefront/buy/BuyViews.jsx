@@ -515,7 +515,9 @@ export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offerings
                 <PaymentSection item={item} />
               )}
             </div>
-            {isAuthenticated && <Comments itemId={item.id} />}
+            <div className="mt-16">
+              <Comments pageType="offering" pageId={item.id} />
+            </div>
           </div>
         </div>
       </section>

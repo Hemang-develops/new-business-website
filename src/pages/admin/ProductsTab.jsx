@@ -1,5 +1,6 @@
 import { SimpleEditor } from "../../components/tiptap-templates/simple/simple-editor";
 import AdminInfoHint from "./AdminInfoHint";
+import ImageUploader from "@/components/ui/ImageUploader";
 import { ctaTypeOptions, offeringModeMeta } from "./catalogAdminConfig";
 
 const ProductsTab = ({ state, actions }) => {
@@ -362,11 +363,13 @@ const ProductsTab = ({ state, actions }) => {
                           <label className="block space-y-1 text-xs text-white/60">
                             <span>Hero Image</span>
                             <div className="flex items-center gap-3">
-                              <label className="inline-flex cursor-pointer items-center rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100">
-                                <input type="file" accept="image/*" className="hidden" onChange={handleHeroImageUpload} />
-                                {uploadingTarget === "hero-image" ? "Uploading..." : "Upload hero image"}
-                              </label>
-                              {selectedSection.hero_image_url ? (
+                              <div className="flex items-center gap-3">
+                                <ImageUploader
+                                  label={uploadingTarget === "hero-image" ? "Uploading..." : "Upload hero image"}
+                                  disabled={uploadingTarget === "hero-image"}
+                                  onPick={handleHeroImageUpload}
+                                />
+                                {selectedSection.hero_image_url ? (
                                 <a
                                   href={selectedSection.hero_image_url}
                                   target="_blank"
@@ -377,6 +380,7 @@ const ProductsTab = ({ state, actions }) => {
                                 </a>
                               ) : null}
                             </div>
+                          </div>
                           </label>
                           <div className="grid grid-cols-2 gap-3">
                             <label className="block space-y-1 text-xs text-white/60">
@@ -519,15 +523,11 @@ const ProductsTab = ({ state, actions }) => {
                                 <AdminInfoHint text="This image is used on storefront cards and product detail sections." />
                               </span>
                               <div className="flex flex-wrap items-center gap-3">
-                                <label className="inline-flex cursor-pointer items-center rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100">
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={handleOfferingImageUpload}
-                                  />
-                                  {uploadingTarget === "offering-image" ? "Uploading..." : "Upload product image"}
-                                </label>
+                                <ImageUploader
+                                  label={uploadingTarget === "offering-image" ? "Uploading..." : "Upload product image"}
+                                  disabled={uploadingTarget === "offering-image"}
+                                  onPick={handleOfferingImageUpload}
+                                />
                                 {editor.image_url ? (
                                   <a
                                     href={editor.image_url}

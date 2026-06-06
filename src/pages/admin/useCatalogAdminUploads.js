@@ -1,5 +1,6 @@
 import { supabase } from "../../supabase-client";
 import { slugify, storageBucket } from "./catalogAdminHelpers";
+import { processImageToWebP } from "../../lib/imageUtils";
 
 export default function useCatalogAdminUploads({
   editor,
@@ -13,14 +14,21 @@ export default function useCatalogAdminUploads({
   updateSectionEditor,
   updateSiteSettings,
 }) {
-  const uploadImageToStorage = async (file, folder) => {
-    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const safeBaseName = slugify(file.name.replace(/\.[^/.]+$/, "")) || "image";
-    const filePath = `${folder}/${Date.now()}-${safeBaseName}.${extension}`;
+  const extractFile = (input) => {
+    if (!input) return null;
+    if (input.target?.files?.length) return input.target.files[0];
+    return input;
+  };
 
-    const { error: uploadError } = await supabase.storage.from(storageBucket).upload(filePath, file, {
+  const uploadImageToStorage = async (file, folder) => {
+    const safeBaseName = slugify(file.name.replace(/\.[^/.]+$/, "")) || "image";
+    const filePath = `${folder}/${Date.now()}-${safeBaseName}.webp`;
+    const webpBlob = await processImageToWebP(file);
+
+    const { error: uploadError } = await supabase.storage.from(storageBucket).upload(filePath, webpBlob, {
       cacheControl: "3600",
       upsert: false,
+      contentType: "image/webp",
     });
 
     if (uploadError) {
@@ -52,12 +60,9 @@ export default function useCatalogAdminUploads({
     return filePath;
   };
 
-  const handleOfferingImageUpload = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !editor) {
-      return;
-    }
+  const handleOfferingImageUpload = async (input) => {
+    const file = extractFile(input);
+    if (!file || !editor) return;
 
     setUploadingTarget("offering-image");
     setStatus({ type: "idle", message: "" });
@@ -75,12 +80,9 @@ export default function useCatalogAdminUploads({
     }
   };
 
-  const handleHeroImageUpload = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !selectedSection) {
-      return;
-    }
+  const handleHeroImageUpload = async (input) => {
+    const file = extractFile(input);
+    if (!file || !selectedSection) return;
 
     setUploadingTarget("hero-image");
     setStatus({ type: "idle", message: "" });
@@ -95,12 +97,9 @@ export default function useCatalogAdminUploads({
     }
   };
 
-  const handleProfileImageUpload = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
+  const handleProfileImageUpload = async (input) => {
+    const file = extractFile(input);
+    if (!file) return;
 
     setUploadingTarget("site-profile-image");
     setStatus({ type: "idle", message: "" });
@@ -118,12 +117,9 @@ export default function useCatalogAdminUploads({
     }
   };
 
-  const handleReviewImageUpload = async (event, index) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
+  const handleReviewImageUpload = async (input, index) => {
+    const file = extractFile(input);
+    if (!file) return;
 
     setUploadingTarget(`review-image-${index}`);
     setStatus({ type: "idle", message: "" });
