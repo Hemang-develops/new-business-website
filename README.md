@@ -135,6 +135,7 @@ Supabase Edge Function secrets:
 ```env
 CALCOM_USERNAME=your-calcom-username
 CALCOM_API_KEY=cal_xxx
+CALCOM_WEBHOOK_SECRET=replace-with-a-long-random-secret
 RAZORPAY_KEY_ID=rzp_live_xxx
 RAZORPAY_KEY_SECRET=xxx
 ```
@@ -143,3 +144,34 @@ Deploy the booking sync function after adding the new `storefront_offerings` boo
 
 - `supabase/add_booking_fields_to_storefront_offerings.sql`
 - `supabase/functions/sync-booking-offering`
+
+## Cal.com booking history
+
+Confirmed Cal.com sessions are saved to `storefront_booking_access` so signed-in customers can see them under **My Meetings**.
+
+1. Apply `supabase/add_booking_access.sql`.
+2. Deploy `supabase/functions/cal-booking-webhook` without JWT verification because Cal.com authenticates with a signature:
+
+```bash
+supabase functions deploy cal-booking-webhook --no-verify-jwt
+```
+
+3. In Cal.com, create a webhook with subscriber URL:
+
+```text
+https://<your-project-ref>.supabase.co/functions/v1/cal-booking-webhook
+```
+
+4. Use the same value as `CALCOM_WEBHOOK_SECRET` for the Cal.com webhook secret and enable these triggers:
+
+```text
+BOOKING_CREATED
+BOOKING_REQUESTED
+BOOKING_CONFIRMED
+BOOKING_RESCHEDULED
+BOOKING_CANCELLED
+BOOKING_REJECTED
+MEETING_ENDED
+```
+
+The embedded calendar also listens for Cal.com's `bookingSuccessfulV2` event so the customer sees their confirmation immediately, while the signed webhook maintains the durable account history.

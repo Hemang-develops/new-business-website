@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen, Camera, Check, LogOut, Pencil, Video, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "../../context/AuthContext";
@@ -39,8 +39,12 @@ const TABS = [
 const UserProfile = () => {
   const { user, isAdmin, signOut, updateProfile } = useAuth();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
   const fileInputRef = useRef(null);
-  const [activeTab, setActiveTab] = useState("courses");
+  const requestedTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(() =>
+    TABS.some((tab) => tab.id === requestedTab) ? requestedTab : "courses",
+  );
 
   const [profileData, setProfileData] = useState({
     firstName: "",
@@ -78,6 +82,12 @@ const UserProfile = () => {
     setProfileData(nextProfileData);
     setDraftProfileData(nextProfileData);
   }, [user]);
+
+  useEffect(() => {
+    if (TABS.some((tab) => tab.id === requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab]);
 
   useEffect(() => {
     if (!isEditOpen) return;

@@ -168,6 +168,7 @@ const MeetingCard = ({ meeting, dimmed }) => {
   const config = STATUS[meeting.status] ?? STATUS.pending;
   const dateStr = formatDate(meeting.scheduledAt);
   const timeStr = formatTime(meeting.scheduledAt);
+  const normalizedDescription = meeting?.description?.replace(/<[^>]+>/g, '') ;
 
   return (
     <article
@@ -195,9 +196,9 @@ const MeetingCard = ({ meeting, dimmed }) => {
       </div>
 
       {/* Description */}
-      {meeting.description ? (
+      {normalizedDescription ? (
         <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-white/55">
-          {meeting.description}
+          {normalizedDescription}
         </p>
       ) : null}
 
