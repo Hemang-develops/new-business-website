@@ -1,120 +1,361 @@
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import { useEffect, useState } from "react";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { SimpleEditor } from "./tiptap-templates/simple/simple-editor";
+import { useEffect, useState, useRef } from "react";
+import ImageUploader from "@/components/ui/ImageUploader";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { uploadWebPImage } from "@/lib/imageUtils";
+import * as commentsService from "@/services/comments";
 
+const uuidv4 = () => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
-const Comments = ({ itemId }) => {
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
   const { user, isAuthenticated } = useAuth();
   const toast = useToast();
-  const [formValues, setFormValues] = useState({
-    name: user?.name || "",
-    heading: "",
-    quote: "",
-    imageUrl: "",
-    imageAlt: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [commentImageFile, setCommentImageFile] = useState(null);
+  const [replyFor, setReplyFor] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyImageFile, setReplyImageFile] = useState(null);
+  const [limit, setLimit] = useState(5);
+  const [hasMore, setHasMore] = useState(false);
+
+  const mounted = useRef(true);
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.name) {
-      return;
-    }
-    setFormValues((previous) => ({
-      ...previous,
-      name: previous.name || user.name,
-    }));
-  }, [isAuthenticated, user]);
+    mounted.current = true;
+    loadComments(limit);
+    return () => {
+      mounted.current = false;
+    };
+  }, [pageType, pageId]);
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormValues((previous) => ({ ...previous, [name]: value }));
+  const loadComments = async (take = 5) => {
+    setLoading(true);
+    try {
+      const res = await commentsService.fetchComments({ pageType, pageId, moduleId, limit: take });
+      if (!mounted.current) return;
+      setComments(res || []);
+      setHasMore((res?.length || 0) >= take);
+      setLimit(take);
+    } catch (err) {
+      console.error(err);
+      toast.error("Unable to load comments");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!formValues.name.trim() || !formValues.quote.trim()) {
-      toast.error("Add your name and review before submitting.");
+  // Image conversion and upload moved to src/lib/imageUtils.js
+
+  const handleImagePick = (file, target) => {
+    if (!file) return;
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error("Image is too large (max 5 MB)");
+      return;
+    }
+    if (target === "reply") {
+      setReplyImageFile(file);
+    } else {
+      setCommentImageFile(file);
+    }
+  };
+
+  const handleClearImage = (target) => {
+    if (target === "reply") {
+      setReplyImageFile(null);
+    } else {
+      setCommentImageFile(null);
+    }
+  };
+
+  const submitComment = async (parentId = null, isReply = false) => {
+    if (!isAuthenticated || !user) {
+      toast.error("Please sign in to post comments.");
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        placement: "buy",
-        offering_id: itemId,
-        heading: formValues.heading.trim() || "Client review",
-        quote: formValues.quote.trim(),
-        author: formValues.name.trim(),
-        image_url: formValues.imageUrl.trim() || null,
-        image_alt: formValues.imageAlt.trim() || null,
-        sort_order: 999,
-        is_active: false,
-      };
+    const text = isReply ? replyText.trim() : commentText.trim();
+    const file = isReply ? replyImageFile : commentImageFile;
 
-      const { error } = await supabase.from(reviewsTable).insert(payload);
-      if (error) {
-        throw error;
+    if (!text && !file) {
+      toast.error("Add a message or an image before submitting.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let imageUrl = null;
+      if (file) {
+        imageUrl = await uploadWebPImage({ file, pageType, pageId, pathPrefix: 'comments' });
       }
 
-      toast.success("Your review was submitted and is now waiting for approval.", "Review received");
-      setFormValues({
-        name: isAuthenticated && user?.name ? user.name : "",
-        heading: "",
-        quote: "",
-        imageUrl: "",
-        imageAlt: "",
-      });
-    } catch (error) {
-      toast.error(error?.message || "We could not submit your review right now. Please try again.");
+      const payload = {
+        id: uuidv4(),
+        page_type: pageType,
+        page_id: String(pageId),
+        module_id: moduleId,
+        parent_id: parentId,
+        author_id: user.id,
+        author_name: user.name || user.email || "Anonymous",
+        content: text || null,
+        image_url: imageUrl,
+        is_visible: true,
+      };
+
+      const created = await commentsService.createComment(payload);
+      setComments((previous) => [created, ...previous]);
+
+      if (isReply) {
+        setReplyFor(null);
+        setReplyText("");
+        setReplyImageFile(null);
+      } else {
+        setCommentText("");
+        setCommentImageFile(null);
+      }
+      toast.success("Comment posted");
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Could not post comment");
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
+  const handleDelete = async (commentId) => {
+    try {
+      const { error } = await commentsService.deleteComment(commentId);
+      if (error) throw error;
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      toast.success("Comment removed");
+    } catch (err) {
+      toast.error("Unable to delete comment");
+    }
+  };
+
+  const handleEdit = async (commentId, newContent) => {
+    try {
+      await commentsService.updateComment(commentId, { content: newContent });
+      setComments((prev) => prev.map((c) => (c.id === commentId ? { ...c, content: newContent } : c)));
+      toast.success("Comment updated");
+    } catch (err) {
+      toast.error("Unable to update comment");
+    }
+  };
+
+  const CommentAvatar = ({ src, alt, sizeClass = "h-12 w-12" }) => (
+    <Avatar className={`${sizeClass} overflow-hidden`}>
+      {src ? <AvatarImage src={src} alt={alt} /> : <AvatarFallback />}
+    </Avatar>
+  );
+
+  const replyBox = (parentId) => (
+    <div className="mt-3 rounded-2xl p-4">
+      <div className="flex gap-3">
+        <CommentAvatar src={user?.profileImage} alt={user?.name || "Your avatar"} sizeClass="h-10 w-10" />
+        <div className="flex-1">
+          <textarea
+            className="w-full min-h-[88px] rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-teal-400/30"
+            placeholder="Write a reply..."
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+          />
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <ImageUploader onPick={(file) => handleImagePick(file, "reply")} disabled={submitting} />
+            <button
+              className="ml-auto rounded-full bg-teal-500 px-5 py-2 text-sm font-semibold text-gray-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={submitting}
+              onClick={() => submitComment(parentId, true)}
+            >
+              {submitting ? "Posting..." : "Reply"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const commentRows = comments.filter((c) => !c.parent_id);
+
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/80 shadow-xl backdrop-blur sm:p-8">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-teal-200/80">Leave a review</p>
-        <h3 className="text-2xl font-semibold text-white">Share your experience</h3>
-        <p className="text-sm leading-relaxed text-white/65">
-          Your review helps future clients choose the right offering. New submissions are reviewed before they go live.
-        </p>
+    <section className="text-white">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-xl font-semibold">Comments</h3>
+          {/* <p className="text-sm text-white/70">Questions, feedback, or quick notes about this {pageType}.</p> */}
+        </div>
+        {!isAuthenticated && (
+          <div className="px-4 py-2 text-sm text-teal-100">
+            Sign in to join the conversation.
+          </div>
+        )}
       </div>
 
-      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-        {/* <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-white/70">
-            <span className="font-semibold text-white">Your name</span>
-            <Input
-              name="name"
-              value={formValues.name}
-              onChange={handleChange}
-              className="border-white/10 bg-black/30 focus-visible:border-teal-300"
-              placeholder="Your name"
+      <div className="pt-4">
+        <div className="flex gap-3">
+          <CommentAvatar src={user?.profileImage} alt={user?.name || "Your avatar"} sizeClass="h-12 w-12" />
+          <div className="flex-1">
+            <textarea
+              className="w-full min-h-[96px] resize-none rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-teal-400/30"
+              placeholder={isAuthenticated ? "Share your thoughts..." : "Sign in to post a comment"}
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              disabled={!isAuthenticated}
             />
-          </label>
-        </div> */}
-        {/* i am confused, should i keep name field for comment/review, because the author is already captured from the user context and if not then it is posible that user comment without buying and any one can comment/review to troll. so this also means not only name field but review/comment field also should not be there for public submission if not authenticated */}
-        {/* Short heading not required */}
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <ImageUploader onPick={(file) => handleImagePick(file)} disabled={!isAuthenticated} />
+              <button
+                className="ml-auto rounded-full bg-teal-500 px-5 py-2 text-sm font-semibold text-gray-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={submitting || !isAuthenticated}
+                onClick={() => submitComment(null)}
+              >
+                {submitting ? "Posting..." : "Post"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <label className="space-y-2 text-sm text-white/70">
-        {/* image upload and comment/review is merged now and only image upload is needed in options */}
-          <span className="font-semibold text-white">Your review</span>
-          <SimpleEditor value={formValues.quote || ""} onChange={handleChange} minHeightClass="min-h-[12rem]" />
-        </label>
+      <div className="pt-8 space-y-4">
+        {loading ? (
+          <p className="text-white/60">Loading comments...</p>
+        ) : commentRows.length ? (
+          commentRows.map((entry) => (
+            <CommentThread
+              key={entry.id}
+              entry={entry}
+              comments={comments}
+              currentUser={user}
+              replyFor={replyFor}
+              onReply={(id) => {
+                setReplyFor(replyFor === id ? null : id);
+                setReplyText("");
+                setReplyImageFile(null);
+              }}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+              replyBox={replyFor === entry.id ? replyBox(entry.id) : null}
+            />
+          ))
+        ) : (
+          <p className="text-white/60">No comments yet. Be the first to start the conversation.</p>
+        )}
+      </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="inline-flex items-center rounded-full border border-teal-300/40 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 transition hover:border-teal-200 hover:bg-teal-300/20 disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {isSubmitting ? "Submitting..." : "Submit review"}
-        </button>
-      </form>
+      {hasMore && (
+        <div className="text-center pt-4">
+          <button onClick={() => loadComments(limit + 5)} className="rounded-full border border-white/10 bg-white/5 px-6 py-2 text-sm text-white transition hover:bg-white/10">
+            Load more
+          </button>
+        </div>
+      )}
     </section>
+  );
+};
+
+const CommentThread = ({ entry, comments, currentUser, replyFor, onReply, onDelete, onEdit, replyBox }) => {
+  const replies = comments
+    .filter((c) => c.parent_id === entry.id)
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  return (
+    <div className="rounded-3xl p-4">
+      <CommentItem entry={entry} currentUser={currentUser} onReply={() => onReply(entry.id)} onDelete={onDelete} onEdit={onEdit} />
+      {replyBox}
+      {replies.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {replies.map((reply) => (
+            <div key={reply.id} className="ml-6 border-l border-white/10 pl-5">
+              <CommentItem
+                entry={reply}
+                currentUser={currentUser}
+                onReply={() => onReply(reply.id)}
+                onDelete={onDelete}
+                onEdit={onEdit}
+              />
+              {replyFor === reply.id && replyBox(reply.id)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CommentItem = ({ entry, currentUser, onReply, onDelete, onEdit }) => {
+  const [editing, setEditing] = useState(false);
+  const [draftText, setDraftText] = useState(entry.content || "");
+
+  return (
+    <div className="flex gap-3">
+      <CommentAvatar src={entry.author_image} alt={entry.author_name || "Author avatar"} sizeClass="h-11 w-11" />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-white">
+            <span className="font-semibold">{entry.author_name}</span>
+            <span className="text-white/50">•</span>
+            <span className="text-xs text-white/60">{new Date(entry.created_at).toLocaleString()}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-white/70">
+            <button className="transition hover:text-white" onClick={onReply}>Reply</button>
+            {currentUser?.id === entry.author_id && (
+              <>
+                <button className="transition hover:text-white" onClick={() => setEditing((value) => !value)}>
+                  {editing ? "Cancel" : "Edit"}
+                </button>
+                <button className="transition hover:text-white" onClick={() => onDelete(entry.id)}>
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="mt-3 text-sm text-white/90">
+          {editing ? (
+            <div className="space-y-3">
+              <textarea
+                className="w-full min-h-[92px] rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-400/30"
+                value={draftText}
+                onChange={(e) => setDraftText(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button
+                  className="rounded-full bg-teal-500 px-4 py-2 text-sm font-semibold text-gray-950"
+                  onClick={() => {
+                    onEdit(entry.id, draftText);
+                    setEditing(false);
+                  }}
+                >
+                  Save
+                </button>
+                <button className="rounded-full border border-white/10 px-4 py-2 text-sm text-white/80" onClick={() => setEditing(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="whitespace-pre-wrap">{entry.content}</p>
+          )}
+        </div>
+        {entry.image_url && (
+          <div className="mt-3 overflow-hidden rounded-3xl">
+            <img src={entry.image_url} alt={entry.image_alt || "comment image"} className="w-full object-cover" />
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

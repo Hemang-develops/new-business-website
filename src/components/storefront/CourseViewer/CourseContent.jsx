@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lock, AlertCircle, CheckCircle, ArrowRight, Flag, ThumbsUp, ThumbsDown, X, Check } from 'lucide-react';
 import RichTextContent from '../../ui/RichTextContent';
 import { Textarea } from "../../ui/textarea";
+import Comments from '@/components/Comments';
 
 const CourseContent = ({ item, onComplete, onNextItem, nextItem, onLikeItem, onDislikeItem }) => {
     const [isIssueReportDialogOpen, setIsIssueReportDialogOpen] = useState(false);
@@ -295,6 +296,9 @@ const CourseContent = ({ item, onComplete, onNextItem, nextItem, onLikeItem, onD
           </form>
         </div>
       )}
+      <div className="mt-16">
+        <Comments pageType="course_item" pageId={item.id} moduleId={item.moduleId} />
+      </div>
     </div>
   );
 };
