@@ -109,6 +109,7 @@ const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
         parent_id: parentId,
         author_id: user.id,
         author_name: user.name || user.email || "Anonymous",
+        author_image: user.profileImage || null,
         content: text || null,
         image_url: imageUrl,
         is_visible: true,
