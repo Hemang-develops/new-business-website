@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "patch:profile-avatars": "node scripts/patch-missing-profile-avatars.mjs"
   },
   "dependencies": {
     "@calcom/atoms": "^2.3.7",
@@ -87,6 +88,7 @@
     "sass-embedded": "^1.99.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "sharp": "^0.32.0"
   }
 }
