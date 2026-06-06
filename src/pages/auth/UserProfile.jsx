@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen, Camera, Check, LogOut, Pencil, Video, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import ImageUploader from "@/components/ui/ImageUploader";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { supabase } from "../../supabase-client";
@@ -9,6 +10,7 @@ import MyCoursesPage from "../storefront/MyCoursesPage";
 import MyMeetingsTab from "../storefront/MyMeetingsTab";
 import { slugify } from "../../utils/slugify";
 import { storageBucket } from "../admin/catalogAdminHelpers";
+import { processImageToWebP } from "../../lib/imageUtils";
 
 const getInitials = (name, email) => {
   const nameParts = String(name || "")
@@ -40,7 +42,6 @@ const UserProfile = () => {
   const { user, isAdmin, signOut, updateProfile } = useAuth();
   const toast = useToast();
   const [searchParams] = useSearchParams();
-  const fileInputRef = useRef(null);
   const requestedTab = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(() =>
     TABS.some((tab) => tab.id === requestedTab) ? requestedTab : "courses",
@@ -125,13 +126,14 @@ const UserProfile = () => {
       throw new Error("Please sign in again before uploading a profile picture.");
     }
 
-    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const webpBlob = await processImageToWebP(file);
     const safeBaseName = slugify(file.name.replace(/\.[^/.]+$/, "")) || "profile";
-    const filePath = `profiles/${user.id}/${Date.now()}-${safeBaseName}.${extension}`;
+    const filePath = `profiles/${user.id}/${Date.now()}-${safeBaseName}.webp`;
 
-    const { error: uploadError } = await supabase.storage.from(storageBucket).upload(filePath, file, {
+    const { error: uploadError } = await supabase.storage.from(storageBucket).upload(filePath, webpBlob, {
       cacheControl: "3600",
       upsert: false,
+      contentType: "image/webp",
     });
 
     if (uploadError) {
@@ -146,11 +148,12 @@ const UserProfile = () => {
     return data.publicUrl;
   };
 
-  const handleProfileImageChange = (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  const handleProfileImageChange = (file) => {
+    if (!file) {
+      clearPendingProfileImage();
+      return;
+    }
 
-    if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Please choose an image file.");
       return;
@@ -289,7 +292,6 @@ const UserProfile = () => {
               >
                 <Camera className="h-5 w-5" />
               </button>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleProfileImageChange} />
             </div>
 
             <h2 className="mt-5 text-2xl font-semibold text-white">{displayName}</h2>
@@ -381,15 +383,13 @@ const UserProfile = () => {
                 <p className="text-sm font-semibold text-white">Profile picture</p>
                 <p className="mt-1 text-sm text-white/55">Upload a JPG, PNG, or WebP image for your account.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isProfileSaving}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 transition hover:border-teal-200 hover:bg-teal-300/20 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <Camera className="h-4 w-4" />
-                {pendingProfileImageFile ? "Change photo" : "Upload photo"}
-              </button>
+              <div>
+                <ImageUploader
+                  label={pendingProfileImageFile ? "Change photo" : "Upload photo"}
+                  disabled={isProfileSaving}
+                  onPick={handleProfileImageChange}
+                />
+              </div>
             </div>
 
             <div className="mt-6 flex flex-col gap-4 sm:flex-row">

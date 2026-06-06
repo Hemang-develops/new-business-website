@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase-client";
+import { createInitialsAvatarBlob, generateInitials } from "@/lib/imageUtils";
+import { slugify } from "../utils/slugify";
 
 const AuthContext = createContext(null);
 
@@ -43,6 +45,68 @@ const mapSupabaseUser = (supabaseUser) => {
     profileImage: metadataProfileImage,
     name: metadataFullName || supabaseUser.user_metadata?.name || (supabaseUser.email ? supabaseUser.email.split("@")[0] : "Account"),
   };
+};
+
+const storageBucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || "site-media";
+
+const buildProfileImageKey = (userId, label) => {
+  const safeName = slugify(String(label || "profile").replace(/\.[^/.]+$/, "")) || "profile";
+  return `profiles/${userId}/${Date.now()}-${safeName}.webp`;
+};
+
+const userHasProfileImage = (supabaseUser) => {
+  return Boolean(
+    supabaseUser?.user_metadata?.profile_image || supabaseUser?.user_metadata?.avatar_url,
+  );
+};
+
+const ensureProfileImageForUser = async (supabaseUser) => {
+  if (!supabaseUser || userHasProfileImage(supabaseUser)) {
+    return supabaseUser;
+  }
+
+  const firstName = supabaseUser.user_metadata?.first_name || "";
+  const lastName = supabaseUser.user_metadata?.last_name || "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || supabaseUser.user_metadata?.name || "";
+  const initials = generateInitials(fullName, supabaseUser.email || "");
+
+  try {
+    const avatarBlob = await createInitialsAvatarBlob({ initials, size: 512 });
+    const key = buildProfileImageKey(supabaseUser.id, initials);
+    const { error: uploadError } = await supabase.storage.from(storageBucket).upload(key, avatarBlob, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: "image/webp",
+    });
+    if (uploadError) {
+      console.warn("Failed to upload profile avatar:", uploadError);
+      return supabaseUser;
+    }
+
+    const { data } = supabase.storage.from(storageBucket).getPublicUrl(key);
+    const publicUrl = data?.publicUrl;
+    if (!publicUrl) {
+      console.warn("Failed to resolve uploaded avatar URL");
+      return supabaseUser;
+    }
+
+    const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+      data: {
+        profile_image: publicUrl,
+        avatar_url: publicUrl,
+        full_name: fullName,
+      },
+    });
+    if (updateError) {
+      console.warn("Failed to update user metadata with avatar URL:", updateError);
+      return supabaseUser;
+    }
+
+    return updateData?.user || supabaseUser;
+  } catch (err) {
+    console.warn("Profile avatar generation failed:", err);
+    return supabaseUser;
+  }
 };
 
 export const AuthProvider = ({ children }) => {
@@ -117,13 +181,15 @@ export const AuthProvider = ({ children }) => {
     const applySession = async (session) => {
       if (!isMounted) return;
 
-      setUser(mapSupabaseUser(session?.user));
-
       if (!session?.user) {
+        setUser(null);
         setIsAdmin(false);
         setIsLoading(false);
         return;
       }
+
+      const userWithAvatar = await ensureProfileImageForUser(session.user);
+      setUser(mapSupabaseUser(userWithAvatar));
 
       try {
         const { data: isAdminData } = await supabase.rpc("is_storefront_admin");
@@ -195,8 +261,10 @@ export const AuthProvider = ({ children }) => {
       throw new Error(error.message || "Unable to create account.");
     }
 
-    const nextUser = mapSupabaseUser(data.user);
+    let nextUser = mapSupabaseUser(data.user);
     if (data.session) {
+      const userWithAvatar = await ensureProfileImageForUser(data.user);
+      nextUser = mapSupabaseUser(userWithAvatar);
       setUser(nextUser);
       // Wait to verify admin after successful signup
       const { data: isAdminData } = await supabase.rpc('is_storefront_admin');
@@ -217,7 +285,8 @@ export const AuthProvider = ({ children }) => {
       throw new Error(error.message || "Invalid email or password.");
     }
 
-    setUser(mapSupabaseUser(data.user));
+    const userWithAvatar = await ensureProfileImageForUser(data.user);
+    setUser(mapSupabaseUser(userWithAvatar));
     const { data: isAdminData } = await supabase.rpc('is_storefront_admin');
     setIsAdmin(!!isAdminData);
   };
