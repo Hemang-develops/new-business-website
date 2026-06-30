@@ -6,6 +6,7 @@ import { Input } from "../../../components/ui/input";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
 import { supabase } from "../../../supabase-client";
+import { useSiteSettings } from "../../../context/SiteSettingsContext";
 
 const isExternalLink = (link) => typeof link === "string" && /^(https?:|upi:|mailto:)/.test(link);
 const RAZORPAY_CHECKOUT_URL = "https://checkout.razorpay.com/v1/checkout.js";
@@ -94,6 +95,8 @@ const loadRazorpayCheckout = () =>
 const PaymentSection = ({ item }) => {
   const { user, isAuthenticated } = useAuth();
   const toast = useToast();
+  const { settings } = useSiteSettings();
+  const brandName = settings?.brand?.fullTitle || "High Frequencies 11";
   const checkoutOptions = item.checkoutOptions;
   const manualInstructions = item.manualInstructions || [];
   const legalNotes = item.legalNotes || [];
@@ -292,17 +295,19 @@ const PaymentSection = ({ item }) => {
         const totalMajorAmount = usdUnitAmount / 100;
         const rawTotalMajor =
           previewCurrencyCode === "USD" ? totalMajorAmount : totalMajorAmount * (countryRate || 1);
-        const roundedPerInstallmentMajor = roundUpAestheticAmount(
-          rawTotalMajor / installments,
-          previewCurrencyCode,
-        );
-        const roundedTotalMajor = roundedPerInstallmentMajor * installments;
+
+        // commented below as asthetic rounding is removed for now
+        // const roundedPerInstallmentMajor = roundUpAestheticAmount(
+        //   rawTotalMajor / installments,
+        //   previewCurrencyCode,
+        // );
+        // const roundedTotalMajor = roundedPerInstallmentMajor * installments;
 
         acc[option.id] = {
-          totalLabel: formatAmountFromMajor(roundedTotalMajor, previewCurrencyCode),
-          perInstallmentLabel: formatAmountFromMajor(roundedPerInstallmentMajor, previewCurrencyCode),
-          totalMajor: roundedTotalMajor,
-          perInstallmentMajor: roundedPerInstallmentMajor,
+          totalLabel: formatAmountFromMajor(rawTotalMajor, previewCurrencyCode),
+          perInstallmentLabel: formatAmountFromMajor(rawTotalMajor / installments, previewCurrencyCode),
+          totalMajor: rawTotalMajor,
+          perInstallmentMajor: rawTotalMajor / installments,
           currencyCode: previewCurrencyCode,
         };
         return acc;
@@ -349,12 +354,14 @@ const PaymentSection = ({ item }) => {
     if (rawTotal == null) {
       return null;
     }
-    const roundedPerInstallment = roundUpAestheticAmount(
-      rawTotal / installments,
-      presentmentCurrency.toUpperCase(),
-    );
-    const roundedTotal = roundedPerInstallment * installments;
-    return Math.max(1, Math.round(roundedTotal * 100));
+
+    // commented below as asthetic rounding is removed for now
+    // const roundedPerInstallment = roundUpAestheticAmount(
+    //   rawTotal / installments,
+    //   presentmentCurrency.toUpperCase(),
+    // );
+    // const roundedTotal = roundedPerInstallment * installments;
+    return Math.max(1, Math.round(rawTotal * 100));
   }, [countryRate, presentmentCurrency, referenceUsdAmount, selectedPackage?.installmentCount]);
   const amountDueLabel = useMemo(() => {
     const selectedPreview = selectedPackage?.id ? packagePricePreviews[selectedPackage.id] : null;
@@ -412,7 +419,8 @@ const PaymentSection = ({ item }) => {
   }, [backupLink, manualInstructions, upiInstructionLabel]);
   const successPath = `/buy/${item.id}/success`;
   const cancelPath = `/buy/${item.id}/cancel`;
-  const canUseRazorpay = hasCheckout && presentmentCurrency === "inr" && typeof presentmentUnitAmount === "number";
+  const canUseRazorpay = hasCheckout && typeof presentmentUnitAmount === "number";
+  const razorpayCurrency = presentmentCurrency.toUpperCase();
 
   useEffect(() => {
     setAcceptedLegalNotes(legalNotes.map(() => false));
@@ -523,7 +531,7 @@ const PaymentSection = ({ item }) => {
       }
       if (paymentMethod === "razorpay") {
         if (!canUseRazorpay) {
-          throw new Error("Razorpay is currently available only for INR payments.");
+          throw new Error("Razorpay is unavailable for the selected checkout amount.");
         }
 
         const Razorpay = await loadRazorpayCheckout();
@@ -537,7 +545,7 @@ const PaymentSection = ({ item }) => {
             packageId: selectedPackage?.id || null,
             packageLabel: selectedPackage?.label || null,
             amount: presentmentUnitAmount,
-            currency: "INR",
+            currency: razorpayCurrency,
             email: email.trim(),
             firstName: firstName.trim(),
             lastName: lastName.trim(),
@@ -553,13 +561,14 @@ const PaymentSection = ({ item }) => {
         }
 
         const paymentCompleted = await new Promise((resolve, reject) => {
+          const orderId = orderData?.order_id || orderData?.orderId;
           const razorpay = new Razorpay({
-            key: orderData?.keyId,
+            key: orderData?.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
             amount: orderData?.amount,
-            currency: orderData?.currency || "INR",
-            name: "High Frequencies 11",
+            currency: orderData?.currency || razorpayCurrency,
+            name: brandName,
             description: item.title,
-            order_id: orderData?.orderId,
+            order_id: orderId,
             prefill: {
               name: `${firstName.trim()} ${lastName.trim()}`.trim(),
               email: email.trim(),
@@ -574,6 +583,9 @@ const PaymentSection = ({ item }) => {
             },
             modal: {
               ondismiss: () => {
+                const message = "Razorpay checkout was cancelled.";
+                setError(message);
+                toast.info(message);
                 window.location.href = cancelPath;
                 resolve(false);
               },
@@ -583,7 +595,10 @@ const PaymentSection = ({ item }) => {
                 const { data: verifyData, error: verifyError } = await supabase.functions.invoke("razorpay-verify-payment", {
                   body: {
                     productId: item.id,
-                    orderId: orderData?.orderId,
+                    orderId,
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
                     razorpayOrderId: response.razorpay_order_id,
                     paymentId: response.razorpay_payment_id,
                     signature: response.razorpay_signature,
@@ -621,6 +636,11 @@ const PaymentSection = ({ item }) => {
                 reject(verificationError);
               }
             },
+          });
+
+          razorpay.on("payment.failed", (response) => {
+            const description = response?.error?.description || response?.error?.reason;
+            reject(new Error(description || "Razorpay payment failed. Please try again or use another payment method."));
           });
 
           razorpay.open();
@@ -917,7 +937,7 @@ const PaymentSection = ({ item }) => {
                 {paymentMethod === "paypal"
                   ? "You will be redirected to PayPal to complete payment securely."
                   : paymentMethod === "razorpay"
-                    ? "Razorpay checkout will open in a secure modal for your INR payment."
+                    ? `Razorpay checkout will open in a secure modal for your ${razorpayCurrency} payment.`
                   : paymentMethod === "upi"
                     ? upiLink
                       ? "You will be redirected to your UPI payment flow."

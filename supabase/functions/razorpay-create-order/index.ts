@@ -24,6 +24,13 @@ const getAuthHeader = () => {
   };
 };
 
+const getRazorpayErrorStatus = (status: number) => {
+  if (status === 401 || status === 403) {
+    return 401;
+  }
+  return 500;
+};
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return json(200, { ok: true });
@@ -53,13 +60,13 @@ Deno.serve(async (request) => {
     const normalizedCurrency = String(currency || "").toUpperCase();
 
     if (!productId) {
-      throw new Error("Missing productId.");
+      return json(400, { error: "Missing productId." });
     }
-    if (!Number.isFinite(normalizedAmount) || normalizedAmount < 10) {
-      throw new Error("Invalid Razorpay order amount.");
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount < 100) {
+      return json(400, { error: "Invalid Razorpay order amount. Minimum amount is 100 paise." });
     }
-    if (normalizedCurrency !== "INR") {
-      throw new Error("Razorpay is currently configured for INR payments only.");
+    if (!/^[A-Z]{3}$/.test(normalizedCurrency)) {
+      return json(400, { error: "Invalid Razorpay order currency." });
     }
 
     const receipt = `${String(productId).slice(0, 20)}-${Date.now()}`.slice(0, 40);
@@ -92,19 +99,25 @@ Deno.serve(async (request) => {
 
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload?.error?.description || payload?.error?.reason || "Unable to create Razorpay order.");
+      return json(getRazorpayErrorStatus(response.status), {
+        error: payload?.error?.description || payload?.error?.reason || "Unable to create Razorpay order.",
+      });
     }
 
     return json(200, {
       keyId,
       orderId: payload.id,
+      order_id: payload.id,
       amount: payload.amount,
       currency: payload.currency,
       receipt: payload.receipt,
     });
   } catch (error) {
-    return json(400, {
-      error: error instanceof Error ? error.message : "Unknown Razorpay order creation error.",
+    const message = error instanceof Error ? error.message : "Unknown Razorpay order creation error.";
+    const isConfigError = message.includes("RAZORPAY_KEY_ID") || message.includes("RAZORPAY_KEY_SECRET");
+
+    return json(isConfigError ? 401 : 500, {
+      error: message,
     });
   }
 });

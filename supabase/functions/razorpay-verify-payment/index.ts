@@ -265,6 +265,13 @@ const getAuthHeader = () => {
   };
 };
 
+const getRazorpayErrorStatus = (status: number) => {
+  if (status === 401 || status === 403) {
+    return 401;
+  }
+  return 500;
+};
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return json(200, { ok: true });
@@ -278,8 +285,11 @@ Deno.serve(async (request) => {
     const {
       orderId,
       razorpayOrderId,
+      razorpay_order_id,
       paymentId,
+      razorpay_payment_id,
       signature,
+      razorpay_signature,
       productId,
       successPath,
       cancelPath,
@@ -291,9 +301,9 @@ Deno.serve(async (request) => {
       userId,
     } = await request.json();
 
-    const normalizedOrderId = String(orderId || razorpayOrderId || "").trim();
-    const normalizedPaymentId = String(paymentId || "").trim();
-    const normalizedSignature = String(signature || "").trim();
+    const normalizedOrderId = String(orderId || razorpayOrderId || razorpay_order_id || "").trim();
+    const normalizedPaymentId = String(paymentId || razorpay_payment_id || "").trim();
+    const normalizedSignature = String(signature || razorpay_signature || "").trim();
 
     if (!normalizedOrderId || !normalizedPaymentId || !normalizedSignature) {
       throw new Error("Missing Razorpay payment verification fields.");
@@ -302,7 +312,10 @@ Deno.serve(async (request) => {
     const { keySecret, header } = getAuthHeader();
     const generatedSignature = await sign(`${normalizedOrderId}|${normalizedPaymentId}`, keySecret);
     if (generatedSignature !== normalizedSignature) {
-      throw new Error("Razorpay payment signature verification failed.");
+      return json(400, {
+        status: "failed",
+        error: "Razorpay payment signature verification failed.",
+      });
     }
 
     const paymentResponse = await fetch(`https://api.razorpay.com/v1/payments/${normalizedPaymentId}`, {
@@ -314,7 +327,10 @@ Deno.serve(async (request) => {
 
     const paymentPayload = await paymentResponse.json();
     if (!paymentResponse.ok) {
-      throw new Error(paymentPayload?.error?.description || "Unable to fetch Razorpay payment details.");
+      return json(getRazorpayErrorStatus(paymentResponse.status), {
+        status: "failed",
+        error: paymentPayload?.error?.description || "Unable to fetch Razorpay payment details.",
+      });
     }
 
     if (paymentPayload.status !== "captured" && paymentPayload.status !== "authorized") {
@@ -351,9 +367,12 @@ Deno.serve(async (request) => {
       courseAccess,
     });
   } catch (error) {
-    return json(400, {
+    const message = error instanceof Error ? error.message : "Unknown Razorpay payment verification error.";
+    const isConfigError = message.includes("RAZORPAY_KEY_ID") || message.includes("RAZORPAY_KEY_SECRET");
+
+    return json(isConfigError ? 401 : 400, {
       status: "failed",
-      error: error instanceof Error ? error.message : "Unknown Razorpay payment verification error.",
+      error: message,
     });
   }
 });
