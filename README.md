@@ -96,20 +96,29 @@ Requirement:
 16. email going twice
 18. drip content
 28. remove asthetic amounts
-
 7. add comment(review) in offerings(option to add image)
-8. user inventory (admin)
 15. explore offering => Details here 
+22. newsletter feature in admin
 17. ADD EMAIL IN TEMPLATE FOR ISSUES 
 19. reminder email
+
+7. add comment(review) in offerings(option to add image)
+test above (Could not find the 'author_image' column of 'comments' in the schema cache)
+make website proper for diff screen sizes
+IMP : need to implement side nav in admin control
+8. user inventory (admin)
 20. filter to show only products in which courses can be added
 21. add content or module needs to be intituitve
-22. newsletter feature in admin
 23. privacy policy, terms of service
 24. cookie policy
 25. a service that allows users to send a request to view/edit/delete their personal information stored on your website and/or app
 26. website have Global Privacy Control (GPC) enabled?
 27. faq not working
+28. test razorpay integration
+
+
+Future scope:
+29. different type of admin with different permissions
 
 
 Courses --->  
@@ -138,6 +147,26 @@ CALCOM_API_KEY=cal_xxx
 CALCOM_WEBHOOK_SECRET=replace-with-a-long-random-secret
 RAZORPAY_KEY_ID=rzp_live_xxx
 RAZORPAY_KEY_SECRET=xxx
+RESEND_API_KEY=re_xxx
+EMAIL_FROM="Your Brand <sender@example.com>"
+SITE_URL=https://your-site.com
+NEWSLETTER_PRIMARY_COLOR=#2dd4bf
+NEWSLETTER_DARK_COLOR=#030406
+NEWSLETTER_ACCENT_COLOR=#f0fdfa
+```
+
+Newsletter production setup:
+
+1. Apply `supabase/add_newsletter_production_features.sql`.
+2. Deploy `supabase/functions/newsletter-dispatch`.
+3. Deploy `supabase/functions/newsletter-unsubscribe`.
+4. Deploy `supabase/functions/newsletter-scheduler`.
+5. Schedule `newsletter-scheduler` from Supabase cron. A daily morning run sends any broadcasts whose `scheduled_at` is already due; exact send-time behavior requires the scheduler to run near the intended send time.
+
+Sender name format for Resend:
+
+```env
+EMAIL_FROM="Nehal Patel <highfrequencies11@contact.nehalpatel.store>"
 ```
 
 Deploy the booking sync function after adding the new `storefront_offerings` booking columns from:
