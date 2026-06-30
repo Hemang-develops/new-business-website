@@ -11,7 +11,7 @@ const loadingMessages = [
 ];
 
 const SiteLoadingScreen = ({
-  eyebrow = "High Frequencies 11",
+  eyebrow = defaultSiteSettings.brand.fullTitle,
   title = "Loading the live experience",
   description = "The latest content is loading now so you see the current website, not stale copy.",
 }) => {

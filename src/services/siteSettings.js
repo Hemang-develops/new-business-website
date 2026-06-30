@@ -1,3 +1,7 @@
+// Single source of truth for the default brand name.
+// In production this is overridden by the admin via `brand_full_title` in the DB.
+export const DEFAULT_BRAND_NAME = "High Frequencies 11";
+
 export const defaultSiteSections = [
   {
     id: "hero",
@@ -42,7 +46,7 @@ export const defaultSiteSections = [
     supportingEyebrow: "Around the world",
     supportingHeading: "Our users are building new realities globally",
     supportingDescription:
-      "High Frequencies 11 supports clients across time zones, cultures, and chapters of life. The work may be personal, but the movement is international.\n\nFrom North America to Europe, the Middle East, Africa, Asia, and Australia, our community keeps expanding through aligned support and word of mouth.",
+      `${DEFAULT_BRAND_NAME} supports clients across time zones, cultures, and chapters of life. The work may be personal, but the movement is international.\n\nFrom North America to Europe, the Middle East, Africa, Asia, and Australia, our community keeps expanding through aligned support and word of mouth.`,
     formHeading: "",
     formDescription: "",
     formSubmitLabel: "",
@@ -83,7 +87,7 @@ export const defaultSiteSections = [
     navVisible: true,
     footerVisible: true,
     eyebrow: "The experience",
-    heading: "What makes High Frequencies 11 different.",
+    heading: `What makes ${DEFAULT_BRAND_NAME} different.`,
     description:
       "These pillars define every session, program, and resource we create. You will be seen, supported, and stretched into your next evolution.",
     primaryCtaLabel: "",
@@ -108,7 +112,7 @@ export const defaultSiteSections = [
     navVisible: true,
     footerVisible: true,
     eyebrow: "Testimonials",
-    heading: "Words from the High Frequencies 11 collective.",
+    heading: `Words from the ${DEFAULT_BRAND_NAME} collective.`,
     description: "Real people. Real timelines collapsing. Real lives transforming.",
     primaryCtaLabel: "",
     primaryCtaHref: "",
@@ -164,7 +168,7 @@ export const defaultSiteSections = [
     secondaryCtaHref: "",
     supportingEyebrow: "Investment",
     supportingHeading: "",
-    supportingDescription: "30 days • private Voxer/email support • personalised meditations",
+    supportingDescription: "30 days â€¢ private Voxer/email support â€¢ personalised meditations",
     formHeading: "",
     formDescription: "",
     formSubmitLabel: "",
@@ -195,7 +199,7 @@ export const defaultSiteSections = [
       "This form lands directly in my inbox. Share your story, desires, and what kind of support you are calling in.",
     formSubmitLabel: "Send message",
     formDisclaimer:
-      "By submitting this form you agree to receive occasional updates about High Frequencies 11 offerings. You can opt out at any time.",
+      `By submitting this form you agree to receive occasional updates about ${DEFAULT_BRAND_NAME} offerings. You can opt out at any time.`,
     formAction: "",
     featuredOfferingId: "",
   },
@@ -231,12 +235,12 @@ export const defaultSiteSectionItems = [
   { key: "hero-proof-support", sectionKey: "hero", itemType: "card", title: "Devoted Support", description: "A coach, cheerleader, and mirror as you lead your divine mission.", label: "", href: "", icon: "", imageUrl: "", imageAlt: "", sortOrder: 2, enabled: true },
   { key: "about-metric-clients", sectionKey: "about", itemType: "metric", title: "1,000+", description: "souls supported through sessions, workshops, and digital communities", label: "", href: "", icon: "", imageUrl: "", imageAlt: "", sortOrder: 0, enabled: true },
   { key: "about-metric-years", sectionKey: "about", itemType: "metric", title: "8+ years", description: "of practical manifestation and mindset coaching experience", label: "", href: "", icon: "", imageUrl: "", imageAlt: "", sortOrder: 1, enabled: true },
-  { key: "about-metric-global", sectionKey: "about", itemType: "metric", title: "Global", description: "clients from 15 countries united by the High Frequencies 11 movement", label: "", href: "", icon: "", imageUrl: "", imageAlt: "", sortOrder: 2, enabled: true },
+  { key: "about-metric-global", sectionKey: "about", itemType: "metric", title: "Global", description: `clients from 15 countries united by the ${DEFAULT_BRAND_NAME} movement`, label: "", href: "", icon: "", imageUrl: "", imageAlt: "", sortOrder: 2, enabled: true },
   { key: "services-practice", sectionKey: "services", itemType: "card", title: "Somatic & Energetic Practices", description: "Breathwork, tapping, and body-led rituals that keep your nervous system anchored while you quantum leap.", label: "", href: "", icon: "sparkles", imageUrl: "", imageAlt: "", sortOrder: 0, enabled: true },
-  { key: "services-frameworks", sectionKey: "services", itemType: "card", title: "Manifestation Frameworks", description: "Signature High Frequencies 11 methods that blend neuroscience with spiritual teachings for tangible shifts.", label: "", href: "", icon: "layers", imageUrl: "", imageAlt: "", sortOrder: 1, enabled: true },
+  { key: "services-frameworks", sectionKey: "services", itemType: "card", title: "Manifestation Frameworks", description: `Signature ${DEFAULT_BRAND_NAME} methods that blend neuroscience with spiritual teachings for tangible shifts.`, label: "", href: "", icon: "layers", imageUrl: "", imageAlt: "", sortOrder: 1, enabled: true },
   { key: "services-resources", sectionKey: "services", itemType: "card", title: "Lifetime-Ready Resources", description: "Journals, guided meditations, and replay libraries you can return to whenever you need a frequency boost.", label: "", href: "", icon: "library", imageUrl: "", imageAlt: "", sortOrder: 2, enabled: true },
   { key: "services-community", sectionKey: "services", itemType: "card", title: "Community & Accountability", description: "Monthly circles, private Voxer channels, and global members who are walking the same path by your side.", label: "", href: "", icon: "users", imageUrl: "", imageAlt: "", sortOrder: 3, enabled: true },
-  { key: "resources-podcast", sectionKey: "resources", itemType: "link", title: "Podcast: High Frequencies 11", description: "Weekly activations, channelled messages, and conversations about manifestation, mindset, and miracles.", label: "Listen on Spotify", href: "https://open.spotify.com/show/02zFg2ejkXs1XHBo6teu5n", icon: "", imageUrl: "", imageAlt: "", sortOrder: 0, enabled: true },
+  { key: "resources-podcast", sectionKey: "resources", itemType: "link", title: `Podcast: ${DEFAULT_BRAND_NAME}`, description: "Weekly activations, channelled messages, and conversations about manifestation, mindset, and miracles.", label: "Listen on Spotify", href: "https://open.spotify.com/show/02zFg2ejkXs1XHBo6teu5n", icon: "", imageUrl: "", imageAlt: "", sortOrder: 0, enabled: true },
   { key: "resources-youtube", sectionKey: "resources", itemType: "link", title: "YouTube: @nehalpatelishere", description: "Binge long-form trainings, rituals, and intimate vlogs that make manifestation feel like your daily rhythm.", label: "Subscribe on YouTube", href: "https://www.youtube.com/@nehalpatelishere", icon: "", imageUrl: "", imageAlt: "", sortOrder: 1, enabled: true },
   { key: "resources-amazon", sectionKey: "resources", itemType: "link", title: "Amazon Storefront", description: "Shop the exact books, candles, and ritual tools I use to stay anchored in a high frequency every day.", label: "View the list", href: "https://www.amazon.ca/shop/bookescape_?ref_=cm_sw_r_cp_mwn_aipsfshop_aipsfbookescape__PBB131SY1HEHXB4D7YG2_1&language=en_US", icon: "", imageUrl: "", imageAlt: "", sortOrder: 2, enabled: true },
   { key: "resources-newsletter", sectionKey: "resources", itemType: "link", title: "Newsletter & Free Gifts", description: "Receive monthly energy forecasts, journal prompts, and pop-up offers that keep you plugged into the vortex.", label: "Join the list", href: "#newsletter", icon: "", imageUrl: "", imageAlt: "", sortOrder: 3, enabled: true },
@@ -277,7 +281,7 @@ export const defaultSiteLinks = [
 export const defaultSiteSettings = {
   brand: {
     navTitle: "HF11",
-    fullTitle: "High Frequencies 11",
+    fullTitle: DEFAULT_BRAND_NAME,
     footerTagline:
       "Manifestation mentorship, somatic practices, and community support for leaders building miraculous lives.",
     shopLabel: "Visit shop",
@@ -297,7 +301,7 @@ export const defaultSiteSettings = {
     roleLabel: "Manifestation Coach",
   },
   footer: {
-    introEyebrow: "High Frequencies 11",
+    introEyebrow: DEFAULT_BRAND_NAME,
     introHeading: "A devotional storefront for manifestation, ritual, and private transformation.",
     statusLabel: "All frequencies aligned",
     termsLabel: "Terms of Service",
