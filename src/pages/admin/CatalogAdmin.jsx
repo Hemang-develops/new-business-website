@@ -7,10 +7,23 @@ import { useAuth } from "../../context/AuthContext";
 import { applyThemeVariables, useSiteSettings } from "../../context/SiteSettingsContext";
 import { useToast } from "../../context/ToastContext";
 import { supabase } from "../../supabase-client";
-import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useGsapPulse } from "../../hooks/useGsapMotion";
 import { defaultSiteSettings, normalizeSiteSettingsFromRows } from "../../services/siteSettings";
+import {
+  BarChart3,
+  BookOpen,
+  CheckCircle2,
+  FileSearch,
+  Home,
+  Layers3,
+  LayoutDashboard,
+  Mail,
+  Menu,
+  MessageSquareQuote,
+  Package,
+  X,
+} from "lucide-react";
 import SharedContentTab from "./SharedContentTab";
 import ReviewsTab from "./ReviewsTab";
 import FulfillmentTab from "./FulfillmentTab";
@@ -44,6 +57,20 @@ import {
 import NewsletterTab from "./NewsletterTab";
 import AnalyticsTab from "./AnalyticsTab";
 import ContentAuditTab from "./ContentAuditTab";
+
+const adminTabs = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
+  { id: "content-audit", label: "Content Audit", icon: FileSearch },
+  { id: "site", label: "Website", icon: Home },
+  { id: "newsletter", label: "Newsletter", icon: Mail },
+  { id: "offerings", label: "Products", icon: Package },
+  { id: "courses", label: "Courses", icon: BookOpen },
+  { id: "shared", label: "Checkout Content", icon: Layers3 },
+  { id: "reviews", label: "Reviews", icon: MessageSquareQuote },
+  { id: "fulfillment", label: "Fulfillment", icon: CheckCircle2 },
+];
+
 const CatalogAdmin = () => {
   const { isAuthenticated, isLoading, isAdmin } = useAuth();
   const { refreshSettings } = useSiteSettings();
@@ -81,6 +108,8 @@ const CatalogAdmin = () => {
   const [status, setStatus] = useState({ type: "idle", message: "" });
   const [uploadingTarget, setUploadingTarget] = useState("");
   const [activeAdminTab, setActiveAdminTab] = useState("dashboard");
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [showNewSectionForm, setShowNewSectionForm] = useState(false);
   const [showNewOfferingForm, setShowNewOfferingForm] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -94,19 +123,6 @@ const CatalogAdmin = () => {
     price_usd: "",
     cta_type: "contact",
   });
-
-  const profileTabs = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "analytics", label: "Analytics" },
-    { id: "content-audit", label: "Content Audit" },
-    { id: "site", label: "Website" },
-    { id: "newsletter", label: "Newsletter" },
-    { id: "offerings", label: "Products" },
-    { id: "courses", label: "Courses" },
-    { id: "shared", label: "Shared Checkout Content" },
-    { id: "reviews", label: "Reviews" },
-    { id: "fulfillment", label: "Fulfillment" },
-  ];
 
   useGsapPulse(adminRef, "[data-gsap-pulse]", [isLoadingData]);
 
@@ -181,6 +197,14 @@ const CatalogAdmin = () => {
       recentNotifications: adminNotifications.slice(0, 8),
     };
   }, [adminNotifications, courseAccess, courses.length, dashboardSummaryViewData]);
+  const selectedAdminTab = adminTabs.find((tab) => tab.id === activeAdminTab) || adminTabs[0];
+  const adminContentOffsetClass = isSidebarExpanded
+    ? "md:pl-[6.25rem] lg:pl-[19.5rem]"
+    : "md:pl-[6.25rem] lg:pl-[6.75rem]";
+
+  useEffect(() => {
+    setIsSidebarExpanded(window.matchMedia("(min-width: 1024px)").matches);
+  }, []);
 
   useEffect(() => {
     if (!status.message) {
@@ -1000,16 +1024,26 @@ const CatalogAdmin = () => {
   return (
     <div ref={adminRef} className="min-h-screen bg-gray-950 text-white">
       <Navigation />
-      <main className="mx-auto max-w-6xl space-y-6 pb-20 pt-32">
-        <h1 className="text-3xl font-semibold">Catalog Admin</h1>
+      <main className="px-4 pb-20 pt-28 sm:px-6 lg:px-8">
+        <div className={`mx-auto mb-6 flex max-w-[1500px] flex-wrap items-end justify-between gap-4 transition-[padding] duration-300 ${adminContentOffsetClass}`}>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-teal-200/70">Admin</p>
+            <h1 className="mt-2 text-3xl font-semibold">Catalog Admin</h1>
+          </div>
+          <div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
+            {selectedAdminTab.label}
+          </div>
+        </div>
 
         {isLoadingData ? (
-          <div data-gsap-pulse className="space-y-6">
-            <div className="flex w-full flex-wrap gap-2 rounded-2xl border border-white/10 bg-[#11161f] p-1.5">
-              <Skeleton className="h-10 w-28 rounded-xl bg-white/10" />
-              <Skeleton className="h-10 w-28 rounded-xl bg-white/10" />
-              <Skeleton className="h-10 w-52 rounded-xl bg-white/10" />
-              <Skeleton className="h-10 w-28 rounded-xl bg-white/10" />
+          <div data-gsap-pulse className="grid gap-5 md:grid-cols-[5rem_minmax(0,1fr)] lg:grid-cols-[18rem_minmax(0,1fr)]">
+            <div className="rounded-3xl border border-white/10 bg-[#11161f] p-3">
+              <Skeleton className="mb-4 h-10 w-full rounded-2xl bg-white/10" />
+              <div className="space-y-3">
+                <Skeleton className="h-11 w-full rounded-2xl bg-white/10" />
+                <Skeleton className="h-11 w-full rounded-2xl bg-white/10" />
+                <Skeleton className="h-11 w-full rounded-2xl bg-white/10" />
+              </div>
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
               <Skeleton className="mb-6 h-8 w-1/4 bg-white/10" />
@@ -1023,64 +1057,128 @@ const CatalogAdmin = () => {
         ) : null}
 
         {!isLoadingData ? (
-          <div className="space-y-6">
-            <div className="border-b border-white/20">
-              <div
-                role="tablist"
-                aria-label="Account sections"
-                className="flex flex-row overflow-x-auto custom-scrollbar whitespace-nowrap pb-2 scroll-smooth"
+          <div>
+            {!isMobileDrawerOpen ? (
+              <button
+                type="button"
+                className="fixed bottom-5 right-5 z-30 inline-flex h-12 w-12 items-center justify-center rounded-full border border-teal-300/25 bg-gray-950/90 text-teal-100 shadow-2xl shadow-black/40 backdrop-blur md:hidden"
+                aria-label="Open admin menu"
+                onClick={() => setIsMobileDrawerOpen(true)}
               >
-                {profileTabs.map((tab) => {
-                  const isActive = activeAdminTab === tab.id;
+                <Menu className="h-5 w-5" />
+              </button>
+            ) : null}
 
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={isActive}
-                      aria-controls={`account-${tab.id}-panel`}
-                      id={`account-${tab.id}-tab`}
-                      onClick={() => setActiveAdminTab(tab.id)}
-                      className={`relative min-h-14 px-2 pr-4 pb-4 text-center text-xs font-semibold uppercase tracking-[0.35em] transition sm:text-sm ${isActive
-                        ? "text-teal-100"
-                        : "text-white/50 hover:text-white/80"
-                        }`}
-                    >
-                      {tab.label}
-                      <span
-                        className={`absolute bottom-[-1px] left-0 h-1 bg-teal-300 transition-all duration-300 ${isActive ? "w-full opacity-100" : "w-0 opacity-0"
-                          }`}
-                      />
-                    </button>
-                  );
-                })}
+            {isMobileDrawerOpen ? (
+              <button
+                type="button"
+                className="fixed inset-0 z-30 bg-black/45 backdrop-blur-sm md:hidden"
+                aria-label="Close admin sidebar"
+                onClick={() => setIsMobileDrawerOpen(false)}
+              />
+            ) : null}
+            <aside className={`fixed z-40 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.12),transparent_36%),linear-gradient(180deg,rgba(17,22,31,0.96),rgba(3,4,6,0.96))] shadow-2xl shadow-black/30 transition-[width] duration-300 md:bottom-6 md:left-6 md:top-24 md:rounded-3xl lg:left-8 ${isMobileDrawerOpen ? "bottom-4 left-4 top-20 block w-[18rem] rounded-3xl md:w-[4.75rem]" : "bottom-6 left-4 top-24 hidden w-[4.75rem] rounded-3xl md:block"} ${isSidebarExpanded ? "lg:w-[17rem]" : "lg:w-[4.75rem]"}`}>
+              <div className="flex h-full flex-col">
+                <div className={`flex items-center border-b border-white/10 p-3 ${isMobileDrawerOpen ? "justify-between gap-3" : isSidebarExpanded ? "justify-center lg:justify-between lg:gap-3" : "justify-center"}`}>
+                  <div className={`min-w-0 transition-opacity ${isMobileDrawerOpen ? "opacity-100" : isSidebarExpanded ? "pointer-events-none w-0 opacity-0 lg:pointer-events-auto lg:w-auto lg:opacity-100" : "pointer-events-none w-0 opacity-0"}`}>
+                    <p className="truncate text-xs font-bold uppercase tracking-[0.24em] text-teal-200">High Frequencies</p>
+                    <p className="mt-1 truncate text-xs text-white/45">Admin control</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.matchMedia("(max-width: 767px)").matches) {
+                        setIsMobileDrawerOpen(false);
+                        return;
+                      }
+                      if (window.matchMedia("(min-width: 1024px)").matches) {
+                        setIsSidebarExpanded((value) => !value);
+                      }
+                    }}
+                    className={`inline-flex shrink-0 items-center justify-center rounded-full text-white/70 transition hover:border-teal-300/30 hover:bg-teal-300/10 hover:text-teal-100 ${isMobileDrawerOpen ? "h-11 w-11" : isSidebarExpanded ? "h-12 w-full max-lg:pointer-events-none lg:h-11 lg:w-11" : "h-12 w-full max-lg:pointer-events-none"}`}
+                    aria-label={isMobileDrawerOpen || isSidebarExpanded ? "Collapse admin sidebar" : "Expand admin sidebar"}
+                    title={isMobileDrawerOpen || isSidebarExpanded ? "Collapse sidebar" : "Expand sidebar"}
+                  >
+                    {isMobileDrawerOpen ? (
+                      <X className="h-5 w-5" />
+                    ) : isSidebarExpanded ? (
+                      <>
+                        <X className="hidden h-5 w-5 lg:block" />
+                        <Menu className="h-5 w-5 lg:hidden" />
+                      </>
+                    ) : (
+                      <Menu className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+
+                <nav className="flex-1 overflow-y-auto p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Admin sections">
+                  <div className="space-y-1.5">
+                    {adminTabs.map((tab) => {
+                      const Icon = tab.icon;
+                      const isActive = activeAdminTab === tab.id;
+
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-controls={`account-${tab.id}-panel`}
+                          id={`account-${tab.id}-tab`}
+                          title={tab.label}
+                          onClick={() => {
+                            setActiveAdminTab(tab.id);
+                            if (window.matchMedia("(max-width: 767px)").matches) {
+                              setIsMobileDrawerOpen(false);
+                            }
+                          }}
+                          className={`group relative flex h-12 w-full items-center rounded-2xl border text-sm font-semibold transition ${isMobileDrawerOpen ? "justify-start gap-3 px-3 text-left" : isSidebarExpanded ? "justify-center px-0 lg:justify-start lg:gap-3 lg:px-3 lg:text-left" : "justify-center px-0"} ${isActive
+                            ? "border-teal-300/30 bg-teal-300/15 text-teal-50 shadow-[0_16px_35px_rgba(45,212,191,0.12)]"
+                            : "border-transparent text-white/58 hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
+                            }`}
+                        >
+                          <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-teal-200" : "text-white/42 group-hover:text-white/75"}`} />
+                          {isMobileDrawerOpen || isSidebarExpanded ? <span className={`truncate ${isMobileDrawerOpen ? "" : "hidden lg:inline"}`}>{tab.label}</span> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </nav>
+
               </div>
-            </div>
+            </aside>
 
-            {activeAdminTab === "dashboard" ? <AdminDashboard stats={dashboardStats} /> : null}
+            <section
+              role="tabpanel"
+              aria-labelledby={`account-${activeAdminTab}-tab`}
+              id={`account-${activeAdminTab}-panel`}
+              className={`mx-auto min-w-0 max-w-[1500px] transition-[padding] duration-300 ${adminContentOffsetClass}`}
+            >
+              {activeAdminTab === "dashboard" ? <AdminDashboard stats={dashboardStats} /> : null}
 
-            {activeAdminTab === "analytics" ? (
-              <AnalyticsTab offeringAnalytics={offeringAnalytics} userLearningPaths={userLearningPaths} />
-            ) : null}
+              {activeAdminTab === "analytics" ? (
+                <AnalyticsTab offeringAnalytics={offeringAnalytics} userLearningPaths={userLearningPaths} />
+              ) : null}
 
-            {activeAdminTab === "content-audit" ? (
-              <ContentAuditTab contentAuditTrail={contentAuditTrail} />
-            ) : null}
+              {activeAdminTab === "content-audit" ? (
+                <ContentAuditTab contentAuditTrail={contentAuditTrail} />
+              ) : null}
 
-            {activeAdminTab === "site" ? <WebsiteTab state={websiteState} actions={websiteActions} /> : null}
+              {activeAdminTab === "site" ? <WebsiteTab state={websiteState} actions={websiteActions} /> : null}
 
-            {activeAdminTab === "newsletter" ? <NewsletterTab /> : null}
+              {activeAdminTab === "newsletter" ? <NewsletterTab /> : null}
 
-            {activeAdminTab === "offerings" ? <ProductsTab state={productsState} actions={productsActions} /> : null}
+              {activeAdminTab === "offerings" ? <ProductsTab state={productsState} actions={productsActions} /> : null}
 
-            {activeAdminTab === "courses" ? <CoursesTab state={coursesState} actions={coursesActions} /> : null}
+              {activeAdminTab === "courses" ? <CoursesTab state={coursesState} actions={coursesActions} /> : null}
 
-            {activeAdminTab === "shared" ? <SharedContentTab state={sharedContentState} actions={sharedContentActions} /> : null}
+              {activeAdminTab === "shared" ? <SharedContentTab state={sharedContentState} actions={sharedContentActions} /> : null}
 
-            {activeAdminTab === "reviews" ? <ReviewsTab state={reviewsState} actions={reviewsActions} /> : null}
+              {activeAdminTab === "reviews" ? <ReviewsTab state={reviewsState} actions={reviewsActions} /> : null}
 
-            {activeAdminTab === "fulfillment" ? <FulfillmentTab /> : null}
+              {activeAdminTab === "fulfillment" ? <FulfillmentTab /> : null}
+            </section>
           </div>
         ) : null}
       </main>
