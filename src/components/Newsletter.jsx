@@ -1,6 +1,9 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Input } from "./ui/input";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+import { addNewsletterSubscription, isDuplicateNewsletterSubscriptionError } from "../services/newsletter";
 import { useGsapHover, useGsapReveal } from "../hooks/useGsapMotion";
 import RichTextContent from "./ui/RichTextContent";
 
@@ -8,7 +11,11 @@ const Newsletter = () => {
   const newsletterRef = useRef(null);
   const { getSection } = useSiteSettings();
   const newsletterSection = getSection("newsletter");
-  
+  const { user } = useAuth();
+  const toast = useToast();
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useGsapReveal(newsletterRef);
   useGsapHover(newsletterRef);
 
@@ -54,44 +61,55 @@ const Newsletter = () => {
             />
 
             <form
-              className="mx-auto flex w-full max-w-xl flex-col gap-4 sm:flex-row"
+              className="mx-auto flex w-full max-w-xl flex-col gap-4"
               onSubmit={async (e) => {
-                const formData = new FormData(e.currentTarget);
-                const email = formData.get("email");
-                if (!email) return;
-
-                // Save to Supabase for Admin management
-                try {
-                  const { supabase } = await import("../supabase-client");
-                  await supabase.from("storefront_newsletter_signups").insert([{ 
-                    email: String(email).toLowerCase(),
-                    created_at: new Date().toISOString()
-                  }]);
-                } catch (err) {
-                  console.warn("Could not save to Supabase:", err.message);
+                e.preventDefault();
+                if (!email) {
+                  toast.error("Please enter a valid email address.");
+                  return;
                 }
-                
-                // Formspree submission continues via standard action/method if desired, 
-                // but we can also manually fetch it here or just let it submit.
-                // Here we let it submit naturally to Formspree after saving to Supabase.
+                setIsSubmitting(true);
+                try {
+                  await addNewsletterSubscription({
+                    email,
+                    source: "newsletter_section",
+                    userId: user?.id || null,
+                    metadata: { section: "homepage_newsletter" },
+                  });
+                  setEmail("");
+                  toast.success("You’re on the list. Check your inbox soon.");
+                } catch (err) {
+                  if (isDuplicateNewsletterSubscriptionError(err)) {
+                    toast.success("You've already joined the newsletter !");
+                    return;
+                  }
+                  toast.error(err.message || "Could not subscribe to the newsletter.");
+                } finally {
+                  setIsSubmitting(false);
+                }
               }}
-              action={newsletterSection?.formAction || "https://formspree.io/f/xovqwaaw"}
-              method="POST"
             >
-              <Input
-                type="email"
-                name="email"
-                required
-                placeholder="Enter your email"
-                className="h-14 flex-1 rounded-2xl border-white/5 bg-white/[0.03] px-6 text-sm placeholder:text-white/20 focus-visible:border-teal-300 focus-visible:ring-teal-300/10 transition-all"
-              />
-              <button
-                type="submit"
-                data-gsap-hover
-                className="h-14 rounded-2xl bg-teal-300 px-10 text-sm font-bold uppercase tracking-widest text-black transition-all hover:bg-teal-200 hover:-translate-y-1 active:scale-95 shadow-[0_20px_40px_rgba(45,212,191,0.2)]"
-              >
-                {newsletterSection?.primaryCtaLabel || "Join now"}
-              </button>
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <Input
+                  type="email"
+                  name="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="Enter your email"
+                  className="h-14 flex-1 rounded-2xl border-white/5 bg-white/[0.03] px-6 text-sm placeholder:text-white/20 focus-visible:border-teal-300 focus-visible:ring-teal-300/10 transition-all"
+                />
+                <button
+                  type="submit"
+                  data-gsap-hover
+                  disabled={isSubmitting}
+                  className="h-14 rounded-2xl bg-teal-300 px-10 text-sm font-bold uppercase tracking-widest text-black transition-all hover:bg-teal-200 hover:-translate-y-1 active:scale-95 shadow-[0_20px_40px_rgba(45,212,191,0.2)] disabled:opacity-50"
+                >
+                  {isSubmitting ? "Saving..." : newsletterSection?.primaryCtaLabel || "Join now"}
+                </button>
+              </div>
+
+              <p className="text-xs text-white/40">{newsletterSection?.formDisclaimer || "By subscribing you agree to receive newsletter updates and can unsubscribe anytime."}</p>
             </form>
           </div>
         </div>

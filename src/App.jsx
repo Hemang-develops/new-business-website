@@ -14,6 +14,7 @@ const AuthPage = lazy(() => import('./pages/auth/AuthPage'));
 const loadCatalogAdmin = () => import('./pages/admin/CatalogAdmin');
 const CatalogAdmin = lazy(loadCatalogAdmin);
 const CourseAccess = lazy(() => import('./pages/storefront/CourseAccess'));
+const NewsletterUnsubscribe = lazy(() => import('./pages/storefront/NewsletterUnsubscribe'));
 
 const ThankYou = lazy(() => import('./pages/storefront/ThankYou').then((module) => ({ default: module.ThankYou })));
 const ErrorPage = lazy(() => import('./pages/storefront/ErrorPage').then((module) => ({ default: module.ErrorPage })));
@@ -132,6 +133,14 @@ function App() {
                       element={
                         <Suspense fallback={<SiteLoadingScreen />}>
                           <CatalogAdmin />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/unsubscribe"
+                      element={
+                        <Suspense fallback={<SiteLoadingScreen />}>
+                          <NewsletterUnsubscribe />
                         </Suspense>
                       }
                     />
