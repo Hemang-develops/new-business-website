@@ -41,15 +41,7 @@ const Newsletter = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-teal-300/[0.03] to-transparent pointer-events-none" />
           
           <div className="relative">
-            <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-teal-300/20 bg-teal-300/5 mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
-              </span>
-              <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
-                {newsletterSection?.eyebrow || "Insights"}
-              </p>
-            </div>
+
 
             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-5xl mb-6">
               {newsletterSection?.heading}

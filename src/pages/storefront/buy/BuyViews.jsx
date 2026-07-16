@@ -253,7 +253,7 @@ export const BuyListView = ({ buySections = [] }) => {
 
       {buySections.map((section) => (
         <section key={section.id} id={section.id} className="bg-gray-950 py-16">
-          <div className="mx-auto max-w-6xl">
+          <div className="mx-auto max-w-6xl px-6">
             <div className="text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-teal-300">{section.title}</p>
               <RichTextContent value={section.description} className="mt-4 text-lg text-white/70" />
@@ -389,7 +389,7 @@ export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offerings
     <main className="relative z-10">
       <section
         ref={detailHeroRef}
-        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-gray-950 to-black px-6 py-20 lg:py-32"
+        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-gray-950 to-black px-6 pt-28 pb-16 lg:py-32"
       >
         {/* Cinematic Animated Noise Overlay */}
         <div

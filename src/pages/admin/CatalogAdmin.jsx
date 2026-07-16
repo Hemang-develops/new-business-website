@@ -76,6 +76,23 @@ const CatalogAdmin = () => {
   const { refreshSettings } = useSiteSettings();
   const toast = useToast();
   const adminRef = useRef(null);
+  const footerRef = useRef(null);
+  const [sidebarBottomOffset, setSidebarBottomOffset] = useState(24); // default 24px = bottom-6
+
+  useEffect(() => {
+    const footer = footerRef.current;
+    if (!footer) return;
+    // Shift sidebar up by however many px of the footer are visible
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry.boundingClientRect.height * entry.intersectionRatio;
+        setSidebarBottomOffset(24 + Math.ceil(visible));
+      },
+      { threshold: Array.from({ length: 101 }, (_, i) => i / 100) },
+    );
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, []);
   const [sections, setSections] = useState([]);
   const [offerings, setOfferings] = useState([]);
   const [selectedSectionId, setSelectedSectionId] = useState("");
@@ -1077,7 +1094,9 @@ const CatalogAdmin = () => {
                 onClick={() => setIsMobileDrawerOpen(false)}
               />
             ) : null}
-            <aside className={`fixed z-40 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.12),transparent_36%),linear-gradient(180deg,rgba(17,22,31,0.96),rgba(3,4,6,0.96))] shadow-2xl shadow-black/30 transition-[width] duration-300 md:bottom-6 md:left-6 md:top-24 md:rounded-3xl lg:left-8 ${isMobileDrawerOpen ? "bottom-4 left-4 top-20 block w-[18rem] rounded-3xl md:w-[4.75rem]" : "bottom-6 left-4 top-24 hidden w-[4.75rem] rounded-3xl md:block"} ${isSidebarExpanded ? "lg:w-[17rem]" : "lg:w-[4.75rem]"}`}>
+            <aside
+              style={{ bottom: `${sidebarBottomOffset}px` }}
+              className={`fixed z-40 overflow-hidden border border-white/10 bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.12),transparent_36%),linear-gradient(180deg,rgba(17,22,31,0.96),rgba(3,4,6,0.96))] shadow-2xl shadow-black/30 transition-[width,bottom] duration-300 md:left-6 md:top-24 md:rounded-3xl lg:left-8 ${isMobileDrawerOpen ? "left-4 top-20 block w-[18rem] rounded-3xl md:w-[4.75rem]" : "left-4 top-24 hidden w-[4.75rem] rounded-3xl md:block"} ${isSidebarExpanded ? "lg:w-[17rem]" : "lg:w-[4.75rem]"}`}>
               <div className="flex h-full flex-col">
                 <div className={`flex items-center border-b border-white/10 p-3 ${isMobileDrawerOpen ? "justify-between gap-3" : isSidebarExpanded ? "justify-center lg:justify-between lg:gap-3" : "justify-center"}`}>
                   <div className={`min-w-0 transition-opacity ${isMobileDrawerOpen ? "opacity-100" : isSidebarExpanded ? "pointer-events-none w-0 opacity-0 lg:pointer-events-auto lg:w-auto lg:opacity-100" : "pointer-events-none w-0 opacity-0"}`}>
@@ -1188,7 +1207,7 @@ const CatalogAdmin = () => {
         persistReviews={persistReviews}
         isSavingReviews={isSavingReviews}
       />
-      <Footer />
+      <div ref={footerRef}><Footer /></div>
     </div>
   );
 };

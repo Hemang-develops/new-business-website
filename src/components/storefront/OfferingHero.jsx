@@ -78,93 +78,101 @@ const OfferingHero = ({ section }) => {
   const profilePicUrl = settings?.global?.profile_image_url || "https://ui-avatars.com/api/?name=Admin&background=020617&color=fff";
 
   return (
-    <section 
-      ref={heroRef} 
-      className="relative min-h-[80vh] flex items-center justify-center overflow-hidden py-20"
-      style={{
-        background: `linear-gradient(135deg, var(--site-brand-dark, #030406) 0%, #080a0f 100%)`,
-      }}
+    <section
+      ref={heroRef}
+      className="relative overflow-hidden"
+      style={{ background: `linear-gradient(160deg, #030406 0%, #060c16 50%, #03050a 100%)` }}
     >
-      {/* Dynamic Background Effects */}
+      {/* Cinematic Background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div 
-          className="absolute -top-[10%] -right-[10%] h-[700px] w-[700px] rounded-full blur-[150px] opacity-10"
+        <div
+          className="absolute -top-[20%] -right-[15%] h-[800px] w-[800px] rounded-full blur-[180px] opacity-[0.12]"
           style={{ backgroundColor: 'var(--site-brand-primary)' }}
         />
-        <div 
-          className="absolute -bottom-[10%] -left-[10%] h-[600px] w-[600px] rounded-full blur-[120px] opacity-15"
+        <div
+          className="absolute -bottom-[15%] -left-[10%] h-[700px] w-[700px] rounded-full blur-[160px] opacity-[0.12]"
           style={{ backgroundColor: 'var(--site-brand-secondary)' }}
         />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.05] mix-blend-overlay" />
+        <div
+          className="absolute inset-0 opacity-[0.025] mix-blend-overlay"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }}
+        />
+        <div className="absolute top-1/3 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
       </div>
 
-      <div className="relative z-10 mx-auto flex max-w-6xl px-6 flex-col items-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left gap-12 lg:gap-16">
-        {/* Content */}
-        <div className="flex-1 space-y-8" data-gsap-reveal>
-          <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-teal-300/20 bg-teal-300/5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
-            </span>
-            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
-              {section.heroSubtitle || section.title}
-            </p>
-          </div>
+      <div className="relative z-10 mx-auto flex max-w-6xl px-6 flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-20 pt-24 pb-16 lg:pt-36 lg:pb-20 text-left">
+        {/* Content — on mobile appears BELOW image */}
+        <div className="order-2 lg:order-1 flex-1 space-y-8" data-gsap-reveal>
 
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.1]">
+
+
+          <h1 className="text-[clamp(2.2rem,5.5vw,4.5rem)] font-bold tracking-tighter text-white leading-[1.05]">
             {section.heroTitle}
           </h1>
 
-          <RichTextContent 
-            value={section.heroDescription} 
-            className="mx-auto max-w-3xl text-lg leading-relaxed text-white/50 font-medium lg:mx-0" 
+          <RichTextContent
+            value={section.heroDescription}
+            className="mx-auto max-w-2xl text-base sm:text-lg leading-relaxed text-white/45 font-medium lg:mx-0"
           />
 
-          <div className="flex flex-col gap-5 sm:flex-row sm:justify-start">
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-start">
             <button
               onClick={handleCtaClick}
               data-gsap-hover
-              className="inline-flex h-14 items-center justify-center rounded-2xl bg-teal-300 px-10 text-sm font-bold uppercase tracking-widest text-black transition-all hover:bg-teal-200 hover:-translate-y-1 active:scale-95 shadow-[0_20px_40px_rgba(45,212,191,0.2)]"
+              className="inline-flex h-13 items-center justify-center rounded-2xl px-8 text-sm font-bold uppercase tracking-widest text-black transition-all duration-300 hover:-translate-y-1 active:scale-95"
+              style={{
+                background: `linear-gradient(135deg, var(--site-brand-primary-light), var(--site-brand-primary))`,
+                boxShadow: `0 16px 48px -8px color-mix(in srgb, var(--site-brand-primary) 45%, transparent)`,
+              }}
             >
               {section.heroCtaLabel}
             </button>
           </div>
         </div>
 
-        {/* Media Column */}
-        <div className="flex-shrink-0" data-gsap-reveal data-gsap-delay="0.16" data-gsap-drift>
-          <div className="relative group" data-gsap-float>
-            {/* Dynamic Glow Aura */}
-            <div 
-              className="absolute -inset-10 rounded-full blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity duration-700 animate-pulse"
+        {/* Media Column — on mobile appears FIRST (top) */}
+        <div className="order-1 lg:order-2 flex-shrink-0 w-full lg:w-auto" data-gsap-reveal data-gsap-delay="0.16" data-gsap-drift>
+          <div className="relative group w-full lg:w-[340px]" data-gsap-float>
+            {/* Outer ambient aura */}
+            <div
+              className="absolute -inset-12 rounded-full blur-[100px] opacity-[0.18] group-hover:opacity-[0.28] transition-opacity duration-1000"
               style={{ backgroundColor: 'var(--site-brand-primary)' }}
             />
+            <div
+              className="absolute -inset-8 top-[20%] rounded-full blur-[80px] opacity-[0.10] group-hover:opacity-[0.16] transition-opacity duration-1000"
+              style={{ backgroundColor: 'var(--site-brand-secondary)' }}
+            />
 
-            <div className="relative h-64 w-64 lg:h-[380px] lg:w-[380px] overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-4 backdrop-blur-2xl shadow-2xl transition-transform duration-700 group-hover:scale-105">
-              {!isHeroImageLoaded && (
-                <div className="absolute inset-0 z-20 grid place-items-center bg-gray-950/80 backdrop-blur">
-                  <div className="flex flex-col items-center gap-4">
-                    <div data-gsap-spin className="h-10 w-10 rounded-full border-4 border-white/20 border-t-teal-300" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Syncing...</span>
+            {/* Glassmorphic card */}
+            <div
+              className="relative overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.02] p-3 backdrop-blur-2xl"
+              style={{ boxShadow: `0 40px 120px -20px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06)` }}
+            >
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+              <div className="relative overflow-hidden rounded-[1.6rem] h-[240px] sm:h-[280px] lg:h-[380px] w-full">
+                {!isHeroImageLoaded && (
+                  <div className="absolute inset-0 z-20 grid place-items-center bg-gray-950/80 backdrop-blur">
+                    <div className="flex flex-col items-center gap-4">
+                      <div data-gsap-spin className="h-10 w-10 rounded-full border-4 border-white/20 border-t-teal-300" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Syncing...</span>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              <img
-                src={section.heroImageUrl || profilePicUrl}
-                alt={section.heroTitle || "Identity"}
-                className="h-full w-full object-cover rounded-[2.5rem]"
-                onLoad={() => setIsHeroImageLoaded(true)}
-                onError={(e) => {
-                  e.target.src = profilePicUrl;
-                  setIsHeroImageLoaded(true);
-                }}
-              />
+                )}
+                <img
+                  src={section.heroImageUrl || profilePicUrl}
+                  alt={section.heroTitle || "Identity"}
+                  className="h-full w-full object-cover transition-transform duration-1000 ease-out group-hover:scale-[1.03]"
+                  onLoad={() => setIsHeroImageLoaded(true)}
+                  onError={(e) => { e.target.src = profilePicUrl; setIsHeroImageLoaded(true); }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              </div>
             </div>
 
-            {/* Decorative Elements */}
-            <div data-gsap-pulse className="absolute -bottom-4 -right-4 h-10 w-10 rounded-full bg-teal-300 shadow-[0_0_15px_rgba(45,212,191,0.5)]" />
-            <div data-gsap-pulse data-gsap-delay="0.4" className="absolute -top-4 -left-4 h-8 w-8 rounded-full" style={{ backgroundColor: 'var(--site-brand-secondary)' }} />
+            {/* Decorative accent dots */}
+            <div data-gsap-pulse className="absolute -bottom-3 -right-3 h-8 w-8 rounded-full shadow-[0_0_15px_rgba(45,212,191,0.6)]" style={{ backgroundColor: 'var(--site-brand-primary)' }} />
+            <div data-gsap-pulse data-gsap-delay="0.4" className="absolute -top-3 -left-3 h-6 w-6 rounded-full" style={{ backgroundColor: 'var(--site-brand-secondary)', opacity: 0.7 }} />
           </div>
         </div>
       </div>

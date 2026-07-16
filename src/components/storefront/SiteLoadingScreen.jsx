@@ -72,13 +72,7 @@ const SiteLoadingScreen = ({
           <div className="mx-auto overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.02] shadow-[0_40px_100px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
             <div className="grid gap-12 px-8 py-10 md:grid-cols-[1.15fr,0.85fr] md:px-12 md:py-12">
               <div className="space-y-8">
-                <div className="inline-flex items-center gap-3 rounded-full border border-teal-300/20 bg-teal-300/5 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
-                  </span>
-                  {eyebrow || defaultSiteSettings.brand.fullTitle}
-                </div>
+
 
                 <div className="space-y-6">
                   <h1 className="text-3xl font-bold leading-tight text-white sm:text-5xl">

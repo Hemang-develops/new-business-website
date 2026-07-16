@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
 import { useGsapHover, useGsapReveal } from "../../hooks/useGsapMotion";
-
 import RichTextContent from "../ui/RichTextContent";
 
 const Hero = () => {
@@ -17,106 +16,136 @@ const Hero = () => {
     <section
       ref={heroRef}
       id="hero"
-      className="relative flex min-h-screen items-center justify-center overflow-hidden"
-      style={{
-        background: `linear-gradient(135deg, var(--site-brand-dark, #030406) 0%, #080a0f 100%)`,
-      }}
+      className="relative flex lg:min-h-screen items-center justify-center overflow-hidden"
+      style={{ background: `linear-gradient(160deg, #030406 0%, #060c16 50%, #03050a 100%)` }}
     >
-      {/* Dynamic Background Orchestration */}
+      {/* Cinematic Background Layers */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
-          className="absolute -top-[10%] -left-[10%] h-[700px] w-[700px] rounded-full blur-[150px] opacity-10"
+          className="absolute -top-[20%] -left-[15%] h-[800px] w-[800px] rounded-full blur-[180px] opacity-[0.12]"
           style={{ backgroundColor: 'var(--site-brand-primary)' }}
         />
         <div
-          className="absolute -bottom-[10%] -right-[10%] h-[600px] w-[600px] rounded-full blur-[120px] opacity-15"
+          className="absolute -bottom-[15%] -right-[10%] h-[700px] w-[700px] rounded-full blur-[160px] opacity-[0.12]"
           style={{ backgroundColor: 'var(--site-brand-secondary)' }}
         />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.05] mix-blend-overlay" />
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full blur-[120px] opacity-[0.05]"
+          style={{ backgroundColor: 'var(--site-brand-primary)' }}
+        />
+        {/* Noise texture */}
+        <div
+          className="absolute inset-0 opacity-[0.025] mix-blend-overlay"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }}
+        />
+        <div className="absolute top-1/3 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/[0.04] to-transparent" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-6xl px-6 flex flex-col lg:flex-row lg:items-center gap-12 lg:gap-16 pt-10">
+      <div className="relative z-10 mx-auto max-w-6xl px-6 flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-20 pt-24 pb-16 lg:pt-36 lg:pb-20">
 
-        {/* Left Content Column */}
-        <div className="flex-1 space-y-8" data-gsap-reveal>
-          {/* <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-teal-300/20 bg-teal-300/5">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
-            </span>
-            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
-              {heroSection?.eyebrow || "Introduction"}
-            </p>
-          </div> */}
+        {/* Left Content Column — on mobile this appears BELOW the image */}
+        <div className="order-2 lg:order-1 flex-1 space-y-8" data-gsap-reveal>
 
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl leading-[1.1]">
+
+          {/* Main Heading */}
+          <h1 className="text-[clamp(2.2rem,5.5vw,4.5rem)] font-bold tracking-tighter text-white leading-[1.05]">
             {heroSection?.heading}
           </h1>
 
+          {/* Description */}
           <RichTextContent
             value={heroSection?.description}
-            className="max-w-xl text-lg leading-relaxed text-white/50 font-medium"
+            className="max-w-lg text-base sm:text-lg leading-relaxed text-white/45 font-medium"
           />
 
-          <div className="flex flex-wrap gap-5">
+          {/* CTAs */}
+          <div className="flex flex-wrap gap-4">
             <a
               href={heroSection?.primaryCtaHref || "#programs"}
               data-gsap-hover
-              className="inline-flex h-14 items-center justify-center rounded-2xl bg-teal-300 px-10 text-sm font-bold uppercase tracking-widest text-black transition-all hover:bg-teal-200 hover:-translate-y-1 active:scale-95 shadow-[0_20px_40px_rgba(45,212,191,0.2)]"
+              className="inline-flex h-13 items-center justify-center rounded-2xl px-8 text-sm font-bold uppercase tracking-widest text-black transition-all duration-300 hover:-translate-y-1 active:scale-95"
+              style={{
+                background: `linear-gradient(135deg, var(--site-brand-primary-light), var(--site-brand-primary))`,
+                boxShadow: `0 16px 48px -8px color-mix(in srgb, var(--site-brand-primary) 45%, transparent)`,
+              }}
             >
               {heroSection?.primaryCtaLabel || "Details here"}
             </a>
             <a
               href={heroSection?.secondaryCtaHref || "#contact"}
               data-gsap-hover
-              className="inline-flex h-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-10 text-sm font-bold uppercase tracking-widest text-white transition-all hover:bg-white/[0.08] hover:border-white/20 hover:-translate-y-1 active:scale-95 backdrop-blur-xl"
+              className="inline-flex h-13 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] px-8 text-sm font-bold uppercase tracking-widest text-white/70 transition-all duration-300 hover:bg-white/[0.07] hover:border-white/15 hover:text-white hover:-translate-y-1 active:scale-95 backdrop-blur-xl"
             >
-              {heroSection?.secondaryCtaLabel || "Contact"}
+              {heroSection?.secondaryCtaLabel || "Book a call"}
             </a>
           </div>
 
           {/* Value Proof Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-            {heroProofs.map((item) => (
-              <div
-                key={item.key}
-                data-gsap-hover
-                className="group rounded-3xl border border-white/5 bg-white/[0.02] p-6 transition-all duration-300 hover:border-teal-300/30"
-              >
-                <p className="text-lg font-bold text-white mb-2 group-hover:text-teal-300 transition-colors">
-                  {item.title}
-                </p>
-                <div className="text-xs font-medium text-white/40 leading-relaxed group-hover:text-white/60">
-                  <RichTextContent value={item.description} />
+          {heroProofs.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              {heroProofs.map((item) => (
+                <div
+                  key={item.key}
+                  data-gsap-hover
+                  className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 transition-all duration-500 hover:border-white/[0.12] hover:bg-white/[0.04] overflow-hidden"
+                >
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                    style={{ background: `radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--site-brand-primary) 8%, transparent), transparent 70%)` }}
+                  />
+                  <p className="relative text-base font-bold text-white mb-1.5 group-hover:text-teal-200 transition-colors duration-300">
+                    {item.title}
+                  </p>
+                  <div className="relative text-xs font-medium text-white/35 leading-relaxed group-hover:text-white/55 transition-colors duration-300">
+                    <RichTextContent value={item.description} />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Right Media Column */}
+        {/* Right Media Column — on mobile this appears FIRST (top) */}
         <div
-          className="lg:w-[40%] flex justify-center"
+          className="order-1 lg:order-2 lg:w-[42%] flex justify-center"
           data-gsap-reveal
           data-gsap-delay="0.2"
         >
-          <div className="relative group">
-            {/* Dynamic Glow Aura */}
+          <div className="relative group w-full lg:max-w-none">
+            {/* Outer ambient aura */}
             <div
-              className="absolute -inset-10 rounded-full blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity duration-700 animate-pulse"
+              className="absolute -inset-12 rounded-full blur-[100px] opacity-[0.18] group-hover:opacity-[0.28] transition-opacity duration-1000"
               style={{ backgroundColor: 'var(--site-brand-primary)' }}
             />
+            <div
+              className="absolute -inset-8 top-[20%] rounded-full blur-[80px] opacity-[0.10] group-hover:opacity-[0.16] transition-opacity duration-1000"
+              style={{ backgroundColor: 'var(--site-brand-secondary)' }}
+            />
 
-            <div className="relative rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-4 backdrop-blur-2xl shadow-2xl overflow-hidden">
-              <img
-                src={settings.profile?.imageUrl || "https://ui-avatars.com/api/?name=Admin&background=020617&color=fff"}
-                alt={settings.profile?.imageAlt || "Profile"}
-                className="h-72 w-72 rounded-[2rem] object-cover shadow-2xl lg:h-[380px] lg:w-full min-w-[280px] transition-transform duration-700 group-hover:scale-105"
-              />
+            {/* Glassmorphic card */}
+            <div
+              className="relative rounded-[2rem] border border-white/[0.08] bg-white/[0.02] p-3 backdrop-blur-2xl overflow-hidden"
+              style={{ boxShadow: `0 40px 120px -20px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06)` }}
+            >
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+              <div className="relative overflow-hidden rounded-[1.6rem]">
+                <img
+                  src={settings.profile?.imageUrl || "https://ui-avatars.com/api/?name=Admin&background=020617&color=fff"}
+                  alt={settings.profile?.imageAlt || "Profile"}
+                  className="w-full object-cover object-center h-[240px] sm:h-[280px] lg:h-[420px] transition-transform duration-1000 ease-out group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              </div>
 
               {/* Floating Role Label */}
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-max rounded-full border border-teal-300/20 bg-gray-950/90 px-8 py-3 text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300 shadow-2xl backdrop-blur-md">
-                {settings.profile?.roleLabel || "Founder"}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-max">
+                <div
+                  className="rounded-full border border-white/[0.08] bg-gray-950/80 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.4em] text-white/55 backdrop-blur-md"
+                  style={{ boxShadow: `0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)` }}
+                >
+                  {settings.profile?.roleLabel || "Founder"}
+                </div>
               </div>
             </div>
           </div>
@@ -127,3 +156,5 @@ const Hero = () => {
 };
 
 export default Hero;
+
+

@@ -1,51 +1,30 @@
-import { useRef, useState } from "react";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import { useState } from "react";
 import { Plus, Minus } from "lucide-react";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
+import RichTextContent from "../ui/RichTextContent";
 
 const FAQItem = ({ faq, isOpen, onToggle }) => {
-  const panelRef = useRef(null);
-  const iconRef = useRef(null);
-
-  useGSAP(
-    () => {
-      gsap.to(panelRef.current, {
-        height: isOpen ? "auto" : 0,
-        autoAlpha: isOpen ? 1 : 0,
-        marginTop: isOpen ? 16 : 0,
-        duration: 0.35,
-        ease: "power2.out",
-      });
-
-      gsap.to(iconRef.current, {
-        rotate: isOpen ? 180 : 0,
-        duration: 0.3,
-        ease: "power2.out",
-      });
-    },
-    { dependencies: [isOpen] },
-  );
-
   return (
     <div className="py-6 first:pt-0 last:pb-0">
       <button
+        type="button"
         onClick={onToggle}
         className="flex w-full items-start gap-5 text-left group focus:outline-none"
         aria-expanded={isOpen}
       >
-        <span ref={iconRef} className="mt-0.5 flex-shrink-0 text-blue-500">
+        <span className="mt-0.5 flex-shrink-0 text-blue-500">
           {isOpen ? <Minus className="h-5 w-5" strokeWidth={2} /> : <Plus className="h-5 w-5" strokeWidth={2} />}
         </span>
         <span className="text-[17px] sm:text-lg font-medium text-white/90 group-hover:text-white">
           {faq.question}
         </span>
       </button>
-      <div ref={panelRef} className="h-0 overflow-hidden opacity-0">
-        <p className="pl-10 pr-4 text-[15px] leading-relaxed text-white/60">
-          {faq.answer}
-        </p>
-      </div>
+      {isOpen ? (
+        <RichTextContent
+          value={faq.answer}
+          className="mt-4 pl-10 pr-4 text-[15px] leading-relaxed text-white/60"
+        />
+      ) : null}
     </div>
   );
 };

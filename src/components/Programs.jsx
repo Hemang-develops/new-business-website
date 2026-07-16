@@ -81,16 +81,8 @@ const Programs = () => {
 
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="max-w-3xl" data-gsap-reveal>
-          <div className="inline-flex items-center gap-3 px-3 py-1 rounded-full border border-teal-300/20 bg-teal-300/5 mb-8">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-300"></span>
-            </span>
-            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-teal-300/80">
-              {programsSection?.eyebrow || "Offerings"}
-            </p>
-          </div>
-          
+
+
           <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl mb-6 leading-[1.1]">
             {programsSection?.heading}
           </h2>
