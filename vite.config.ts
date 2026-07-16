@@ -37,8 +37,7 @@ export default defineConfig({
     react({
       babel: {
         plugins: [
-          // Disable compiler for now to fix hook errors
-          // ["babel-plugin-react-compiler", { target: "19" }],
+          ["babel-plugin-react-compiler", { target: "19" }],
         ],
       },
     }),

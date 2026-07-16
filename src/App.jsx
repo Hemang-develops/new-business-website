@@ -1,12 +1,14 @@
-import { Suspense, lazy, useLayoutEffect } from 'react';
+import { Suspense, lazy, useLayoutEffect, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { TooltipProvider } from './components/ui/tooltip';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { SiteSettingsProvider } from './context/SiteSettingsContext';
 import { ToastProvider } from './context/ToastContext';
 import { loadSavedTheme } from './utils/themeGenerator';
 import './styles/globals.css';
 import SiteLoadingScreen from './components/storefront/SiteLoadingScreen';
+import GlobalErrorBoundary from './components/common/GlobalErrorBoundary';
+import logger from './utils/logger';
 
 const Home = lazy(() => import('./pages/storefront/Home').then((module) => ({ default: module.Home })));
 const Buy = lazy(() => import('./pages/storefront/Buy'));
@@ -60,17 +62,39 @@ function RouteScrollController() {
   return null;
 }
 
+function LoggerContextBinder() {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  // Sync user details to logger/Sentry
+  useEffect(() => {
+    logger.setUser(user);
+  }, [user]);
+
+  // Log page navigation breadcrumbs
+  useEffect(() => {
+    logger.info(`Navigation to: ${location.pathname}${location.search}`, {
+      pathname: location.pathname,
+      search: location.search,
+    });
+  }, [location.pathname, location.search]);
+
+  return null;
+}
+
 function App() {
   return (
     <AuthProvider>
       <SiteSettingsProvider>
         <ToastProvider>
           <TooltipProvider>
-            <Router>
-              <RouteScrollController />
-              <div className="flex flex-col min-h-screen">
-                <main className="flex-1">
-                  <Routes>
+            <GlobalErrorBoundary>
+              <Router>
+                <RouteScrollController />
+                <LoggerContextBinder />
+                <div className="flex flex-col min-h-screen">
+                  <main className="flex-1">
+                    <Routes>
                     <Route
                       path="/"
                       element={
@@ -164,10 +188,11 @@ function App() {
                 </main>
               </div>
             </Router>
-          </TooltipProvider>
-        </ToastProvider>
-      </SiteSettingsProvider>
-    </AuthProvider>
+          </GlobalErrorBoundary>
+        </TooltipProvider>
+      </ToastProvider>
+    </SiteSettingsProvider>
+  </AuthProvider>
   );
 }
 
