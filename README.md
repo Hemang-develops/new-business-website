@@ -1,206 +1,94 @@
-# React + TypeScript + Vite
+# Business Coaching Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, high-performance platform for coaches and creators to manage offerings, bookings, and digital products. Built with React, Vite, Tailwind CSS, and Supabase.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Storefront & Offerings:** Showcases coaching packages, digital products, and courses with dynamic routing.
+- **Booking Integration:** Seamless integration with Cal.com for scheduling and synchronizing meetings.
+- **Secure Authentication:** User sign-up and login flows powered by Supabase Auth.
+- **Comments & Engagement:** Nested, threaded commenting system on offerings with image upload support.
+- **Newsletter Management:** Integrated newsletter dispatch and scheduling via Supabase Edge Functions.
+- **Error Tracking:** Real-time production error monitoring configured via Sentry.
+- **Admin Dashboard:** Centralized control for managing the catalog, users, reviews, and website settings.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+- **Frontend:** React 19, Vite, Tailwind CSS (v4), Zustand (State), React Router
+- **Backend & Database:** Supabase (PostgreSQL, Edge Functions, Storage, Auth)
+- **UI Components:** Radix UI, Shadcn, GSAP (Animations), Floating UI
+- **Error Tracking:** Sentry (`@sentry/react`)
 
-Note: This will impact Vite dev & build performances.
+---
 
-## Expanding the ESLint configuration
+## Local Development Setup
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Install Dependencies
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-
-Requirement:
-
-1. Monthly vs yearly subscriber view
-2. Configurable mail
-3. Courses // still pending
-4. Separate offerings to types in home page for separate landing page of each 
-5. minimum amount for installment: 15000 INR
-6. introduce toast msg for attention
-11. make demo live
-10. improve confirm email supabase default mail
-9. calendly integration - > cal.com integration
-12. remove back to offerings button
-13. separate hero for offering pages
-14. Show more issue with card
-10. old content should not be shown after modified but loader should be shown then new data
-11. pages break after refresh due to page api not found
-12. scroll issue 
-13. white screen due to lazy loading
-16. email going twice
-18. drip content
-28. remove asthetic amounts
-7. add comment(review) in offerings(option to add image)
-15. explore offering => Details here 
-22. newsletter feature in admin
-17. ADD EMAIL IN TEMPLATE FOR ISSUES 
-19. reminder email
-
-7. add comment(review) in offerings(option to add image)
-test above (Could not find the 'author_image' column of 'comments' in the schema cache)
-make website proper for diff screen sizes
-IMP : need to implement side nav in admin control
-8. user inventory (admin)
-20. filter to show only products in which courses can be added
-21. add content or module needs to be intituitve
-23. privacy policy, terms of service
-24. cookie policy
-25. a service that allows users to send a request to view/edit/delete their personal information stored on your website and/or app
-26. website have Global Privacy Control (GPC) enabled?
-27. faq not working
-28. test razorpay integration
-
-
-Future scope:
-29. different type of admin with different permissions
-
-
-Courses --->  
-        |--> Booking (meeting)                                            
-        |                                                       |--> with out Modules ------------------|
-        |--> Content ---> Normal (all at once access)---------------------|                             |-------> Types (youtube video/ rich text/ video or audio (uploaded))/ external link
-                     |                                                    |----------> Modules-----------
-                     |                                                    |                             
-                     |--> Drip content (access in interval of days)-------|       
-
-## Cal.com booking sync
-
-This project now supports auto-provisioned Cal.com event types for offerings saved from the admin.
-
-Frontend env:
+### 2. Environment Variables
+Create a `.env` file in the root directory and configure the required variables. Example configuration:
 
 ```env
+# Supabase Configuration
+VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-anon-key>
+
+# Error Tracking (Optional for local dev)
+VITE_SENTRY_DSN="https://example@o12345.ingest.sentry.io/67890"
+
+# Cal.com Booking
 VITE_CALCOM_DEFAULT_HOST_ID=default-host
 ```
 
-Supabase Edge Function secrets:
+### 3. Run the Development Server
+```bash
+npm run dev
+```
 
+---
+
+## Integrations & Supabase Configuration
+
+### Cal.com Booking Sync
+This project supports auto-provisioned Cal.com event types for offerings saved from the admin.
+
+**Supabase Edge Function Secrets (`supabase/functions/sync-booking-offering`):**
 ```env
 CALCOM_USERNAME=your-calcom-username
 CALCOM_API_KEY=cal_xxx
 CALCOM_WEBHOOK_SECRET=replace-with-a-long-random-secret
-RAZORPAY_KEY_ID=rzp_live_xxx
-RAZORPAY_KEY_SECRET=xxx
+```
+
+**Booking History Webhook:**
+Confirmed Cal.com sessions are saved to `storefront_booking_access` so signed-in customers can see them under **My Meetings**.
+1. Apply `supabase/add_booking_access.sql`.
+2. Deploy the webhook function: `supabase functions deploy cal-booking-webhook --no-verify-jwt`
+3. Configure the webhook in Cal.com pointing to `https://<your-project-ref>.supabase.co/functions/v1/cal-booking-webhook`.
+
+### Newsletter Production Setup
+1. Apply `supabase/add_newsletter_production_features.sql`.
+2. Deploy the required Edge Functions:
+   - `newsletter-dispatch`
+   - `newsletter-unsubscribe`
+   - `newsletter-scheduler`
+3. Schedule `newsletter-scheduler` from Supabase cron for daily dispatching.
+
+**Resend & Email Secrets:**
+```env
 RESEND_API_KEY=re_xxx
 EMAIL_FROM="Your Brand <sender@example.com>"
 SITE_URL=https://your-site.com
-NEWSLETTER_PRIMARY_COLOR=#2dd4bf
-NEWSLETTER_DARK_COLOR=#030406
-NEWSLETTER_ACCENT_COLOR=#f0fdfa
 ```
 
-Newsletter production setup:
+### Sentry Error Logging
+To enable production error tracking, simply add your Sentry project DSN to your environment variables:
+`VITE_SENTRY_DSN="your-dsn-here"`
 
-1. Apply `supabase/add_newsletter_production_features.sql`.
-2. Deploy `supabase/functions/newsletter-dispatch`.
-3. Deploy `supabase/functions/newsletter-unsubscribe`.
-4. Deploy `supabase/functions/newsletter-scheduler`.
-5. Schedule `newsletter-scheduler` from Supabase cron. A daily morning run sends any broadcasts whose `scheduled_at` is already due; exact send-time behavior requires the scheduler to run near the intended send time.
+If this value is missing (e.g., during local development), the application will cleanly default to console logging without attempting to contact Sentry.
 
-Sender name format for Resend:
+---
 
-```env
-EMAIL_FROM="Nehal Patel <highfrequencies11@contact.nehalpatel.store>"
-```
-
-Deploy the booking sync function after adding the new `storefront_offerings` booking columns from:
-
-- `supabase/add_booking_fields_to_storefront_offerings.sql`
-- `supabase/functions/sync-booking-offering`
-
-## Cal.com booking history
-
-Confirmed Cal.com sessions are saved to `storefront_booking_access` so signed-in customers can see them under **My Meetings**.
-
-1. Apply `supabase/add_booking_access.sql`.
-2. Deploy `supabase/functions/cal-booking-webhook` without JWT verification because Cal.com authenticates with a signature:
-
-```bash
-supabase functions deploy cal-booking-webhook --no-verify-jwt
-```
-
-3. In Cal.com, create a webhook with subscriber URL:
-
-```text
-https://<your-project-ref>.supabase.co/functions/v1/cal-booking-webhook
-```
-
-4. Use the same value as `CALCOM_WEBHOOK_SECRET` for the Cal.com webhook secret and enable these triggers:
-
-```text
-BOOKING_CREATED
-BOOKING_REQUESTED
-BOOKING_CONFIRMED
-BOOKING_RESCHEDULED
-BOOKING_CANCELLED
-BOOKING_REJECTED
-MEETING_ENDED
-```
-
-The embedded calendar also listens for Cal.com's `bookingSuccessfulV2` event so the customer sees their confirmation immediately, while the signed webhook maintains the durable account history.
+*Note: For upcoming tasks, requirements, and development ideas, see [ROADMAP.md](./ROADMAP.md).*
