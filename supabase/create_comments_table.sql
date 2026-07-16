@@ -9,7 +9,6 @@ create table if not exists public.comments (
   parent_id uuid,
   author_id uuid,
   author_name text,
-  author_image text,
   content text,
   image_url text,
   image_alt text,

@@ -93,8 +93,8 @@ export async function uploadWebPImage({ file, pageType = "generic", pageId = "gl
     contentType: "image/webp",
   });
   if (uploadError) throw uploadError;
-  const { publicURL } = supabase.storage.from(bucket).getPublicUrl(uploadKey);
-  return publicURL;
+  const { data } = supabase.storage.from(bucket).getPublicUrl(uploadKey);
+  return data?.publicUrl ?? null;
 }
 
 function cryptoRandomId() {

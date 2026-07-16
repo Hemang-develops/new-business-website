@@ -31,6 +31,22 @@ export async function updateComment(id, patch) {
 
 export async function deleteComment(id) {
   const { data, error } = await supabase.from("comments").delete().eq("id", id).select();
+  if (error) return { data, error };
+
+  const deletedComment = data?.[0];
+  if (deletedComment?.image_url) {
+    const imageUrl = deletedComment.image_url;
+    const bucketName = "comment-images";
+    const bucketSegment = `/${bucketName}/`;
+    const index = imageUrl.indexOf(bucketSegment);
+    if (index !== -1) {
+      const path = decodeURIComponent(imageUrl.substring(index + bucketSegment.length));
+      supabase.storage.from(bucketName).remove([path]).catch(err => {
+        console.error("Failed to delete comment image from storage:", err);
+      });
+    }
+  }
+
   return { data, error };
 }
 

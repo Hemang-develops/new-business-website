@@ -30,6 +30,8 @@ const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
   const [replyImageFile, setReplyImageFile] = useState(null);
   const [limit, setLimit] = useState(5);
   const [hasMore, setHasMore] = useState(false);
+  const [commentUploaderKey, setCommentUploaderKey] = useState(0);
+  const [replyUploaderKey, setReplyUploaderKey] = useState(0);
 
   const mounted = useRef(true);
 
@@ -109,7 +111,6 @@ const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
         parent_id: parentId,
         author_id: user.id,
         author_name: user.name || user.email || "Anonymous",
-        author_image: user.profileImage || null,
         content: text || null,
         image_url: imageUrl,
         is_visible: true,
@@ -122,9 +123,11 @@ const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
         setReplyFor(null);
         setReplyText("");
         setReplyImageFile(null);
+        setReplyUploaderKey((k) => k + 1);
       } else {
         setCommentText("");
         setCommentImageFile(null);
+        setCommentUploaderKey((k) => k + 1);
       }
       toast.success("Comment posted");
     } catch (err) {
@@ -174,7 +177,7 @@ const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
             onChange={(e) => setReplyText(e.target.value)}
           />
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <ImageUploader onPick={(file) => handleImagePick(file, "reply")} disabled={submitting} />
+            <ImageUploader key={replyUploaderKey} onPick={(file) => handleImagePick(file, "reply")} disabled={submitting} />
             <button
               className="ml-auto rounded-full bg-teal-500 px-5 py-2 text-sm font-semibold text-gray-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={submitting}
@@ -216,7 +219,7 @@ const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
               disabled={!isAuthenticated}
             />
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <ImageUploader onPick={(file) => handleImagePick(file)} disabled={!isAuthenticated} />
+              <ImageUploader key={commentUploaderKey} onPick={(file) => handleImagePick(file)} disabled={!isAuthenticated} />
               <button
                 className="ml-auto rounded-full bg-teal-500 px-5 py-2 text-sm font-semibold text-gray-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={submitting || !isAuthenticated}
@@ -247,7 +250,7 @@ const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
               }}
               onDelete={handleDelete}
               onEdit={handleEdit}
-              replyBox={replyFor === entry.id ? replyBox(entry.id) : null}
+              replyBox={replyBox}
             />
           ))
         ) : (
@@ -266,28 +269,31 @@ const Comments = ({ pageType = "offering", pageId, moduleId = null }) => {
   );
 };
 
-const CommentThread = ({ entry, comments, currentUser, replyFor, onReply, onDelete, onEdit, replyBox }) => {
+const CommentThread = ({ entry, comments, currentUser, replyFor, onReply, onDelete, onEdit, replyBox, depth = 0 }) => {
   const replies = comments
     .filter((c) => c.parent_id === entry.id)
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
   return (
-    <div className="rounded-3xl p-4">
+    <div className={depth === 0 ? "rounded-3xl p-4" : ""}>
       <CommentItem entry={entry} currentUser={currentUser} onReply={() => onReply(entry.id)} onDelete={onDelete} onEdit={onEdit} />
-      {replyBox}
+      {replyFor === entry.id && replyBox(entry.id)}
       {replies.length > 0 && (
-        <div className="mt-4 space-y-3">
+        // ponytail: cap indent at depth 4 so mobile doesn't run out of space
+        <div className={`mt-3 space-y-3 ${depth < 4 ? "ml-6 border-l border-white/10 pl-5" : ""}`}>
           {replies.map((reply) => (
-            <div key={reply.id} className="ml-6 border-l border-white/10 pl-5">
-              <CommentItem
-                entry={reply}
-                currentUser={currentUser}
-                onReply={() => onReply(reply.id)}
-                onDelete={onDelete}
-                onEdit={onEdit}
-              />
-              {replyFor === reply.id && replyBox(reply.id)}
-            </div>
+            <CommentThread
+              key={reply.id}
+              entry={reply}
+              comments={comments}
+              currentUser={currentUser}
+              replyFor={replyFor}
+              onReply={onReply}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              replyBox={replyBox}
+              depth={depth + 1}
+            />
           ))}
         </div>
       )}
@@ -299,9 +305,17 @@ const CommentItem = ({ entry, currentUser, onReply, onDelete, onEdit }) => {
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState(entry.content || "");
 
+  const CommentAvatar = ({ src, alt, sizeClass = "h-12 w-12" }) => (
+    <Avatar className={`${sizeClass} overflow-hidden`}>
+      {src ? <AvatarImage src={src} alt={alt} /> : <AvatarFallback />}
+    </Avatar>
+  );
+  // ponytail: resolve avatar from current user if it's their comment; others get fallback initials
+  const avatarSrc = currentUser?.id === entry.author_id ? currentUser.profileImage : null;
+
   return (
     <div className="flex gap-3">
-      <CommentAvatar src={entry.author_image} alt={entry.author_name || "Author avatar"} sizeClass="h-11 w-11" />
+      <CommentAvatar src={avatarSrc} alt={entry.author_name || "Author avatar"} sizeClass="h-11 w-11" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2 text-sm text-white">
@@ -351,8 +365,13 @@ const CommentItem = ({ entry, currentUser, onReply, onDelete, onEdit }) => {
           )}
         </div>
         {entry.image_url && (
-          <div className="mt-3 overflow-hidden rounded-3xl">
-            <img src={entry.image_url} alt={entry.image_alt || "comment image"} className="w-full object-cover" />
+          <div className="mt-3 overflow-hidden rounded-2xl max-w-xs sm:max-w-sm max-h-[250px] border border-white/5 bg-black/20">
+            <img
+              src={entry.image_url}
+              alt={entry.image_alt || "comment image"}
+              className="w-full h-full max-h-[250px] object-cover hover:scale-[1.02] transition-transform duration-200 cursor-zoom-in"
+              onClick={() => window.open(entry.image_url, "_blank")}
+            />
           </div>
         )}
       </div>
