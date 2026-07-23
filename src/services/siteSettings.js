@@ -240,9 +240,9 @@ export const defaultSiteSectionItems = [
   { key: "services-frameworks", sectionKey: "services", itemType: "card", title: "Manifestation Frameworks", description: `Signature ${DEFAULT_BRAND_NAME} methods that blend neuroscience with spiritual teachings for tangible shifts.`, label: "", href: "", icon: "layers", imageUrl: "", imageAlt: "", sortOrder: 1, enabled: true },
   { key: "services-resources", sectionKey: "services", itemType: "card", title: "Lifetime-Ready Resources", description: "Journals, guided meditations, and replay libraries you can return to whenever you need a frequency boost.", label: "", href: "", icon: "library", imageUrl: "", imageAlt: "", sortOrder: 2, enabled: true },
   { key: "services-community", sectionKey: "services", itemType: "card", title: "Community & Accountability", description: "Monthly circles, private Voxer channels, and global members who are walking the same path by your side.", label: "", href: "", icon: "users", imageUrl: "", imageAlt: "", sortOrder: 3, enabled: true },
-  { key: "resources-podcast", sectionKey: "resources", itemType: "link", title: `Podcast: ${DEFAULT_BRAND_NAME}`, description: "Weekly activations, channelled messages, and conversations about manifestation, mindset, and miracles.", label: "Listen on Spotify", href: "https://open.spotify.com/show/02zFg2ejkXs1XHBo6teu5n", icon: "", imageUrl: "", imageAlt: "", sortOrder: 0, enabled: true },
-  { key: "resources-youtube", sectionKey: "resources", itemType: "link", title: "YouTube: @nehalpatelishere", description: "Binge long-form trainings, rituals, and intimate vlogs that make manifestation feel like your daily rhythm.", label: "Subscribe on YouTube", href: "https://www.youtube.com/@nehalpatelishere", icon: "", imageUrl: "", imageAlt: "", sortOrder: 1, enabled: true },
-  { key: "resources-amazon", sectionKey: "resources", itemType: "link", title: "Amazon Storefront", description: "Shop the exact books, candles, and ritual tools I use to stay anchored in a high frequency every day.", label: "View the list", href: "https://www.amazon.ca/shop/bookescape_?ref_=cm_sw_r_cp_mwn_aipsfshop_aipsfbookescape__PBB131SY1HEHXB4D7YG2_1&language=en_US", icon: "", imageUrl: "", imageAlt: "", sortOrder: 2, enabled: true },
+  { key: "resources-podcast", sectionKey: "resources", itemType: "link", title: `Podcast: ${DEFAULT_BRAND_NAME}`, description: "Weekly activations, channelled messages, and conversations about manifestation, mindset, and miracles.", label: "Listen on Spotify", href: "https://open.spotify.com", icon: "", imageUrl: "", imageAlt: "", sortOrder: 0, enabled: true },
+  { key: "resources-youtube", sectionKey: "resources", itemType: "link", title: "YouTube Channel", description: "Binge long-form trainings, rituals, and intimate vlogs that make manifestation feel like your daily rhythm.", label: "Subscribe on YouTube", href: "https://www.youtube.com", icon: "", imageUrl: "", imageAlt: "", sortOrder: 1, enabled: true },
+  { key: "resources-amazon", sectionKey: "resources", itemType: "link", title: "Recommended Reading & Tools", description: "Shop the exact books, candles, and ritual tools I use to stay anchored in a high frequency every day.", label: "View the list", href: "https://www.amazon.com", icon: "", imageUrl: "", imageAlt: "", sortOrder: 2, enabled: true },
   { key: "resources-newsletter", sectionKey: "resources", itemType: "link", title: "Newsletter & Free Gifts", description: "Receive monthly energy forecasts, journal prompts, and pop-up offers that keep you plugged into the vortex.", label: "Join the list", href: "#newsletter", icon: "", imageUrl: "", imageAlt: "", sortOrder: 3, enabled: true },
   { key: "coaching-benefit-1", sectionKey: "coaching", itemType: "benefit", title: "Personalised Coaching with me for 30 days", description: "", label: "", href: "", icon: "", imageUrl: "", imageAlt: "", sortOrder: 0, enabled: true },
   { key: "coaching-benefit-2", sectionKey: "coaching", itemType: "benefit", title: "5 calls with me", description: "", label: "", href: "", icon: "", imageUrl: "", imageAlt: "", sortOrder: 1, enabled: true },
@@ -256,26 +256,26 @@ export const defaultSiteSectionItems = [
 ];
 
 export const defaultSiteLinks = [
-  { key: "contact-email", groupKey: "contact", label: "Email", value: "highfrequencies11@gmail.com", href: "mailto:highfrequencies11@gmail.com", icon: "mail", sortOrder: 0, enabled: true },
-  { key: "contact-instagram", groupKey: "contact", label: "Instagram", value: "@highfrequencies11", href: "https://www.instagram.com/highfrequencies11/", icon: "instagram", sortOrder: 1, enabled: true },
-  { key: "contact-youtube", groupKey: "contact", label: "YouTube", value: "@nehalpatelishere", href: "https://www.youtube.com/@nehalpatelishere", icon: "youtube", sortOrder: 2, enabled: true },
+  { key: "contact-email", groupKey: "contact", label: "Email", value: "support@example.com", href: "mailto:support@example.com", icon: "mail", sortOrder: 0, enabled: true },
+  { key: "contact-instagram", groupKey: "contact", label: "Instagram", value: "@example", href: "https://www.instagram.com", icon: "instagram", sortOrder: 1, enabled: true },
+  { key: "contact-youtube", groupKey: "contact", label: "YouTube", value: "@example", href: "https://www.youtube.com", icon: "youtube", sortOrder: 2, enabled: true },
   { key: "footer-offerings-programs", groupKey: "footer_offerings", label: "Programs", value: "", href: "#programs", icon: "", sortOrder: 0, enabled: true },
   { key: "footer-offerings-services", groupKey: "footer_offerings", label: "Services", value: "", href: "#services", icon: "", sortOrder: 1, enabled: true },
   { key: "footer-offerings-coaching", groupKey: "footer_offerings", label: "1:1 Coaching", value: "", href: "#coaching", icon: "", sortOrder: 2, enabled: true },
   { key: "footer-offerings-resources", groupKey: "footer_offerings", label: "Resources", value: "", href: "#resources", icon: "", sortOrder: 3, enabled: true },
   { key: "footer-offerings-testimonials", groupKey: "footer_offerings", label: "Testimonials", value: "", href: "#testimonials", icon: "", sortOrder: 4, enabled: true },
-  { key: "footer-resources-instagram", groupKey: "footer_resources", label: "Instagram", value: "", href: "https://www.instagram.com/highfrequencies11/", icon: "instagram", sortOrder: 0, enabled: true },
-  { key: "footer-resources-youtube", groupKey: "footer_resources", label: "YouTube", value: "", href: "https://www.youtube.com/@nehalpatelishere", icon: "youtube", sortOrder: 1, enabled: true },
-  { key: "footer-resources-podcast", groupKey: "footer_resources", label: "Podcast", value: "", href: "https://open.spotify.com/show/02zFg2ejkXs1XHBo6teu5n", icon: "music", sortOrder: 2, enabled: true },
-  { key: "footer-resources-amazon", groupKey: "footer_resources", label: "Amazon Store", value: "", href: "https://www.amazon.ca/shop/bookescape_?ref_=cm_sw_r_cp_mwn_aipsfshop_aipsfbookescape__PBB131SY1HEHXB4D7YG2_1&language=en_US", icon: "shopping-bag", sortOrder: 3, enabled: true },
+  { key: "footer-resources-instagram", groupKey: "footer_resources", label: "Instagram", value: "", href: "https://www.instagram.com", icon: "instagram", sortOrder: 0, enabled: true },
+  { key: "footer-resources-youtube", groupKey: "footer_resources", label: "YouTube", value: "", href: "https://www.youtube.com", icon: "youtube", sortOrder: 1, enabled: true },
+  { key: "footer-resources-podcast", groupKey: "footer_resources", label: "Podcast", value: "", href: "https://open.spotify.com", icon: "music", sortOrder: 2, enabled: true },
+  { key: "footer-resources-amazon", groupKey: "footer_resources", label: "Amazon Store", value: "", href: "https://www.amazon.com", icon: "shopping-bag", sortOrder: 3, enabled: true },
   { key: "footer-support-contact", groupKey: "footer_support", label: "Contact", value: "", href: "#contact", icon: "", sortOrder: 0, enabled: true },
   { key: "footer-support-newsletter", groupKey: "footer_support", label: "Newsletter", value: "", href: "#newsletter", icon: "", sortOrder: 1, enabled: true },
   { key: "footer-support-call", groupKey: "footer_support", label: "Book a Call", value: "", href: "#contact", icon: "", sortOrder: 2, enabled: true },
   { key: "footer-support-shop", groupKey: "footer_support", label: "Visit Shop", value: "", href: "/#programs", icon: "", sortOrder: 3, enabled: true },
-  { key: "footer-social-instagram", groupKey: "footer_social", label: "Instagram", value: "", href: "https://www.instagram.com/highfrequencies11/", icon: "instagram", sortOrder: 0, enabled: true },
-  { key: "footer-social-youtube", groupKey: "footer_social", label: "YouTube", value: "", href: "https://www.youtube.com/@nehalpatelishere", icon: "youtube", sortOrder: 1, enabled: true },
-  { key: "footer-social-podcast", groupKey: "footer_social", label: "Podcast", value: "", href: "https://open.spotify.com/show/02zFg2ejkXs1XHBo6teu5n", icon: "music", sortOrder: 2, enabled: true },
-  { key: "footer-social-email", groupKey: "footer_social", label: "Email", value: "", href: "mailto:highfrequencies11@gmail.com", icon: "mail", sortOrder: 3, enabled: true },
+  { key: "footer-social-instagram", groupKey: "footer_social", label: "Instagram", value: "", href: "https://www.instagram.com", icon: "instagram", sortOrder: 0, enabled: true },
+  { key: "footer-social-youtube", groupKey: "footer_social", label: "YouTube", value: "", href: "https://www.youtube.com", icon: "youtube", sortOrder: 1, enabled: true },
+  { key: "footer-social-podcast", groupKey: "footer_social", label: "Podcast", value: "", href: "https://open.spotify.com", icon: "music", sortOrder: 2, enabled: true },
+  { key: "footer-social-email", groupKey: "footer_social", label: "Email", value: "", href: "mailto:support@example.com", icon: "mail", sortOrder: 3, enabled: true },
 ];
 
 export const defaultSiteSettings = {
@@ -286,7 +286,7 @@ export const defaultSiteSettings = {
       "Manifestation mentorship, somatic practices, and community support for leaders building miraculous lives.",
     shopLabel: "Visit shop",
     shopHref: "/#programs",
-    supportEmail: "highfrequencies11@gmail.com",
+    supportEmail: "support@example.com",
   },
   theme: {
     primary: "#06b6d4",
@@ -297,7 +297,7 @@ export const defaultSiteSettings = {
   },
   profile: {
     imageUrl: "",
-    imageAlt: "Nehal Patel portrait",
+    imageAlt: "Mentor portrait",
     roleLabel: "Manifestation Coach",
   },
   footer: {
