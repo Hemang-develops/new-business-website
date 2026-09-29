@@ -4,12 +4,14 @@ import { processImageToWebP } from "../../lib/imageUtils";
 
 export default function useCatalogAdminUploads({
   editor,
+  newOffering,
   reviewsEditor,
   selectedSection,
   siteSettingsEditor,
   setStatus,
   setUploadingTarget,
   updateEditor,
+  updateNewOffering,
   updateReviewEditor,
   updateSectionEditor,
   updateSiteSettings,
@@ -62,15 +64,23 @@ export default function useCatalogAdminUploads({
 
   const handleOfferingImageUpload = async (input) => {
     const file = extractFile(input);
-    if (!file || !editor) return;
+    if (!file) return;
 
     setUploadingTarget("offering-image");
     setStatus({ type: "idle", message: "" });
     try {
-      const publicUrl = await uploadImageToStorage(file, `offerings/${editor.id}`);
-      updateEditor("image_url", publicUrl);
-      if (!editor.image_alt) {
-        updateEditor("image_alt", editor.title || file.name);
+      const targetId = editor?.id || `new-${Date.now()}`;
+      const publicUrl = await uploadImageToStorage(file, `offerings/${targetId}`);
+      if (editor) {
+        updateEditor("image_url", publicUrl);
+        if (!editor.image_alt) {
+          updateEditor("image_alt", editor.title || file.name);
+        }
+      } else if (updateNewOffering) {
+        updateNewOffering("image_url", publicUrl);
+        if (!newOffering?.image_alt) {
+          updateNewOffering("image_alt", newOffering?.title || file.name);
+        }
       }
       setStatus({ type: "success", message: "Product image uploaded successfully." });
     } catch (error) {
@@ -83,17 +93,22 @@ export default function useCatalogAdminUploads({
   const handleOfferingDeliveryUpload = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || !editor) return;
+    if (!file) return;
 
     setUploadingTarget("offering-delivery");
     setStatus({ type: "idle", message: "" });
     try {
-      const filePath = await uploadFileToStorage(file, `offerings/${editor.id}/delivery`);
+      const targetId = editor?.id || `new-${Date.now()}`;
+      const filePath = await uploadFileToStorage(file, `offerings/${targetId}/delivery`);
       const { data } = supabase.storage.from(storageBucket).getPublicUrl(filePath);
       if (!data?.publicUrl) {
         throw new Error("File uploaded, but a delivery URL could not be generated.");
       }
-      updateEditor("delivery_url", data.publicUrl);
+      if (editor) {
+        updateEditor("delivery_url", data.publicUrl);
+      } else if (updateNewOffering) {
+        updateNewOffering("delivery_url", data.publicUrl);
+      }
       setStatus({ type: "success", message: "Digital delivery file uploaded successfully." });
     } catch (error) {
       setStatus({ type: "error", message: error?.message || "Unable to upload delivery file." });

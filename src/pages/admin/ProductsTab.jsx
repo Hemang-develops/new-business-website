@@ -1,20 +1,48 @@
+import { useState, useMemo, useEffect, useRef } from "react";
 import { SimpleEditor } from "../../components/tiptap-templates/simple/simple-editor";
 import AdminInfoHint from "./AdminInfoHint";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { ctaTypeOptions, fulfillmentModeMeta, fulfillmentModeOptions, offeringModeMeta } from "./catalogAdminConfig";
+import {
+  Search,
+  Plus,
+  Edit3,
+  Trash2,
+  X,
+  ExternalLink,
+  Layers,
+  FolderKanban,
+  Check,
+  AlertTriangle,
+  Package,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  FileText,
+  Settings2,
+} from "lucide-react";
+
+const STORAGE_KEY_COLUMNS = "admin_products_visible_cols_v1";
+
+const defaultVisibleColumns = {
+  category: true,
+  price: true,
+  deliveryMode: true,
+  status: true,
+};
 
 const ProductsTab = ({ state, actions }) => {
   const {
     editor,
     isCreatingOffering,
     isCreatingSection,
+    isDeletingOffering,
     isSavingOffering,
     isSavingSection,
     newOffering,
     newSection,
     offerings,
-    offeringsBySection,
-    offeringsForSelectedSection,
     sections,
     sectionsById,
     selectedModeMeta,
@@ -22,799 +50,1394 @@ const ProductsTab = ({ state, actions }) => {
     selectedSection,
     selectedSectionId,
     showNewOfferingForm,
-    showNewSectionForm,
     uploadingTarget,
   } = state;
+
   const {
     handleCreateOffering,
     handleCreateSection,
+    handleDeleteOffering,
     handleHeroImageUpload,
     handleOfferingDeliveryUpload,
     handleOfferingImageUpload,
     handleSaveOffering,
     handleSaveSection,
+    handleTogglePublishOffering,
     setSelectedOfferingId,
     setSelectedSectionId,
     setShowNewOfferingForm,
-    setShowNewSectionForm,
     updateEditor,
     updateNewOffering,
     updateNewSection,
     updateSectionEditor,
   } = actions;
+
+  // Local UI filters, search, and modal states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterSectionId, setFilterSectionId] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all"); // 'all' | 'live' | 'draft'
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+  const [showNewSectionInModal, setShowNewSectionInModal] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
+  const [statusChangeCandidate, setStatusChangeCandidate] = useState(null);
+
+  // Column visibility selector with localStorage persistence
+  const [visibleColumns, setVisibleColumns] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_COLUMNS);
+      return stored ? { ...defaultVisibleColumns, ...JSON.parse(stored) } : defaultVisibleColumns;
+    } catch {
+      return defaultVisibleColumns;
+    }
+  });
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const columnPickerRef = useRef(null);
+
+  const toggleColumn = (colKey) => {
+    setVisibleColumns((prev) => {
+      const next = { ...prev, [colKey]: !prev[colKey] };
+      try {
+        localStorage.setItem(STORAGE_KEY_COLUMNS, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
+
+  // Close column picker on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (columnPickerRef.current && !columnPickerRef.current.contains(e.target)) {
+        setShowColumnPicker(false);
+      }
+    };
+    if (showColumnPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showColumnPicker]);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset pagination to page 1 on filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterSectionId, filterStatus, pageSize]);
+
+  // Filtered offerings list for Master Table
+  const filteredOfferings = useMemo(() => {
+    return offerings.filter((offering) => {
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = offering.title?.toLowerCase().includes(query);
+        const matchesSubtitle = offering.subtitle?.toLowerCase().includes(query);
+        const matchesId = offering.id?.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesSubtitle && !matchesId) return false;
+      }
+      if (filterSectionId !== "all" && offering.section_id !== filterSectionId) {
+        return false;
+      }
+      if (filterStatus === "live" && !offering.is_active) return false;
+      if (filterStatus === "draft" && offering.is_active) return false;
+
+      return true;
+    });
+  }, [offerings, searchQuery, filterSectionId, filterStatus]);
+
+  // Pagination computations
+  const totalItems = filteredOfferings.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedOfferings = useMemo(() => {
+    const startIdx = (currentPage - 1) * pageSize;
+    return filteredOfferings.slice(startIdx, startIdx + pageSize);
+  }, [filteredOfferings, currentPage, pageSize]);
+
+  const startIndex = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalItems);
+
+  // Summary statistics
+  const liveCount = useMemo(() => offerings.filter((o) => o.is_active).length, [offerings]);
+  const draftCount = offerings.length - liveCount;
+
+  // Unified Drawer target (either editing existing product or creating new product)
+  const isCreateMode = Boolean(showNewOfferingForm);
+  const isDrawerOpen = isCreateMode || Boolean(editor);
+  const drawerOffering = isCreateMode ? newOffering : editor;
+  const drawerUpdater = isCreateMode ? updateNewOffering : updateEditor;
+  const drawerModeMeta = offeringModeMeta[drawerOffering?.cta_type || "checkout"] || offeringModeMeta.checkout;
+
+  // Reset or pre-fill new offering when opening create mode
+  const openAddProductDrawer = () => {
+    const defaultSection = filterSectionId !== "all" ? filterSectionId : sections[0]?.id || "";
+    updateNewOffering("section_id", defaultSection);
+    updateNewOffering("title", "");
+    updateNewOffering("subtitle", "");
+    updateNewOffering("price_usd", "");
+    updateNewOffering("cta_type", "checkout");
+    updateNewOffering("fulfillment_mode", "digital");
+    updateNewOffering("digital_delivery_type", "download");
+    updateNewOffering("summary", "");
+    updateNewOffering("long_description", "");
+    updateNewOffering("image_url", "");
+    updateNewOffering("image_alt", "");
+    updateNewOffering("delivery_url", "");
+    updateNewOffering("reading_email_body", "");
+    updateNewOffering("access_expiry_days", "");
+    updateNewOffering("duration_minutes", 60);
+    updateNewOffering("booking_cta_label", "Book now");
+    updateNewOffering("action_link", "");
+    updateNewOffering("checkout_fallback_message", "");
+    updateNewOffering("cta_label", "");
+    setSelectedOfferingId("");
+    setShowNewOfferingForm(true);
+  };
+
+  const closeDrawer = () => {
+    setShowNewOfferingForm(false);
+    setSelectedOfferingId("");
+  };
+
   return (
+    <section className="space-y-6">
+      {/* Top Banner & Quick Stats */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.12),transparent_32%),linear-gradient(180deg,rgba(7,12,22,0.94),rgba(9,16,28,0.96))] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.24)]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-teal-300/30 bg-teal-300/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-teal-200">
+              <Package className="h-3.5 w-3.5" />
+              Products Studio
+            </div>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              Storefront Products & Offerings
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/65">
+              Browse, search, and manage customer-facing products, digital downloads, bookings, and pricing.
+            </p>
+          </div>
 
-              <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.12),transparent_32%),linear-gradient(180deg,rgba(7,12,22,0.94),rgba(9,16,28,0.96))] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.24)]">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="max-w-3xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.34em] text-teal-200/80">Products studio</p>
-                      <h2 className="mt-3 text-2xl font-semibold text-white">Manage what customers see, how they pay, and how each offer is fulfilled.</h2>
-                      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/65">
-                        The editor below is organised around storefront copy, fulfilment mode, and publishing status. Internal fields are tucked behind clearer labels so adding a new product feels like managing a product, not editing a table row.
-                      </p>
-                    </div>
-                    <div className="flex flex-1 flex-wrap gap-3">
-                      <div className="min-w-[160px] flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-                        <p className="text-xs uppercase tracking-[0.2em] text-white/45">Types</p>
-                        <p className="mt-2 text-2xl font-semibold text-white">{sections.length}</p>
-                      </div>
-                      <div className="min-w-[160px] flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-                        <p className="text-xs uppercase tracking-[0.2em] text-white/45">Products</p>
-                        <p className="mt-2 text-2xl font-semibold text-white">{offerings.length}</p>
-                      </div>
-                      <div className="min-w-[160px] flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-                        <p className="text-xs uppercase tracking-[0.2em] text-white/45">Current mode</p>
-                        <p className="mt-2 text-base font-semibold text-white">{selectedModeMeta.label}</p>
-                      </div>
-                    </div>
-                  </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-center sm:px-5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Total</p>
+                <p className="mt-1 text-xl font-bold text-white">{offerings.length}</p>
+              </div>
+              <div className="mx-4 w-px bg-white/10" />
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-teal-300">Live</p>
+                <p className="mt-1 text-xl font-bold text-teal-200">{liveCount}</p>
+              </div>
+              <div className="mx-4 w-px bg-white/10" />
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Drafts</p>
+                <p className="mt-1 text-xl font-bold text-white/70">{draftCount}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowCategoriesModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                title="Manage product categories, descriptions, and hero banners"
+              >
+                <Settings2 className="h-4 w-4 text-teal-300" />
+                Manage Categories
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60">
+                  {sections.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={openAddProductDrawer}
+                className="inline-flex items-center gap-2 rounded-xl bg-teal-400 px-4 py-2.5 text-sm font-semibold text-gray-950 shadow-[0_4px_20px_rgba(45,212,191,0.3)] transition hover:bg-teal-300 active:scale-95"
+              >
+                <Plus className="h-4 w-4 stroke-[2.5]" />
+                Add Product
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search & Filter & Column Selector Toolbar */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 lg:flex-row lg:items-center lg:justify-between">
+        {/* Search Input */}
+        <div className="relative flex-1 lg:max-w-md">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+          <input
+            type="text"
+            placeholder="Search products by title, subtitle, or ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-black/40 py-2 pl-10 pr-4 text-sm text-white placeholder-white/35 transition focus:border-teal-400/60 focus:outline-none focus:ring-1 focus:ring-teal-400/40"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Category Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/50">Category:</span>
+            <select
+              value={filterSectionId}
+              onChange={(e) => setFilterSectionId(e.target.value)}
+              className="rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs font-medium text-white transition focus:border-teal-400/60 focus:outline-none"
+            >
+              <option value="all" className="bg-gray-900">All Categories ({offerings.length})</option>
+              {sections.map((s) => {
+                const count = offerings.filter((o) => o.section_id === s.id).length;
+                return (
+                  <option key={s.id} value={s.id} className="bg-gray-900">
+                    {s.title} ({count})
+                  </option>
+                );
+              })}
+            </select>
+            <button
+              type="button"
+              onClick={() => setShowCategoriesModal(true)}
+              title="Configure categories & hero banners"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2 text-xs font-medium text-teal-300 transition hover:bg-white/10 hover:text-teal-200"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Manage</span>
+            </button>
+          </div>
+
+          {/* Status Filter Pills */}
+          <div className="flex rounded-xl border border-white/10 bg-white/[0.04] p-1">
+            {[
+              { id: "all", label: "All" },
+              { id: "live", label: "Live" },
+              { id: "draft", label: "Draft" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFilterStatus(tab.id)}
+                className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
+                  filterStatus === tab.id
+                    ? "bg-teal-300 text-gray-950 shadow-sm"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Column Visibility Selector Dropdown */}
+          <div className="relative" ref={columnPickerRef}>
+            <button
+              type="button"
+              onClick={() => setShowColumnPicker((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-white/75 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5 text-teal-300" />
+              Columns
+            </button>
+
+            {showColumnPicker && (
+              <div className="absolute right-0 z-30 mt-2 w-48 rounded-2xl border border-white/15 bg-gray-950 p-3 shadow-2xl backdrop-blur-md">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">Visible Columns</p>
+                <div className="space-y-2 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.category}
+                      onChange={() => toggleColumn("category")}
+                      className="rounded border-white/20 bg-black/40 text-teal-400 focus:ring-teal-400"
+                    />
+                    Category
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.price}
+                      onChange={() => toggleColumn("price")}
+                      className="rounded border-white/20 bg-black/40 text-teal-400 focus:ring-teal-400"
+                    />
+                    Price
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.deliveryMode}
+                      onChange={() => toggleColumn("deliveryMode")}
+                      className="rounded border-white/20 bg-black/40 text-teal-400 focus:ring-teal-400"
+                    />
+                    Delivery Mode
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-white/80 hover:text-white">
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns.status}
+                      onChange={() => toggleColumn("status")}
+                      className="rounded border-white/20 bg-black/40 text-teal-400 focus:ring-teal-400"
+                    />
+                    Status
+                  </label>
                 </div>
-                <div className="mt-5 space-y-4">
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowNewSectionForm((prev) => !prev)}
-                      className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100"
-                    >
-                      {showNewSectionForm ? "Hide new type" : "Add new product type"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowNewOfferingForm((prev) => !prev)}
-                      className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                      disabled={!selectedSectionId}
-                    >
-                      {showNewOfferingForm ? "Hide new product" : "Add new product"}
-                    </button>
-                  </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-                  {(showNewSectionForm || showNewOfferingForm) ? (
-                    <div className="flex flex-col gap-4 xl:flex-row">
-                      {showNewSectionForm ? (
-                        <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add product type</p>
-                          <div className="mt-4 space-y-3">
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>Type title</span>
-                              <input
-                                value={newSection.title}
-                                onChange={(event) => updateNewSection("title", event.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                placeholder="For example: Coaching"
-                              />
-                            </label>
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>Description</span>
-                              <SimpleEditor
-                                value={newSection.description}
-                                onChange={(value) => updateNewSection("description", value)}
-                                placeholder="Short description for this product type"
-                                minHeightClass="min-h-[10rem]"
-                              />
-                            </label>
-                            <div className="flex flex-wrap gap-3">
-                              <button
-                                type="button"
-                                onClick={handleCreateSection}
-                                disabled={isCreatingSection}
-                                className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                              >
-                                {isCreatingSection ? "Creating..." : "Add product type"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setShowNewSectionForm(false)}
-                                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
+      {/* Master Products Table with RIGID Fixed Column Layout */}
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-xl backdrop-blur-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full table-fixed text-left text-sm">
+            {/* Rigid Fixed Colgroup Definition */}
+            <colgroup>
+              <col className="w-[300px]" />
+              {visibleColumns.category && <col className="w-[170px]" />}
+              {visibleColumns.price && <col className="w-[140px]" />}
+              {visibleColumns.deliveryMode && <col className="w-[190px]" />}
+              {visibleColumns.status && <col className="w-[130px]" />}
+              <col className="w-[140px]" />
+            </colgroup>
 
-                      {showNewOfferingForm ? (
-                        <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Add product to selected type</p>
-                          <div className="mt-4 space-y-3">
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>Selected type</span>
-                              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
-                                {sectionsById[selectedSectionId]?.title || "Choose a type first"}
+            <thead className="border-b border-white/10 bg-white/[0.03] text-xs font-semibold uppercase tracking-wider text-white/50">
+              <tr>
+                <th scope="col" className="px-5 py-3.5 truncate">Product</th>
+                {visibleColumns.category && <th scope="col" className="px-4 py-3.5 truncate">Category</th>}
+                {visibleColumns.price && <th scope="col" className="px-4 py-3.5 truncate">Price</th>}
+                {visibleColumns.deliveryMode && <th scope="col" className="px-4 py-3.5 truncate">Delivery Mode</th>}
+                {visibleColumns.status && <th scope="col" className="px-4 py-3.5 truncate">Status</th>}
+                <th scope="col" className="px-5 py-3.5 text-right truncate">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {paginatedOfferings.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-white/50">
+                    <p className="font-semibold text-white/70">No products found</p>
+                    <p className="mt-1 text-xs text-white/40">
+                      {searchQuery || filterSectionId !== "all" || filterStatus !== "all"
+                        ? "Try clearing or adjusting your search filters above."
+                        : "Click 'Add Product' above to create your first offering."}
+                    </p>
+                    {(searchQuery || filterSectionId !== "all" || filterStatus !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setFilterSectionId("all");
+                          setFilterStatus("all");
+                        }}
+                        className="mt-3 rounded-xl border border-teal-300/30 bg-teal-300/10 px-3 py-1.5 text-xs font-medium text-teal-200 transition hover:bg-teal-300/20"
+                      >
+                        Reset filters
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ) : (
+                paginatedOfferings.map((offering) => {
+                  const modeMeta = offeringModeMeta[offering.cta_type || "checkout"] || offeringModeMeta.checkout;
+                  const sectionTitle = sectionsById[offering.section_id]?.title || offering.section_id;
+
+                  return (
+                    <tr
+                      key={offering.id}
+                      className="group transition-colors hover:bg-white/[0.02]"
+                    >
+                      {/* Product Thumbnail & Title (Rigid w-[300px]) */}
+                      <td className="px-5 py-4 overflow-hidden">
+                        <div className="flex items-center gap-3">
+                          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                            {offering.image_url ? (
+                              <img
+                                src={offering.image_url}
+                                alt={offering.image_alt || offering.title}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-white/30">
+                                <Package className="h-5 w-5" />
                               </div>
-                            </label>
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>Product title</span>
-                              <input
-                                value={newOffering.title}
-                                onChange={(event) => updateNewOffering("title", event.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                placeholder="For example: Private Mentorship"
-                              />
-                            </label>
-                            <div className="flex flex-col gap-3 sm:flex-row">
-                              <label className="block flex-1 space-y-1 text-xs text-white/60">
-                                <span>Subtitle</span>
-                                <input
-                                  value={newOffering.subtitle}
-                                  onChange={(event) => updateNewOffering("subtitle", event.target.value)}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                  placeholder="Optional subtitle"
-                                />
-                              </label>
-                              <label className="block flex-1 space-y-1 text-xs text-white/60">
-                                <span>Price (USD)</span>
-                                <input
-                                  value={newOffering.price_usd}
-                                  onChange={(event) => updateNewOffering("price_usd", event.target.value)}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                  placeholder="Optional"
-                                />
-                              </label>
-                            </div>
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>Sales mode</span>
-                              <select
-                                value={newOffering.cta_type || "checkout"}
-                                onChange={(event) => updateNewOffering("cta_type", event.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              >
-                                {ctaTypeOptions.map((option) => (
-                                  <option key={option.value} value={option.value} className="bg-gray-900">
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>Fulfilment mode</span>
-                              <select
-                                value={newOffering.fulfillment_mode || "digital"}
-                                onChange={(event) => updateNewOffering("fulfillment_mode", event.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              >
-                                {fulfillmentModeOptions.map((option) => (
-                                  <option key={option.value} value={option.value} className="bg-gray-900">
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <p className={`text-xs leading-relaxed ${offeringModeMeta[newOffering.cta_type || "checkout"]?.accentClass || "text-white/60"}`}>
-                              {offeringModeMeta[newOffering.cta_type || "checkout"]?.description}
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-semibold text-white group-hover:text-teal-200" title={offering.title}>
+                              {offering.title}
                             </p>
-                            <div className="flex flex-wrap gap-3">
-                              <button
-                                type="button"
-                                onClick={handleCreateOffering}
-                                disabled={isCreatingOffering || !selectedSectionId}
-                                className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                              >
-                                {isCreatingOffering ? "Creating..." : "Add product"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setShowNewOfferingForm(false)}
-                                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70"
-                              >
-                                Cancel
-                              </button>
-                            </div>
+                            <p className="truncate text-xs text-white/45" title={offering.subtitle || offering.id}>
+                              {offering.subtitle || offering.summary || offering.id}
+                            </p>
                           </div>
                         </div>
-                      ) : null}
-                    </div>
-                  ) : null}
+                      </td>
 
-                  <div className="flex flex-col gap-4 xl:flex-row">
-                    <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Browse types</p>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/55">{sections.length}</span>
-                      </div>
-                      <div className="mt-4 flex flex-col gap-2">
-                        {sections.map((section) => {
-                          const isSelected = section.id === selectedSectionId;
-                          const count = offeringsBySection[section.id]?.length || 0;
-                          return (
-                            <button
-                              key={section.id}
-                              type="button"
-                              onClick={() => setSelectedSectionId(section.id)}
-                              className={`rounded-2xl border px-4 py-3 text-left transition ${isSelected
-                                  ? "border-teal-300/35 bg-teal-300/10"
-                                  : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
-                                }`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-white">{section.title}</p>
-                                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/50">
-                                    {section.description || "No description yet."}
-                                  </p>
-                                </div>
-                                <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] text-white/50">
-                                  {count}
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
+                      {/* Category (Rigid w-[170px]) */}
+                      {visibleColumns.category && (
+                        <td className="px-4 py-4 text-xs overflow-hidden">
+                          <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 font-medium text-white/75 truncate" title={sectionTitle}>
+                            <Layers className="h-3 w-3 shrink-0 text-teal-300/70" />
+                            <span className="truncate">{sectionTitle}</span>
+                          </span>
+                        </td>
+                      )}
 
-                    <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Browse offers</p>
-                          <p className="mt-1 text-xs text-white/55">Choose the offer you want to edit.</p>
-                        </div>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/55">
-                          {offeringsForSelectedSection.length}
-                        </span>
-                      </div>
-                      <div className="mt-4 flex flex-col gap-2">
-                        {offeringsForSelectedSection.length ? (
-                          offeringsForSelectedSection.map((offering) => {
-                            const isSelected = offering.id === selectedOfferingId;
-                            const modeMeta = offeringModeMeta[offering.cta_type || "checkout"] || offeringModeMeta.checkout;
-                            return (
-                              <button
-                                key={offering.id}
-                                type="button"
-                                onClick={() => setSelectedOfferingId(offering.id)}
-                                className={`w-full overflow-hidden rounded-2xl border px-4 py-3 text-left transition ${isSelected
-                                    ? "border-teal-300/35 bg-teal-300/10"
-                                    : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
-                                  }`}
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-semibold text-white">{offering.title}</p>
-                                    <p className="mt-1 truncate text-xs text-white/50">{offering.subtitle || offering.summary || "No short copy yet."}</p>
-                                  </div>
-                                  <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${modeMeta.badgeClass}`}>
-                                    {modeMeta.label}
-                                  </span>
-                                </div>
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-white/45">
-                            No offers in this type yet.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                      {/* Price (Rigid w-[140px]) */}
+                      {visibleColumns.price && (
+                        <td className="px-4 py-4 text-xs font-semibold text-white overflow-hidden">
+                          {offering.price_usd ? (
+                            <span className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-emerald-300">
+                              ${offering.price_usd} USD
+                            </span>
+                          ) : (
+                            <span className="text-white/40">Free / Custom</span>
+                          )}
+                        </td>
+                      )}
 
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">
-                          Current type
-                        </p>
-                        <p className="mt-1 text-base font-semibold text-white">
-                          {selectedSection?.title || "No type selected"}
-                        </p>
-                      </div>
-                      <p className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
-                        {offeringsForSelectedSection.length} product{offeringsForSelectedSection.length === 1 ? "" : "s"} in this type
-                      </p>
-                    </div>
-                    {selectedSection ? (
-                      <div className="mt-4 space-y-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Type details</p>
-                        <div className="flex flex-col gap-3">
-                          <label className="block space-y-1 text-xs text-white/60">
-                            <span>Type title</span>
-                            <input
-                              value={selectedSection.title || ""}
-                              onChange={(event) => updateSectionEditor("title", event.target.value)}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                            />
-                          </label>
-                        </div>
-                        <label className="block space-y-1 text-xs text-white/60">
-                          <span>Description</span>
-                          <SimpleEditor
-                            value={selectedSection.description || ""}
-                            onChange={(value) => updateSectionEditor("description", value)}
-                            placeholder="Add paragraphs, lists, and formatted copy for this product type."
-                            minHeightClass="min-h-[10rem]"
-                          />
-                        </label>
-                        <div className="space-y-3 border-t border-white/10 pt-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Hero Section</p>
-                          <label className="block space-y-1 text-xs text-white/60">
-                            <span>Hero Title</span>
-                            <input
-                              value={selectedSection.hero_title || ""}
-                              onChange={(event) => updateSectionEditor("hero_title", event.target.value)}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              placeholder="Meet Your Manifestation Coach"
-                            />
-                          </label>
-                          <label className="block space-y-1 text-xs text-white/60">
-                            <span>Hero Subtitle</span>
-                            <input
-                              value={selectedSection.hero_subtitle || ""}
-                              onChange={(event) => updateSectionEditor("hero_subtitle", event.target.value)}
-                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              placeholder="High-Frequency Coaching & Mentorship"
-                            />
-                          </label>
-                          <label className="block space-y-1 text-xs text-white/60">
-                            <span>Hero Description</span>
-                            <SimpleEditor
-                              value={selectedSection.hero_description || ""}
-                              onChange={(value) => updateSectionEditor("hero_description", value)}
-                              placeholder="Hi, I'm Nehal Patel - a manifestation coach, energy reader, and your guide to quantum leaping into your dream reality..."
-                              minHeightClass="min-h-[12rem]"
-                            />
-                          </label>
-                          <label className="block space-y-1 text-xs text-white/60">
-                            <span>Hero Image</span>
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-3">
-                                <ImageUploader
-                                  label={uploadingTarget === "hero-image" ? "Uploading..." : "Upload hero image"}
-                                  disabled={uploadingTarget === "hero-image"}
-                                  onPick={handleHeroImageUpload}
-                                />
-                                {selectedSection.hero_image_url ? (
-                                <a
-                                  href={selectedSection.hero_image_url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-sm text-white/55 underline-offset-4 hover:text-white hover:underline"
-                                >
-                                  View current image
-                                </a>
-                              ) : null}
-                            </div>
+                      {/* Delivery Mode (Rigid w-[190px]) */}
+                      {visibleColumns.deliveryMode && (
+                        <td className="px-4 py-4 text-xs overflow-hidden">
+                          <div className="flex flex-col gap-1 items-start max-w-full">
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider truncate ${modeMeta.badgeClass}`}>
+                              {modeMeta.label}
+                            </span>
+                            <span className="text-[11px] text-white/40 capitalize truncate max-w-full">
+                              {offering.fulfillment_mode || "digital"}
+                              {offering.fulfillment_mode === "digital" && offering.digital_delivery_type ? ` (${offering.digital_delivery_type})` : ""}
+                            </span>
                           </div>
-                          </label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>CTA Label</span>
-                              <input
-                                value={selectedSection.hero_cta_label || ""}
-                                onChange={(event) => updateSectionEditor("hero_cta_label", event.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                placeholder="Details here"
-                              />
-                            </label>
-                            <label className="block space-y-1 text-xs text-white/60">
-                              <span>CTA Link</span>
-                              <input
-                                value={selectedSection.hero_cta_href || ""}
-                                onChange={(event) => updateSectionEditor("hero_cta_href", event.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                placeholder="#offerings"
-                              />
-                            </label>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(selectedSection.is_active)}
-                              onChange={(event) => updateSectionEditor("is_active", event.target.checked)}
-                            />
-                            Active type
-                          </label>
+                        </td>
+                      )}
+
+                      {/* Status Toggle Switch (Direct In-Table Toggle with Confirmation Guard) */}
+                      {visibleColumns.status && (
+                        <td className="px-4 py-4 text-xs overflow-hidden">
                           <button
                             type="button"
-                            onClick={handleSaveSection}
-                            disabled={isSavingSection}
-                            className="rounded-full border border-teal-300/50 bg-teal-300/10 px-4 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                            onClick={() => setStatusChangeCandidate({
+                              offering,
+                              nextStatus: !offering.is_active,
+                            })}
+                            title={offering.is_active ? "Click to unpublish (draft)" : "Click to publish live"}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold uppercase tracking-wider transition ${
+                              offering.is_active
+                                ? "border-teal-300/40 bg-teal-300/15 text-teal-200 hover:border-amber-400/50 hover:bg-amber-400/15 hover:text-amber-200"
+                                : "border-white/15 bg-white/5 text-white/45 hover:border-teal-300/50 hover:bg-teal-300/15 hover:text-teal-200"
+                            }`}
                           >
-                            {isSavingSection ? "Saving..." : "Save product type"}
+                            <span
+                              className={`h-2 w-2 rounded-full ${
+                                offering.is_active ? "bg-teal-300 shadow-[0_0_8px_rgba(45,212,191,0.8)]" : "bg-white/30"
+                              }`}
+                            />
+                            {offering.is_active ? "Live" : "Draft"}
+                          </button>
+                        </td>
+                      )}
+
+                      {/* Actions (Rigid w-[140px]) */}
+                      <td className="px-5 py-4 text-right overflow-hidden">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowNewOfferingForm(false);
+                              setSelectedOfferingId(offering.id);
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:border-teal-300/40 hover:bg-teal-300/10 hover:text-teal-200"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteCandidate(offering)}
+                            className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-1.5 text-white/40 transition hover:border-rose-400/40 hover:bg-rose-400/10 hover:text-rose-300"
+                            title="Delete product"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                      </div>
-                    ) : null}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Footer Controls */}
+        <div className="flex flex-col gap-3 border-t border-white/10 bg-white/[0.02] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 text-xs text-white/50">
+            <span>
+              Showing <strong className="text-white">{startIndex}</strong> to <strong className="text-white">{endIndex}</strong> of <strong className="text-white">{totalItems}</strong> products
+            </span>
+            <div className="flex items-center gap-1.5 border-l border-white/10 pl-3">
+              <span>Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-xs text-white focus:border-teal-400 focus:outline-none"
+              >
+                <option value={10} className="bg-gray-900">10</option>
+                <option value={25} className="bg-gray-900">25</option>
+                <option value={50} className="bg-gray-900">50</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 disabled:pointer-events-none disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Prev
+            </button>
+
+            <span className="px-2 text-xs font-semibold text-white/60">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10 disabled:pointer-events-none disabled:opacity-40"
+            >
+              Next
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* UNIFIED SLIDE-OVER DRAWER: Used for both Add Product & Edit Product       */}
+      {/* ========================================================================= */}
+      {isDrawerOpen && drawerOffering && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={closeDrawer}
+          />
+
+          <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
+            <div className="w-screen max-w-2xl border-l border-white/15 bg-gray-950 shadow-2xl flex flex-col justify-between">
+              {/* Drawer Header */}
+              <div className="border-b border-white/10 px-6 py-5">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 pr-4">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${drawerModeMeta.badgeClass}`}>
+                        {drawerModeMeta.label}
+                      </span>
+                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-wider ${
+                        isCreateMode
+                          ? "border-amber-300/30 bg-amber-300/10 text-amber-200"
+                          : drawerOffering.is_active
+                            ? "border-teal-300/30 bg-teal-300/10 text-teal-200"
+                            : "border-white/10 text-white/40"
+                      }`}>
+                        {isCreateMode ? "New Product" : drawerOffering.is_active ? "Published Live" : "Draft"}
+                      </span>
+                    </div>
+                    <h3 className="mt-2 truncate text-xl font-bold text-white">
+                      {isCreateMode ? "Create New Product" : drawerOffering.title || "Untitled Product"}
+                    </h3>
+                    {!isCreateMode && (
+                      <p className="truncate font-mono text-xs text-white/40">ID: {drawerOffering.id}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeDrawer}
+                    className="rounded-full border border-white/10 bg-white/5 p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Drawer Body - Scrollable Form (100% of fields for both Add & Edit) */}
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                {/* 1. Basic Information */}
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">Basic Information</p>
+                  
+                  <label className="block space-y-1 text-xs text-white/60">
+                    <span>Product Title *</span>
+                    <input
+                      value={drawerOffering.title || ""}
+                      onChange={(e) => drawerUpdater("title", e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                      placeholder="e.g. 1-on-1 Breakthrough Session"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="block space-y-1 text-xs text-white/60">
+                      <span>Category / Type *</span>
+                      <select
+                        value={drawerOffering.section_id || selectedSectionId || sections[0]?.id || ""}
+                        onChange={(e) => drawerUpdater("section_id", e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                      >
+                        {sections.map((s) => (
+                          <option key={s.id} value={s.id} className="bg-gray-900">
+                            {s.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="block space-y-1 text-xs text-white/60">
+                      <span>Display Price (USD) *</span>
+                      <input
+                        value={drawerOffering.price_usd ?? ""}
+                        onChange={(e) => drawerUpdater("price_usd", e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                        placeholder="e.g. 150"
+                      />
+                    </label>
                   </div>
 
-                  {editor ? (
-                    <div className="space-y-4">
-                      <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_28%),linear-gradient(180deg,rgba(12,18,30,0.94),rgba(9,14,24,0.98))]">
-                        <div className="flex flex-col lg:flex-row">
-                          <div className="flex-1 p-6">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${selectedModeMeta.badgeClass}`}>
-                                {selectedModeMeta.label}
-                              </span>
-                              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-white/50">
-                                {editor.is_active ? "Live" : "Draft"}
-                              </span>
-                            </div>
-                            <h3 className="mt-5 text-3xl font-semibold text-white">{editor.title || "Untitled product"}</h3>
-                            {editor.subtitle ? (
-                              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">{editor.subtitle}</p>
-                            ) : null}
-                            <p className="mt-5 max-w-2xl text-sm leading-relaxed text-white/72">
-                              {editor.summary || "Add a summary. This is the main storefront copy shown on product cards and reused on the detail page."}
-                            </p>
-                          </div>
-                          <div className="border-t border-white/10 p-6 text-sm text-white/65 lg:w-[340px] lg:border-l lg:border-t-0">
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Storefront preview guide</p>
-                            <div className="mt-5 space-y-4">
-                              <div>
-                                <p className="font-semibold text-white">Card display</p>
-                                <p className="mt-1 text-white/55">Title, subtitle, summary, price, and image.</p>
-                              </div>
-                              <div>
-                                <p className="font-semibold text-white">Fulfilment flow</p>
-                                <p className={`mt-1 ${selectedModeMeta.accentClass}`}>{selectedModeMeta.description}</p>
-                              </div>
-                              <div>
-                                <p className="font-semibold text-white">Current type</p>
-                                <p className="mt-1 text-white/55">{sectionsById[editor.section_id]?.title || editor.section_id}</p>
-                              </div>
-                              <div>
-                                <p className="font-semibold text-white">Internal ID</p>
-                                <p className="mt-1 break-all font-mono text-xs text-white/45">{editor.id}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-4">
-                        <div className="min-w-0 space-y-4">
-                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">What customers see</p>
-                            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                              {[
-                                ["title", "Title"],
-                                ["subtitle", "Subtitle"],
-                                ["price_usd", "Displayed price (USD)"],
-                                ["cta_label", "Legacy button label"],
-                              ].map(([key, label]) => (
-                                <label key={key} className="min-w-[220px] flex-1 space-y-1 text-xs text-white/60">
-                                  <span>{label}</span>
-                                  <input
-                                    value={editor[key] ?? ""}
-                                    onChange={(event) => updateEditor(key, event.target.value)}
-                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                  />
-                                </label>
-                              ))}
-                            </div>
+                  <label className="block space-y-1 text-xs text-white/60">
+                    <span>Subtitle</span>
+                    <input
+                      value={drawerOffering.subtitle || ""}
+                      onChange={(e) => drawerUpdater("subtitle", e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                      placeholder="Short tagline shown below title"
+                    />
+                  </label>
+                </div>
 
-                            <label className="mt-3 block space-y-1 text-xs text-white/60">
-                              <span className="inline-flex items-center gap-1.5">
-                                Summary
-                                <AdminInfoHint text="Shown on offer cards and reused as the opening copy on the detail page." />
-                              </span>
-                              <textarea
-                                value={editor.summary || ""}
-                                onChange={(event) => updateEditor("summary", event.target.value)}
-                                rows={3}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                              />
-                            </label>
+                {/* 2. Storefront Copy & Media */}
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">Storefront Copy & Media</p>
+                  
+                  <label className="block space-y-1 text-xs text-white/60">
+                    <span className="inline-flex items-center gap-1.5">
+                      Summary
+                      <AdminInfoHint text="Shown on offer cards and reused as the opening copy on the detail page." />
+                    </span>
+                    <textarea
+                      value={drawerOffering.summary || ""}
+                      onChange={(e) => drawerUpdater("summary", e.target.value)}
+                      rows={3}
+                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                      placeholder="Brief 1-2 sentence overview of what this offer is..."
+                    />
+                  </label>
 
-                            <label className="mt-3 block space-y-1 text-xs text-white/60">
-                              <span className="inline-flex items-center gap-1.5">
-                                Long description
-                                <AdminInfoHint text="Use this for the detailed story, transformation, or delivery explanation." />
-                              </span>
-                              <SimpleEditor
-                                value={editor.long_description || ""}
-                                onChange={(value) => updateEditor("long_description", value)}
-                                minHeightClass="min-h-[12rem]"
-                                placeholder="Use paragraphs, bullet lists, and emphasis for the full offer story."
-                              />
-                            </label>
+                  <label className="block space-y-1 text-xs text-white/60">
+                    <span className="inline-flex items-center gap-1.5">
+                      Long Description
+                      <AdminInfoHint text="Use this for the detailed story, transformation, curriculum, or delivery explanation." />
+                    </span>
+                    <SimpleEditor
+                      value={drawerOffering.long_description || ""}
+                      onChange={(value) => drawerUpdater("long_description", value)}
+                      minHeightClass="min-h-[10rem]"
+                      placeholder="Write the full description with formatting, bullet points, etc..."
+                    />
+                  </label>
 
-                            <div className="mt-3 space-y-2">
-                              <span className="inline-flex items-center gap-1.5 text-xs text-white/60">
-                                Product image
-                                <AdminInfoHint text="This image is used on storefront cards and product detail sections." />
-                              </span>
-                              <div className="flex flex-wrap items-center gap-3">
-                                <ImageUploader
-                                  label={uploadingTarget === "offering-image" ? "Uploading..." : "Upload product image"}
-                                  disabled={uploadingTarget === "offering-image"}
-                                  onPick={handleOfferingImageUpload}
-                                />
-                                {editor.image_url ? (
-                                  <a
-                                    href={editor.image_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-sm text-white/55 underline-offset-4 hover:text-white hover:underline"
-                                  >
-                                    Preview image
-                                  </a>
-                                ) : null}
-                              </div>
-                            </div>
-
-                            {[
-                              ["image_url", "Image URL"],
-                              ["image_alt", "Image alt"],
-                            ].map(([key, label]) => (
-                              <label key={key} className="mt-3 block space-y-1 text-xs text-white/60">
-                                <span>{label}</span>
-                                <input
-                                  value={editor[key] ?? ""}
-                                  onChange={(event) => updateEditor(key, event.target.value)}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                />
-                              </label>
-                            ))}
-                          </div>
-
-                        </div>
-
-                        <div className="min-w-0 space-y-4">
-                          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Fulfilment and publishing</p>
-                            <div className="mt-4 flex flex-col gap-3">
-                              <label className="space-y-1 text-xs text-white/60">
-                                <span>Sales mode</span>
-                                <select
-                                  value={editor.cta_type || "checkout"}
-                                  onChange={(event) => updateEditor("cta_type", event.target.value)}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                >
-                                  {ctaTypeOptions.map((option) => (
-                                    <option key={option.value} value={option.value} className="bg-gray-900">
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label className="space-y-1 text-xs text-white/60">
-                                <span>Fulfilment mode</span>
-                                <select
-                                  value={editor.fulfillment_mode || "digital"}
-                                  onChange={(event) => updateEditor("fulfillment_mode", event.target.value)}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                >
-                                  {fulfillmentModeOptions.map((option) => (
-                                    <option key={option.value} value={option.value} className="bg-gray-900">
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-xs leading-relaxed text-white/60">
-                                {fulfillmentModeMeta[editor.fulfillment_mode || "digital"]?.description}
-                              </div>
-                              {editor.fulfillment_mode === "digital" ? (
-                                <div className="space-y-3 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-4">
-                                  <label className="space-y-1 text-xs text-white/60">
-                                    <span>Digital product type</span>
-                                    <select
-                                      value={editor.digital_delivery_type || "download"}
-                                      onChange={(event) => updateEditor("digital_delivery_type", event.target.value)}
-                                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                    >
-                                      <option value="download" className="bg-gray-900">Download or external link</option>
-                                      <option value="course" className="bg-gray-900">Course access</option>
-                                    </select>
-                                  </label>
-                                  {editor.digital_delivery_type === "download" ? (
-                                    <div className="space-y-3">
-                                      <label className="block space-y-1 text-xs text-white/60">
-                                        <span>External delivery URL</span>
-                                        <input
-                                          value={editor.delivery_url || ""}
-                                          onChange={(event) => updateEditor("delivery_url", event.target.value)}
-                                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                          placeholder="https://..."
-                                        />
-                                      </label>
-                                      <div className="flex flex-wrap items-center gap-3">
-                                        <label className="inline-flex cursor-pointer rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/75 hover:bg-white/10">
-                                          <input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleOfferingDeliveryUpload}
-                                            disabled={uploadingTarget === "offering-delivery"}
-                                          />
-                                          {uploadingTarget === "offering-delivery" ? "Uploading..." : "Upload delivery file"}
-                                        </label>
-                                        {editor.delivery_url ? (
-                                          <a href={editor.delivery_url} target="_blank" rel="noreferrer" className="text-xs text-teal-200 underline-offset-4 hover:underline">
-                                            Open current delivery
-                                          </a>
-                                        ) : null}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <p className="text-xs leading-relaxed text-white/55">
-                                      An active course linked to this product is required before publishing.
-                                    </p>
-                                  )}
-                                  <label className="block space-y-1 text-xs text-white/60">
-                                    <span>Access expiry (days, optional)</span>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      value={editor.access_expiry_days || ""}
-                                      onChange={(event) => updateEditor("access_expiry_days", event.target.value)}
-                                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                      placeholder="No expiry"
-                                    />
-                                  </label>
-                                </div>
-                              ) : null}
-                              {editor.fulfillment_mode === "reading" ? (
-                                <label className="block space-y-1 rounded-2xl border border-rose-300/20 bg-rose-300/5 p-4 text-xs text-white/60">
-                                  <span>Reading email body (plain text)</span>
-                                  <textarea
-                                    value={editor.reading_email_body || ""}
-                                    onChange={(event) => updateEditor("reading_email_body", event.target.value)}
-                                    rows={8}
-                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                    placeholder="This text is inserted into the branded reading email after payment."
-                                  />
-                                </label>
-                              ) : null}
-                              <div className={`rounded-xl border px-3 py-3 text-sm ${selectedModeMeta.badgeClass}`}>
-                                {selectedModeMeta.description}
-                              </div>
-
-                              {editor.cta_type === "booking" ? (
-                                <div className="space-y-3 rounded-2xl border border-teal-300/20 bg-teal-300/5 p-4">
-                                  <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-teal-200/80">
-                                      Booking sync
-                                    </p>
-                                    <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${editor.booking_status === "synced"
-                                        ? "border border-teal-300/30 bg-teal-300/10 text-teal-100"
-                                        : editor.booking_status === "failed"
-                                          ? "border border-rose-300/30 bg-rose-300/10 text-rose-100"
-                                          : "border border-amber-300/30 bg-amber-300/10 text-amber-100"
-                                      }`}>
-                                      {editor.booking_status || "pending"}
-                                    </span>
-                                  </div>
-                                  <div className="flex flex-col gap-3 sm:flex-row">
-                                    <label className="flex-1 space-y-1 text-xs text-white/60">
-                                      <span>Booking CTA label</span>
-                                      <input
-                                        value={editor.booking_cta_label || ""}
-                                        onChange={(event) => updateEditor("booking_cta_label", event.target.value)}
-                                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                        placeholder="Book now"
-                                      />
-                                    </label>
-                                    <label className="flex-1 space-y-1 text-xs text-white/60">
-                                      <span>Duration (minutes)</span>
-                                      <input
-                                        type="number"
-                                        min="15"
-                                        step="15"
-                                        value={editor.duration_minutes ?? 60}
-                                        onChange={(event) => updateEditor("duration_minutes", event.target.value)}
-                                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                      />
-                                    </label>
-                                  </div>
-                                  <div className="space-y-2 text-xs text-white/60">
-                                    <div className="flex flex-row justify-between">
-                                      <span className="block">Cal.com booking link</span>
-                                      {editor.booking_url ? (
-                                        <div className="space-y-2">
-                                          <a
-                                            href={editor.booking_url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="inline-flex items-center text-xs font-semibold text-teal-200 underline-offset-4 hover:underline"
-                                          >
-                                            Open booking page
-                                          </a>
-                                        </div>
-                                      ) : ''}</div>
-                                    <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-3">
-                                      {editor.booking_url ? (
-                                        <div className="space-y-2">
-                                          <p className="break-all text-sm text-white/75">{editor.booking_url}</p>
-                                        </div>
-                                      ) : (
-                                        <p className="text-sm text-white/45">
-                                          A booking link will appear here after the event sync succeeds.
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <p className="text-[11px] leading-relaxed text-white/45">
-                                    Guest additions are disabled on the Cal.com event. The booked attendee can still share their own calendar invite externally.
-                                  </p>
-                                  {editor.booking_last_error ? (
-                                    <p className="text-xs leading-relaxed text-rose-200">{editor.booking_last_error}</p>
-                                  ) : null}
-                                </div>
-                              ) : null}
-
-                              <label className="space-y-1 text-xs text-white/60">
-                                <span>Fallback support link</span>
-                                <input
-                                  value={editor.action_link || ""}
-                                  onChange={(event) => updateEditor("action_link", event.target.value)}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                  placeholder="Use mailto: or a manual recovery page"
-                                />
-                              </label>
-                              <label className="space-y-1 text-xs text-white/60">
-                                <span className="inline-flex items-center gap-1.5">
-                                  Fallback helper message
-                                  <AdminInfoHint text="Shown when checkout or booking cannot be completed automatically." />
-                                </span>
-                                <textarea
-                                  value={editor.checkout_fallback_message || ""}
-                                  onChange={(event) => updateEditor("checkout_fallback_message", event.target.value)}
-                                  rows={3}
-                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
-                                />
-                              </label>
-
-                              <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/60">
-                                Status: {editor.is_active ? "published" : "draft"}. Saving edits creates a draft; publish explicitly to make a new version live.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="sticky bottom-4 z-50 mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-teal-300/20 bg-black/80 px-4 py-3 shadow-2xl backdrop-blur-md sm:flex-nowrap">
-                        <button
-                          type="button"
-                          onClick={handleSaveOffering}
-                          disabled={isSavingOffering}
-                          className="rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
+                  {/* Product Image */}
+                  <div className="space-y-2 border-t border-white/10 pt-3">
+                    <span className="text-xs text-white/60">Product Image</span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <ImageUploader
+                        label={uploadingTarget === "offering-image" ? "Uploading..." : "Upload product image"}
+                        disabled={uploadingTarget === "offering-image"}
+                        onPick={handleOfferingImageUpload}
+                      />
+                      {drawerOffering.image_url ? (
+                        <a
+                          href={drawerOffering.image_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-teal-300 underline-offset-4 hover:underline"
                         >
-                          {isSavingOffering ? "Saving..." : "Save product"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveOffering({ publishVersion: true })}
-                          disabled={isSavingOffering}
-                          className="rounded-full border border-teal-300/50 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
-                        >
-                          {isSavingOffering ? "Publishing..." : "Publish version"}
-                        </button>
-                        <p className="hidden text-sm text-white/45 md:block">
-                          Edits are scoped to the selected product only.
-                        </p>
-                      </div>
+                          <ExternalLink className="h-3 w-3" />
+                          Preview current image
+                        </a>
+                      ) : null}
                     </div>
-                  ) : (
-                    <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/60">
-                      No products found for this type yet.
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 pt-2">
+                      <label className="block space-y-1 text-xs text-white/50">
+                        <span>Image URL</span>
+                        <input
+                          value={drawerOffering.image_url || ""}
+                          onChange={(e) => drawerUpdater("image_url", e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-teal-400 focus:outline-none"
+                        />
+                      </label>
+                      <label className="block space-y-1 text-xs text-white/50">
+                        <span>Image Alt Text</span>
+                        <input
+                          value={drawerOffering.image_alt || ""}
+                          onChange={(e) => drawerUpdater("image_alt", e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-teal-400 focus:outline-none"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Sales & Fulfillment Modes */}
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">Sales & Fulfillment</p>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="space-y-1 text-xs text-white/60">
+                      <span>Sales Mode</span>
+                      <select
+                        value={drawerOffering.cta_type || "checkout"}
+                        onChange={(e) => drawerUpdater("cta_type", e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                      >
+                        {ctaTypeOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value} className="bg-gray-900">
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="space-y-1 text-xs text-white/60">
+                      <span>Fulfilment Mode</span>
+                      <select
+                        value={drawerOffering.fulfillment_mode || "digital"}
+                        onChange={(e) => drawerUpdater("fulfillment_mode", e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                      >
+                        {fulfillmentModeOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value} className="bg-gray-900">
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/65">
+                    {fulfillmentModeMeta[drawerOffering.fulfillment_mode || "digital"]?.description}
+                  </div>
+
+                  {/* Digital Delivery Configuration */}
+                  {drawerOffering.fulfillment_mode === "digital" && (
+                    <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 space-y-3">
+                      <label className="block space-y-1 text-xs text-white/70">
+                        <span>Digital Product Type</span>
+                        <select
+                          value={drawerOffering.digital_delivery_type || "download"}
+                          onChange={(e) => drawerUpdater("digital_delivery_type", e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                        >
+                          <option value="download" className="bg-gray-900">Download file or external link</option>
+                          <option value="course" className="bg-gray-900">Course access (requires linked course)</option>
+                        </select>
+                      </label>
+
+                      {drawerOffering.digital_delivery_type === "download" ? (
+                        <div className="space-y-2">
+                          <label className="block space-y-1 text-xs text-white/60">
+                            <span>External Delivery URL</span>
+                            <input
+                              value={drawerOffering.delivery_url || ""}
+                              onChange={(e) => drawerUpdater("delivery_url", e.target.value)}
+                              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                              placeholder="https://..."
+                            />
+                          </label>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/10">
+                              <input
+                                type="file"
+                                className="hidden"
+                                onChange={handleOfferingDeliveryUpload}
+                                disabled={uploadingTarget === "offering-delivery"}
+                              />
+                              {uploadingTarget === "offering-delivery" ? "Uploading file..." : "Upload delivery file"}
+                            </label>
+                            {drawerOffering.delivery_url && (
+                              <a
+                                href={drawerOffering.delivery_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-teal-300 underline hover:text-teal-200"
+                              >
+                                View current delivery file
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-white/60">
+                          To publish, ensure an active course is linked to this product in the Courses tab.
+                        </p>
+                      )}
+
+                      <label className="block space-y-1 text-xs text-white/60">
+                        <span>Access Expiry (Days, optional)</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={drawerOffering.access_expiry_days || ""}
+                          onChange={(e) => drawerUpdater("access_expiry_days", e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                          placeholder="No expiry (unlimited)"
+                        />
+                      </label>
                     </div>
                   )}
+
+                  {/* Reading Configuration */}
+                  {drawerOffering.fulfillment_mode === "reading" && (
+                    <div className="rounded-xl border border-rose-300/20 bg-rose-300/5 p-4 space-y-2">
+                      <label className="block space-y-1 text-xs text-white/70">
+                        <span>Reading Email Body (Plain Text)</span>
+                        <textarea
+                          value={drawerOffering.reading_email_body || ""}
+                          onChange={(e) => drawerUpdater("reading_email_body", e.target.value)}
+                          rows={6}
+                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                          placeholder="This text is automatically sent in the branded reading email after payment..."
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Booking Sync Configuration */}
+                  {drawerOffering.cta_type === "booking" && (
+                    <div className="rounded-xl border border-teal-300/20 bg-teal-300/5 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-teal-300">Cal.com Booking Sync</span>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${
+                          drawerOffering.booking_status === "synced"
+                            ? "bg-teal-400/10 text-teal-300 border border-teal-400/20"
+                            : "bg-amber-400/10 text-amber-300 border border-amber-400/20"
+                        }`}>
+                          {drawerOffering.booking_status || "Pending sync"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="block space-y-1 text-xs text-white/60">
+                          <span>Booking CTA Label</span>
+                          <input
+                            value={drawerOffering.booking_cta_label || ""}
+                            onChange={(e) => drawerUpdater("booking_cta_label", e.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                            placeholder="Book session"
+                          />
+                        </label>
+                        <label className="block space-y-1 text-xs text-white/60">
+                          <span>Duration (Minutes)</span>
+                          <input
+                            type="number"
+                            min="15"
+                            step="15"
+                            value={drawerOffering.duration_minutes ?? 60}
+                            onChange={(e) => drawerUpdater("duration_minutes", e.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                          />
+                        </label>
+                      </div>
+
+                      {drawerOffering.booking_url ? (
+                        <div className="rounded-xl border border-white/10 bg-black/30 p-2.5 text-xs">
+                          <p className="text-white/40">Cal.com event URL:</p>
+                          <a
+                            href={drawerOffering.booking_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="break-all font-mono text-teal-300 underline"
+                          >
+                            {drawerOffering.booking_url}
+                          </a>
+                        </div>
+                      ) : null}
+
+                      {drawerOffering.booking_last_error ? (
+                        <p className="text-xs text-rose-300">
+                          Sync error: {drawerOffering.booking_last_error}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {/* Fallback Support & Details */}
+                  <div className="space-y-3 border-t border-white/10 pt-3">
+                    <label className="block space-y-1 text-xs text-white/50">
+                      <span>Legacy Button Label (Optional)</span>
+                      <input
+                        value={drawerOffering.cta_label || ""}
+                        onChange={(e) => drawerUpdater("cta_label", e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white focus:border-teal-400 focus:outline-none"
+                        placeholder="Buy now"
+                      />
+                    </label>
+
+                    <label className="block space-y-1 text-xs text-white/50">
+                      <span>Fallback Support Link</span>
+                      <input
+                        value={drawerOffering.action_link || ""}
+                        onChange={(e) => drawerUpdater("action_link", e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white focus:border-teal-400 focus:outline-none"
+                        placeholder="mailto:support@example.com"
+                      />
+                    </label>
+
+                    <label className="block space-y-1 text-xs text-white/50">
+                      <span>Fallback Helper Message</span>
+                      <textarea
+                        value={drawerOffering.checkout_fallback_message || ""}
+                        onChange={(e) => drawerUpdater("checkout_fallback_message", e.target.value)}
+                        rows={2}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-white focus:border-teal-400 focus:outline-none"
+                        placeholder="Message shown if automatic checkout is unavailable."
+                      />
+                    </label>
+                  </div>
                 </div>
-              </section>
+              </div>
+
+              {/* Drawer Footer Actions */}
+              <div className="border-t border-white/10 bg-black/60 px-6 py-4 backdrop-blur-md">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={closeDrawer}
+                    className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/10 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isCreateMode) {
+                          handleCreateOffering({ publishVersion: false });
+                        } else {
+                          handleSaveOffering({ publishVersion: false });
+                        }
+                      }}
+                      disabled={isCreateMode ? isCreatingOffering : isSavingOffering}
+                      className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 disabled:opacity-50"
+                    >
+                      {isCreateMode
+                        ? isCreatingOffering ? "Creating Draft..." : "Create as Draft"
+                        : isSavingOffering ? "Saving..." : "Save Draft"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isCreateMode) {
+                          handleCreateOffering({ publishVersion: true });
+                        } else {
+                          handleSaveOffering({ publishVersion: true });
+                        }
+                      }}
+                      disabled={isCreateMode ? isCreatingOffering : isSavingOffering}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-teal-400 px-5 py-2 text-sm font-semibold text-gray-950 shadow-[0_4px_15px_rgba(45,212,191,0.3)] transition hover:bg-teal-300 disabled:opacity-50"
+                    >
+                      <Check className="h-4 w-4 stroke-[2.5]" />
+                      {isCreateMode
+                        ? isCreatingOffering ? "Publishing..." : "Create & Publish Live"
+                        : isSavingOffering ? "Publishing..." : "Publish Live"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: Manage Categories / Types                                          */}
+      {/* ========================================================================= */}
+      {showCategoriesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowCategoriesModal(false)}
+          />
+          <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col rounded-3xl border border-white/15 bg-gray-950 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">Manage Product Categories & Types</h3>
+                <p className="text-xs text-white/50">Edit category titles, descriptions, and hero banners</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCategoriesModal(false)}
+                className="rounded-full border border-white/10 bg-white/5 p-1.5 text-white/60 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Split Content: Category List on left, Selected Category Editor on right */}
+            <div className="grid flex-1 overflow-hidden grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
+              {/* Left Column: Categories List */}
+              <div className="border-b border-white/10 md:border-b-0 md:border-r p-4 overflow-y-auto space-y-2 bg-black/20">
+                <button
+                  type="button"
+                  onClick={() => setShowNewSectionInModal((prev) => !prev)}
+                  className="w-full mb-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-teal-300/40 bg-teal-300/10 py-2 text-xs font-semibold text-teal-200 hover:bg-teal-300/20"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {showNewSectionInModal ? "Cancel New Type" : "Add Product Type"}
+                </button>
+
+                {sections.map((section) => {
+                  const isSelected = !showNewSectionInModal && section.id === selectedSectionId;
+                  const count = offerings.filter((o) => o.section_id === section.id).length;
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSectionId(section.id);
+                        setShowNewSectionInModal(false);
+                      }}
+                      className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium transition flex items-center justify-between ${
+                        isSelected
+                          ? "bg-teal-300/15 text-teal-200 border border-teal-300/30"
+                          : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
+                      }`}
+                    >
+                      <span className="truncate">{section.title}</span>
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/50">
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right Column: Editor Form */}
+              <div className="p-6 overflow-y-auto space-y-5">
+                {showNewSectionInModal ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">New Product Type</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowNewSectionInModal(false)}
+                        className="text-xs text-white/50 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                    <label className="block space-y-1 text-xs text-white/60">
+                      <span>Type Title *</span>
+                      <input
+                        value={newSection.title}
+                        onChange={(e) => updateNewSection("title", e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                        placeholder="e.g. Coaching"
+                      />
+                    </label>
+
+                    <label className="block space-y-1 text-xs text-white/60">
+                      <span>Description</span>
+                      <SimpleEditor
+                        value={newSection.description}
+                        onChange={(val) => updateNewSection("description", val)}
+                        minHeightClass="min-h-[8rem]"
+                        placeholder="Short description for this category..."
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={handleCreateSection}
+                      disabled={isCreatingSection}
+                      className="rounded-xl bg-teal-400 px-4 py-2 text-xs font-semibold text-gray-950 transition hover:bg-teal-300 disabled:opacity-50"
+                    >
+                      {isCreatingSection ? "Creating..." : "Save Product Type"}
+                    </button>
+                  </div>
+                ) : selectedSection ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">
+                        Editing: {selectedSection.title}
+                      </p>
+                      <label className="inline-flex items-center gap-2 text-xs text-white/80">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(selectedSection.is_active)}
+                          onChange={(e) => updateSectionEditor("is_active", e.target.checked)}
+                          className="rounded border-white/20 bg-black/40 text-teal-400 focus:ring-teal-400"
+                        />
+                        Active Category
+                      </label>
+                    </div>
+
+                    <label className="block space-y-1 text-xs text-white/60">
+                      <span>Category Title</span>
+                      <input
+                        value={selectedSection.title || ""}
+                        onChange={(e) => updateSectionEditor("title", e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-400 focus:outline-none"
+                      />
+                    </label>
+
+                    <label className="block space-y-1 text-xs text-white/60">
+                      <span>Description</span>
+                      <SimpleEditor
+                        value={selectedSection.description || ""}
+                        onChange={(val) => updateSectionEditor("description", val)}
+                        minHeightClass="min-h-[8rem]"
+                        placeholder="Description for this category..."
+                      />
+                    </label>
+
+                    {/* Hero Section Banner Settings */}
+                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-white/50">Category Hero Banner</p>
+                      
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="block space-y-1 text-xs text-white/60">
+                          <span>Hero Title</span>
+                          <input
+                            value={selectedSection.hero_title || ""}
+                            onChange={(e) => updateSectionEditor("hero_title", e.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-teal-400 focus:outline-none"
+                          />
+                        </label>
+                        <label className="block space-y-1 text-xs text-white/60">
+                          <span>Hero Subtitle</span>
+                          <input
+                            value={selectedSection.hero_subtitle || ""}
+                            onChange={(e) => updateSectionEditor("hero_subtitle", e.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-teal-400 focus:outline-none"
+                          />
+                        </label>
+                      </div>
+
+                      <label className="block space-y-1 text-xs text-white/60">
+                        <span>Hero Description</span>
+                        <SimpleEditor
+                          value={selectedSection.hero_description || ""}
+                          onChange={(val) => updateSectionEditor("hero_description", val)}
+                          minHeightClass="min-h-[8rem]"
+                          placeholder="Hero copy..."
+                        />
+                      </label>
+
+                      <div className="space-y-2 border-t border-white/10 pt-2">
+                        <span className="text-xs text-white/60">Hero Image</span>
+                        <div className="flex items-center gap-3">
+                          <ImageUploader
+                            label={uploadingTarget === "hero-image" ? "Uploading..." : "Upload hero image"}
+                            disabled={uploadingTarget === "hero-image"}
+                            onPick={handleHeroImageUpload}
+                          />
+                          {selectedSection.hero_image_url && (
+                            <a
+                              href={selectedSection.hero_image_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-teal-300 underline"
+                            >
+                              View image
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <label className="block space-y-1 text-xs text-white/60">
+                          <span>CTA Label</span>
+                          <input
+                            value={selectedSection.hero_cta_label || ""}
+                            onChange={(e) => updateSectionEditor("hero_cta_label", e.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-teal-400 focus:outline-none"
+                          />
+                        </label>
+                        <label className="block space-y-1 text-xs text-white/60">
+                          <span>CTA Link</span>
+                          <input
+                            value={selectedSection.hero_cta_href || ""}
+                            onChange={(e) => updateSectionEditor("hero_cta_href", e.target.value)}
+                            className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-xs text-white focus:border-teal-400 focus:outline-none"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveSection}
+                      disabled={isSavingSection}
+                      className="rounded-xl bg-teal-400 px-5 py-2 text-xs font-semibold text-gray-950 transition hover:bg-teal-300 disabled:opacity-50"
+                    >
+                      {isSavingSection ? "Saving..." : "Save Category Changes"}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/50">Select a category on the left to edit its details.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: Status Change Confirmation Guard                                    */}
+      {/* ========================================================================= */}
+      {statusChangeCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setStatusChangeCandidate(null)}
+          />
+          <div className="relative w-full max-w-md rounded-3xl border border-white/15 bg-gray-950 p-6 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className={`rounded-xl p-2.5 border ${
+                statusChangeCandidate.nextStatus
+                  ? "bg-teal-400/10 border-teal-400/20 text-teal-300"
+                  : "bg-amber-400/10 border-amber-400/20 text-amber-300"
+              }`}>
+                {statusChangeCandidate.nextStatus ? (
+                  <Globe className="h-5 w-5" />
+                ) : (
+                  <FileText className="h-5 w-5" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  {statusChangeCandidate.nextStatus ? "Publish Product Live?" : "Set Product to Draft?"}
+                </h3>
+                <p className="text-xs text-white/50">Status change confirmation</p>
+              </div>
+            </div>
+
+            <p className="mt-4 text-sm text-white/75 leading-relaxed">
+              Are you sure you want to {statusChangeCandidate.nextStatus ? "publish" : "unpublish"}{" "}
+              <strong className="text-white font-semibold">"{statusChangeCandidate.offering.title}"</strong>?
+            </p>
+
+            <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/60 space-y-1">
+              {statusChangeCandidate.nextStatus ? (
+                <>
+                  <p>• This product will immediately become visible to visitors on your storefront.</p>
+                  <p>• Customers will be able to proceed through checkout or booking.</p>
+                </>
+              ) : (
+                <>
+                  <p>• This product will be hidden from storefront visitors.</p>
+                  <p>• Existing customer purchases and past records remain completely safe and untouched.</p>
+                </>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setStatusChangeCandidate(null)}
+                className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const { offering, nextStatus } = statusChangeCandidate;
+                  setStatusChangeCandidate(null);
+                  await handleTogglePublishOffering(offering.id, !nextStatus);
+                }}
+                className={`rounded-xl px-4 py-2 text-xs font-semibold shadow transition ${
+                  statusChangeCandidate.nextStatus
+                    ? "bg-teal-400 text-gray-950 hover:bg-teal-300"
+                    : "bg-amber-400 text-gray-950 hover:bg-amber-300"
+                }`}
+              >
+                {statusChangeCandidate.nextStatus ? "Yes, Publish Live" : "Yes, Set to Draft"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: Delete Product Confirmation                                        */}
+      {/* ========================================================================= */}
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setDeleteCandidate(null)}
+          />
+          <div className="relative w-full max-w-md rounded-3xl border border-rose-400/20 bg-gray-950 p-6 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-300">
+              <div className="rounded-xl bg-rose-400/10 p-2 border border-rose-400/20">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Delete Product?</h3>
+            </div>
+
+            <p className="mt-3 text-sm text-white/70">
+              Are you sure you want to permanently delete{" "}
+              <span className="font-semibold text-white">"{deleteCandidate.title}"</span>?
+            </p>
+
+            <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/50 space-y-1">
+              <p>• Removes this product and its checkout configuration.</p>
+              <p>• If customer purchases exist for this product, the database will block deletion. In that case, simply set it to <strong>Draft</strong> instead.</p>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteCandidate(null)}
+                className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingOffering}
+                onClick={async () => {
+                  await handleDeleteOffering(deleteCandidate.id);
+                  setDeleteCandidate(null);
+                }}
+                className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-rose-600 disabled:opacity-50"
+              >
+                {isDeletingOffering ? "Deleting..." : "Delete Product"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 };
 

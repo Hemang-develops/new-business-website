@@ -87,6 +87,7 @@ export default function useCatalogAdminSaves({
   reviewsEditor,
   savedReviewsSnapshot,
   sections,
+  selectedOfferingId,
   selectedSection,
   selectedSectionId,
   setNewOffering,
@@ -104,6 +105,7 @@ export default function useCatalogAdminSaves({
 }) {
   const [isSavingSection, setIsSavingSection] = useState(false);
   const [isSavingOffering, setIsSavingOffering] = useState(false);
+  const [isDeletingOffering, setIsDeletingOffering] = useState(false);
   const [isSavingGlobal, setIsSavingGlobal] = useState(false);
   const [isSavingSite, setIsSavingSite] = useState(false);
   const [isSavingReviews, setIsSavingReviews] = useState(false);
@@ -397,9 +399,10 @@ export default function useCatalogAdminSaves({
     }
   };
 
-  const handleCreateOffering = async () => {
-    const title = newOffering.title.trim();
-    if (!selectedSectionId) {
+  const handleCreateOffering = async ({ publishVersion = false } = {}) => {
+    const title = (newOffering.title || "").trim();
+    const targetSectionId = newOffering.section_id || selectedSectionId || sections[0]?.id;
+    if (!targetSectionId) {
       setStatus({ type: "error", message: "Select a product type before creating a product." });
       return;
     }
@@ -420,46 +423,48 @@ export default function useCatalogAdminSaves({
         nextId = `${baseId}-${counter}`;
       }
 
-      const scopedOfferings = offerings.filter((entry) => entry.section_id === selectedSectionId);
+      const scopedOfferings = offerings.filter((entry) => entry.section_id === targetSectionId);
       const ctaType = newOffering.cta_type === "booking" ? "booking" : "checkout";
       const fulfillmentMode = newOffering.fulfillment_mode || "digital";
-      const checkoutEnabled = ctaType === "checkout" || ctaType === "booking";
+      const bookingEnabled = ctaType === "booking";
+      const checkoutEnabled = ctaType === "checkout" || bookingEnabled;
       const priceUsd = parseUsdPrice(newOffering.price_usd);
       if (priceUsd == null) {
         setStatus({ type: "error", message: "Add a USD price before creating a paid product." });
         return;
       }
+
       const payload = {
         id: nextId,
-        section_id: selectedSectionId,
+        section_id: targetSectionId,
         sort_order: scopedOfferings.length,
-        is_active: false,
+        is_active: Boolean(publishVersion),
         title,
-        subtitle: newOffering.subtitle.trim() || null,
-        summary: null,
-        long_description: null,
+        subtitle: newOffering.subtitle?.trim() || null,
+        summary: newOffering.summary || null,
+        long_description: newOffering.long_description || null,
         price_usd: newOffering.price_usd || null,
         cta_type: ctaType,
         fulfillment_mode: fulfillmentMode,
-        digital_delivery_type: fulfillmentMode === "digital" ? "download" : null,
-        delivery_url: null,
-        reading_email_body: null,
-        access_expiry_days: null,
+        digital_delivery_type: fulfillmentMode === "digital" ? newOffering.digital_delivery_type || "download" : null,
+        delivery_url: fulfillmentMode === "digital" ? newOffering.delivery_url || null : null,
+        reading_email_body: fulfillmentMode === "reading" ? newOffering.reading_email_body || null : null,
+        access_expiry_days: newOffering.access_expiry_days ? Number(newOffering.access_expiry_days) : null,
         fulfillment_version: 1,
-        cta_label: null,
-        action_link: null,
-        checkout_fallback_message: null,
-        image_url: null,
-        image_alt: null,
-        booking_enabled: ctaType === "booking",
-        booking_provider: ctaType === "booking" ? "calcom" : null,
+        cta_label: newOffering.cta_label || null,
+        action_link: newOffering.action_link || null,
+        checkout_fallback_message: newOffering.checkout_fallback_message || null,
+        image_url: newOffering.image_url || null,
+        image_alt: newOffering.image_alt || null,
+        booking_enabled: bookingEnabled,
+        booking_provider: bookingEnabled ? "calcom" : null,
         booking_status: "pending",
-        booking_external_id: null,
-        booking_url: null,
-        booking_cta_label: ctaType === "booking" ? "Book now" : null,
-        duration_minutes: 60,
-        session_format: "google-meet",
-        host_id: defaultCalcomHostId || null,
+        booking_external_id: newOffering.booking_external_id || null,
+        booking_url: bookingEnabled ? newOffering.booking_url || null : null,
+        booking_cta_label: bookingEnabled ? newOffering.booking_cta_label || "Book now" : null,
+        duration_minutes: bookingEnabled ? Number(newOffering.duration_minutes || 60) : null,
+        session_format: bookingEnabled ? "google-meet" : null,
+        host_id: bookingEnabled ? newOffering.host_id || defaultCalcomHostId || null : null,
         booking_last_error: null,
       };
 
@@ -474,17 +479,121 @@ export default function useCatalogAdminSaves({
         enabled: checkoutEnabled,
       });
 
+      let syncedFields = {
+        booking_status: payload.booking_status,
+        booking_external_id: payload.booking_external_id,
+        booking_url: payload.booking_url,
+        booking_provider: payload.booking_provider,
+        booking_last_error: null,
+      };
+
+      if (bookingEnabled) {
+        const bookingSyncResult = await syncBookingOffering({
+          id: payload.id,
+          title: payload.title,
+          summary: payload.summary || "",
+          is_active: Boolean(payload.is_active),
+          cta_type: ctaType,
+          booking_enabled: bookingEnabled,
+          booking_provider: "calcom",
+          booking_external_id: null,
+          duration_minutes: Number(payload.duration_minutes || 60),
+          session_format: "google-meet",
+          host_id: payload.host_id || defaultCalcomHostId || null,
+        });
+
+        syncedFields = {
+          booking_status: bookingSyncResult.booking_status || "failed",
+          booking_external_id: bookingSyncResult.booking_external_id || null,
+          booking_url: bookingSyncResult.booking_url || null,
+          booking_provider: "calcom",
+          booking_last_error: bookingSyncResult.booking_last_error || null,
+        };
+
+        await supabase
+          .from(offeringsTable)
+          .update({
+            booking_status: syncedFields.booking_status,
+            booking_external_id: syncedFields.booking_external_id,
+            booking_url: syncedFields.booking_url,
+            booking_provider: syncedFields.booking_provider,
+            booking_last_error: syncedFields.booking_last_error,
+            booking_last_synced_at: syncedFields.booking_status === "synced" ? new Date().toISOString() : null,
+          })
+          .eq("id", payload.id);
+      }
+
+      const createdOffering = { ...payload, ...syncedFields };
       setOfferings((prev) =>
-        [...prev, payload].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)),
+        [...prev, createdOffering].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)),
       );
-      setSelectedOfferingId(payload.id);
-      setNewOffering({ title: "", subtitle: "", price_usd: "", cta_type: "checkout", fulfillment_mode: "digital" });
+      setSelectedSectionId(targetSectionId);
       setShowNewOfferingForm(false);
-      setStatus({ type: "success", message: "Product created successfully." });
+      setSelectedOfferingId(payload.id);
+      setStatus({
+        type: syncedFields.booking_status === "failed" ? "error" : "success",
+        message:
+          syncedFields.booking_status === "failed"
+            ? syncedFields.booking_last_error || "Product created, but booking sync failed."
+            : publishVersion
+              ? "Product created and published live."
+              : "Product draft created successfully.",
+      });
     } catch (error) {
       setStatus({ type: "error", message: error?.message || "Unable to create product." });
     } finally {
       setIsCreatingOffering(false);
+    }
+  };
+
+  const handleDeleteOffering = async (offeringId) => {
+    if (!offeringId) return;
+    setIsDeletingOffering(true);
+    setStatus({ type: "idle", message: "" });
+    try {
+      await supabase.from(checkoutConfigsTable).delete().eq("product_id", offeringId);
+      const { error } = await supabase.from(offeringsTable).delete().eq("id", offeringId);
+      if (error) {
+        if (error.code === "23503") {
+          throw new Error(
+            "Cannot delete product because customer purchases or course access records are linked to it. Toggle it to Draft instead to hide it from visitors.",
+          );
+        }
+        throw error;
+      }
+
+      setOfferings((prev) => prev.filter((entry) => entry.id !== offeringId));
+      if (selectedOfferingId === offeringId) {
+        setSelectedOfferingId("");
+      }
+      setStatus({ type: "success", message: "Product deleted successfully." });
+    } catch (error) {
+      setStatus({ type: "error", message: error?.message || "Unable to delete product." });
+    } finally {
+      setIsDeletingOffering(false);
+    }
+  };
+
+  const handleTogglePublishOffering = async (offeringId, currentActive) => {
+    if (!offeringId) return;
+    setStatus({ type: "idle", message: "" });
+    try {
+      const nextActive = !currentActive;
+      const { error } = await supabase
+        .from(offeringsTable)
+        .update({ is_active: nextActive })
+        .eq("id", offeringId);
+      if (error) throw error;
+
+      setOfferings((prev) =>
+        prev.map((entry) => (entry.id === offeringId ? { ...entry, is_active: nextActive } : entry)),
+      );
+      setStatus({
+        type: "success",
+        message: nextActive ? "Product is now live on storefront." : "Product unpublished (set to draft).",
+      });
+    } catch (error) {
+      setStatus({ type: "error", message: error?.message || "Unable to update product status." });
     }
   };
 
@@ -755,13 +864,16 @@ export default function useCatalogAdminSaves({
   return {
     handleCreateOffering,
     handleCreateSection,
+    handleDeleteOffering,
     handleSaveGlobalContent,
     handleSaveOffering,
     handleSaveReviews,
     handleSaveSection,
     handleSaveSiteSettings,
+    handleTogglePublishOffering,
     isCreatingOffering,
     isCreatingSection,
+    isDeletingOffering,
     isSavingGlobal,
     isSavingOffering,
     isSavingReviews,
