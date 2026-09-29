@@ -1,7 +1,7 @@
 import { SimpleEditor } from "../../components/tiptap-templates/simple/simple-editor";
 import AdminInfoHint from "./AdminInfoHint";
 import ImageUploader from "@/components/ui/ImageUploader";
-import { ctaTypeOptions, offeringModeMeta } from "./catalogAdminConfig";
+import { ctaTypeOptions, fulfillmentModeMeta, fulfillmentModeOptions, offeringModeMeta } from "./catalogAdminConfig";
 
 const ProductsTab = ({ state, actions }) => {
   const {
@@ -29,6 +29,7 @@ const ProductsTab = ({ state, actions }) => {
     handleCreateOffering,
     handleCreateSection,
     handleHeroImageUpload,
+    handleOfferingDeliveryUpload,
     handleOfferingImageUpload,
     handleSaveOffering,
     handleSaveSection,
@@ -173,9 +174,9 @@ const ProductsTab = ({ state, actions }) => {
                               </label>
                             </div>
                             <label className="block space-y-1 text-xs text-white/60">
-                              <span>Fulfilment mode</span>
+                              <span>Sales mode</span>
                               <select
-                                value={newOffering.cta_type || "contact"}
+                                value={newOffering.cta_type || "checkout"}
                                 onChange={(event) => updateNewOffering("cta_type", event.target.value)}
                                 className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                               >
@@ -186,8 +187,22 @@ const ProductsTab = ({ state, actions }) => {
                                 ))}
                               </select>
                             </label>
-                            <p className={`text-xs leading-relaxed ${offeringModeMeta[newOffering.cta_type || "contact"]?.accentClass || "text-white/60"}`}>
-                              {offeringModeMeta[newOffering.cta_type || "contact"]?.description}
+                            <label className="block space-y-1 text-xs text-white/60">
+                              <span>Fulfilment mode</span>
+                              <select
+                                value={newOffering.fulfillment_mode || "digital"}
+                                onChange={(event) => updateNewOffering("fulfillment_mode", event.target.value)}
+                                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                              >
+                                {fulfillmentModeOptions.map((option) => (
+                                  <option key={option.value} value={option.value} className="bg-gray-900">
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <p className={`text-xs leading-relaxed ${offeringModeMeta[newOffering.cta_type || "checkout"]?.accentClass || "text-white/60"}`}>
+                              {offeringModeMeta[newOffering.cta_type || "checkout"]?.description}
                             </p>
                             <div className="flex flex-wrap gap-3">
                               <button
@@ -263,7 +278,7 @@ const ProductsTab = ({ state, actions }) => {
                         {offeringsForSelectedSection.length ? (
                           offeringsForSelectedSection.map((offering) => {
                             const isSelected = offering.id === selectedOfferingId;
-                            const modeMeta = offeringModeMeta[offering.cta_type || "contact"] || offeringModeMeta.contact;
+                            const modeMeta = offeringModeMeta[offering.cta_type || "checkout"] || offeringModeMeta.checkout;
                             return (
                               <button
                                 key={offering.id}
@@ -563,9 +578,9 @@ const ProductsTab = ({ state, actions }) => {
                             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Fulfilment and publishing</p>
                             <div className="mt-4 flex flex-col gap-3">
                               <label className="space-y-1 text-xs text-white/60">
-                                <span>Fulfilment mode</span>
+                                <span>Sales mode</span>
                                 <select
-                                  value={editor.cta_type || "contact"}
+                                  value={editor.cta_type || "checkout"}
                                   onChange={(event) => updateEditor("cta_type", event.target.value)}
                                   className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
                                 >
@@ -576,6 +591,94 @@ const ProductsTab = ({ state, actions }) => {
                                   ))}
                                 </select>
                               </label>
+                              <label className="space-y-1 text-xs text-white/60">
+                                <span>Fulfilment mode</span>
+                                <select
+                                  value={editor.fulfillment_mode || "digital"}
+                                  onChange={(event) => updateEditor("fulfillment_mode", event.target.value)}
+                                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                >
+                                  {fulfillmentModeOptions.map((option) => (
+                                    <option key={option.value} value={option.value} className="bg-gray-900">
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-xs leading-relaxed text-white/60">
+                                {fulfillmentModeMeta[editor.fulfillment_mode || "digital"]?.description}
+                              </div>
+                              {editor.fulfillment_mode === "digital" ? (
+                                <div className="space-y-3 rounded-2xl border border-amber-300/20 bg-amber-300/5 p-4">
+                                  <label className="space-y-1 text-xs text-white/60">
+                                    <span>Digital product type</span>
+                                    <select
+                                      value={editor.digital_delivery_type || "download"}
+                                      onChange={(event) => updateEditor("digital_delivery_type", event.target.value)}
+                                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                    >
+                                      <option value="download" className="bg-gray-900">Download or external link</option>
+                                      <option value="course" className="bg-gray-900">Course access</option>
+                                    </select>
+                                  </label>
+                                  {editor.digital_delivery_type === "download" ? (
+                                    <div className="space-y-3">
+                                      <label className="block space-y-1 text-xs text-white/60">
+                                        <span>External delivery URL</span>
+                                        <input
+                                          value={editor.delivery_url || ""}
+                                          onChange={(event) => updateEditor("delivery_url", event.target.value)}
+                                          className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                          placeholder="https://..."
+                                        />
+                                      </label>
+                                      <div className="flex flex-wrap items-center gap-3">
+                                        <label className="inline-flex cursor-pointer rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/75 hover:bg-white/10">
+                                          <input
+                                            type="file"
+                                            className="hidden"
+                                            onChange={handleOfferingDeliveryUpload}
+                                            disabled={uploadingTarget === "offering-delivery"}
+                                          />
+                                          {uploadingTarget === "offering-delivery" ? "Uploading..." : "Upload delivery file"}
+                                        </label>
+                                        {editor.delivery_url ? (
+                                          <a href={editor.delivery_url} target="_blank" rel="noreferrer" className="text-xs text-teal-200 underline-offset-4 hover:underline">
+                                            Open current delivery
+                                          </a>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs leading-relaxed text-white/55">
+                                      An active course linked to this product is required before publishing.
+                                    </p>
+                                  )}
+                                  <label className="block space-y-1 text-xs text-white/60">
+                                    <span>Access expiry (days, optional)</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={editor.access_expiry_days || ""}
+                                      onChange={(event) => updateEditor("access_expiry_days", event.target.value)}
+                                      className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                      placeholder="No expiry"
+                                    />
+                                  </label>
+                                </div>
+                              ) : null}
+                              {editor.fulfillment_mode === "reading" ? (
+                                <label className="block space-y-1 rounded-2xl border border-rose-300/20 bg-rose-300/5 p-4 text-xs text-white/60">
+                                  <span>Reading email body (plain text)</span>
+                                  <textarea
+                                    value={editor.reading_email_body || ""}
+                                    onChange={(event) => updateEditor("reading_email_body", event.target.value)}
+                                    rows={8}
+                                    className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                                    placeholder="This text is inserted into the branded reading email after payment."
+                                  />
+                                </label>
+                              ) : null}
                               <div className={`rounded-xl border px-3 py-3 text-sm ${selectedModeMeta.badgeClass}`}>
                                 {selectedModeMeta.description}
                               </div>
@@ -675,14 +778,9 @@ const ProductsTab = ({ state, actions }) => {
                                 />
                               </label>
 
-                              <label className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(editor.is_active)}
-                                  onChange={(event) => updateEditor("is_active", event.target.checked)}
-                                />
-                                Active
-                              </label>
+                              <p className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/60">
+                                Status: {editor.is_active ? "published" : "draft"}. Saving edits creates a draft; publish explicitly to make a new version live.
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -696,6 +794,14 @@ const ProductsTab = ({ state, actions }) => {
                           className="rounded-full bg-teal-300 px-5 py-2 text-sm font-semibold text-gray-900 shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
                         >
                           {isSavingOffering ? "Saving..." : "Save product"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveOffering({ publishVersion: true })}
+                          disabled={isSavingOffering}
+                          className="rounded-full border border-teal-300/50 bg-teal-300/10 px-5 py-2 text-sm font-semibold text-teal-100 disabled:opacity-60"
+                        >
+                          {isSavingOffering ? "Publishing..." : "Publish version"}
                         </button>
                         <p className="hidden text-sm text-white/45 md:block">
                           Edits are scoped to the selected product only.

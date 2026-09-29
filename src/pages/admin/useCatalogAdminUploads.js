@@ -1,5 +1,5 @@
 import { supabase } from "../../supabase-client";
-import { slugify, storageBucket } from "./catalogAdminHelpers";
+import { courseStorageBucket, slugify, storageBucket } from "./catalogAdminHelpers";
 import { processImageToWebP } from "../../lib/imageUtils";
 
 export default function useCatalogAdminUploads({
@@ -48,7 +48,7 @@ export default function useCatalogAdminUploads({
     const safeBaseName = slugify(file.name.replace(/\.[^/.]+$/, "")) || "file";
     const filePath = `${folder}/${Date.now()}-${safeBaseName}.${extension}`;
 
-    const { error: uploadError } = await supabase.storage.from(storageBucket).upload(filePath, file, {
+    const { error: uploadError } = await supabase.storage.from(courseStorageBucket).upload(filePath, file, {
       cacheControl: "3600",
       upsert: false,
     });
@@ -75,6 +75,28 @@ export default function useCatalogAdminUploads({
       setStatus({ type: "success", message: "Product image uploaded successfully." });
     } catch (error) {
       setStatus({ type: "error", message: error?.message || "Unable to upload product image." });
+    } finally {
+      setUploadingTarget("");
+    }
+  };
+
+  const handleOfferingDeliveryUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !editor) return;
+
+    setUploadingTarget("offering-delivery");
+    setStatus({ type: "idle", message: "" });
+    try {
+      const filePath = await uploadFileToStorage(file, `offerings/${editor.id}/delivery`);
+      const { data } = supabase.storage.from(storageBucket).getPublicUrl(filePath);
+      if (!data?.publicUrl) {
+        throw new Error("File uploaded, but a delivery URL could not be generated.");
+      }
+      updateEditor("delivery_url", data.publicUrl);
+      setStatus({ type: "success", message: "Digital delivery file uploaded successfully." });
+    } catch (error) {
+      setStatus({ type: "error", message: error?.message || "Unable to upload delivery file." });
     } finally {
       setUploadingTarget("");
     }
@@ -163,6 +185,7 @@ export default function useCatalogAdminUploads({
     handleCourseMediaUpload,
     handleHeroImageUpload,
     handleOfferingImageUpload,
+    handleOfferingDeliveryUpload,
     handleProfileImageUpload,
     handleReviewImageUpload,
   };

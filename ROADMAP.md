@@ -47,6 +47,44 @@ make website proper for diff screen sizes
 ## Future scope:
 29. different type of admin with different permissions
 
+## Test Findings (2026-07-29)
+
+- Email confirmation failure: sign-up smoke test returned "Error sending confirmation email". Likely causes: SMTP not configured in Supabase Auth, or SMTP credentials invalid. This blocks user sign-up confirmation and should be resolved before public launch.
+
+- `course-access-fulfill` invocation logs (from latest smoke run):
+
+        - "Request received. Auth header present: true"
+        - "[Fulfill] Checking for Admin session..."
+        - "[Fulfill] Internal secret check: Invalid/Missing"
+        - "[Fulfill] Unauthorized attempt."
+        - "[Fulfill] Auth error: invalid claim: missing sub claim"
+
+        These indicate the fulfillment function is receiving a request without a valid admin/service-session or required secret; ensure `SUPABASE_SERVICE_ROLE_KEY` and any function-specific secrets/webhook signing secrets are set for the function runtime and that invocations include expected auth metadata.
+
+Action items from tests:
+1. Verify and configure SMTP for Supabase Auth (or the configured email provider) so confirmation emails send successfully.
+2. Ensure server-only secrets are present in Supabase Functions (service role key and webhook secrets) and that the fulfillment function validates & receives expected auth claims.
+3. Re-run smoke tests after fixes and record results here.
+
+Additional logged issues (2026-07-30):
+
+- Send email failures (detailed):
+        - Symptom: Sign-up confirmation returned "Error sending confirmation email" during smoke tests.
+        - Location: `supabase/functions/_shared/course-fulfillment.ts` -> `sendEmail()` uses `RESEND_API_KEY` and `EMAIL_FROM`.
+        - Next steps: capture the Resend API response body for failed sends, verify `RESEND_API_KEY` and `EMAIL_FROM` values in function secrets, and confirm Supabase Auth SMTP settings if using SMTP instead of Resend.
+
+- Course access fulfillment invocation (detailed):
+        - Symptom: `course-access-fulfill` logged missing/invalid auth ("Internal secret check: Invalid/Missing" and "invalid claim: missing sub claim"). Smoke test reported an "unknown" invoke status when calling from the admin client.
+        - Location: `supabase/functions/course-access-fulfill` and shared helpers in `supabase/functions/_shared/course-fulfillment.ts`.
+        - Next steps: ensure `FULFILLMENT_SECRET` (or valid admin JWT) is set for automated invocations, add server-side logging of the function invoke response bodies, and add a local dev fallback to skip sending real emails during smoke runs.
+
+New action items:
+4. Add a `DEV_SKIP_EMAIL` (or `NODE_ENV=development`) fallback in `supabase/functions/_shared/course-fulfillment.ts` to avoid sending real emails during local E2E/smoke runs.
+5. Improve smoke-test logging to print the full invoke response body from `admin.functions.invoke` (helpful for debugging fulfillment failures).
+6. If the current `FULFILLMENT_SECRET` is unknown, rotate it in Supabase and update local dev secrets and any callers.
+7. adding temp stripe_webhook_secret for testing, need to change to live once live
+
+
 
 ## Architecture Diagrams
 

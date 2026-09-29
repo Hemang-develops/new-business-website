@@ -37,6 +37,8 @@ import { offeringModeMeta, siteSectionEditorMeta } from "./catalogAdminConfig";
 import {
   defaultCalcomHostId,
   adminNotificationsTable,
+  purchasesTable,
+  newsletterSubscriptionsTable,
   adminDashboardSummaryView,
   offeringPerformanceAnalyticsView,
   userLearningPathView,
@@ -57,6 +59,7 @@ import {
 import NewsletterTab from "./NewsletterTab";
 import AnalyticsTab from "./AnalyticsTab";
 import ContentAuditTab from "./ContentAuditTab";
+import LegalDocumentsManager from "../../components/admin/LegalDocumentsManager";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -69,6 +72,7 @@ const adminTabs = [
   { id: "shared", label: "Checkout Content", icon: Layers3 },
   { id: "reviews", label: "Reviews", icon: MessageSquareQuote },
   { id: "fulfillment", label: "Fulfillment", icon: CheckCircle2 },
+  { id: "legal-documents", label: "Legal Docs", icon: FileSearch },
 ];
 
 const CatalogAdmin = () => {
@@ -104,6 +108,8 @@ const CatalogAdmin = () => {
   const [courseModules, setCourseModules] = useState([]);
   const [courseAccess, setCourseAccess] = useState([]);
   const [adminNotifications, setAdminNotifications] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [newsletterSubscriptions, setNewsletterSubscriptions] = useState([]);
   const [dashboardSummaryViewData, setDashboardSummaryViewData] = useState(null);
   const [offeringAnalytics, setOfferingAnalytics] = useState([]);
   const [userLearningPaths, setUserLearningPaths] = useState([]);
@@ -138,7 +144,8 @@ const CatalogAdmin = () => {
     title: "",
     subtitle: "",
     price_usd: "",
-    cta_type: "contact",
+    cta_type: "checkout",
+    fulfillment_mode: "digital",
   });
 
   useGsapPulse(adminRef, "[data-gsap-pulse]", [isLoadingData]);
@@ -183,14 +190,64 @@ const CatalogAdmin = () => {
   const getSectionIdForOffering = (offeringId) =>
     offerings.find((entry) => entry.id === offeringId)?.section_id || "";
   const selectedCourse = courses.find((course) => course.id === selectedCourseId) || courses[0] || null;
+  const dashboardPurchaseRows = useMemo(() => purchases.map((purchase, index) => ({
+    id: index + 1,
+    name: purchase.customer_name || purchase.customer_email || "Unknown customer",
+    offering: purchase.offering?.title || purchase.offering_id || "Unknown offering",
+    purchaseDate: purchase.created_at ? new Date(purchase.created_at).toLocaleDateString() : "—",
+    amount: Number(purchase.amount || 0) / 100,
+    currency: String(purchase.currency || "USD").toUpperCase(),
+    country: purchase.country || "—",
+    purchaseCount: 1,
+    paymentStatus: purchase.status || "paid",
+    deliveryStatus: purchase.delivery_status || "pending",
+    paymentProvider: purchase.payment_provider || "—",
+  })), [purchases]);
+  const dashboardChartData = useMemo(() => {
+    const now = new Date();
+    const days = Array.from({ length: 90 }, (_, index) => {
+      const date = new Date(now);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (89 - index));
+      return { date: date.toISOString().slice(0, 10), purchases: 0, subscribers: 0 };
+    });
+    const byDate = new Map(days.map((entry) => [entry.date, entry]));
+    purchases.forEach((purchase) => {
+      const date = new Date(purchase.created_at).toISOString().slice(0, 10);
+      const entry = byDate.get(date);
+      if (entry && purchase.status === "paid") entry.purchases += 1;
+    });
+    newsletterSubscriptions.forEach((subscription) => {
+      const date = new Date(subscription.created_at).toISOString().slice(0, 10);
+      const entry = byDate.get(date);
+      if (entry && subscription.status === "subscribed") entry.subscribers += 1;
+    });
+    return days;
+  }, [newsletterSubscriptions, purchases]);
   const dashboardStats = useMemo(() => {
     const activeAccess = courseAccess.filter((entry) => !entry.revoked_at && (!entry.expires_at || new Date(entry.expires_at).getTime() >= Date.now()));
-    const volumeByCurrency = courseAccess.reduce((acc, entry) => {
+    const volumeByCurrency = purchases.reduce((acc, entry) => {
       const currency = String(entry.currency || "unknown").toUpperCase();
       acc[currency] = (acc[currency] || 0) + (Number(entry.amount) || 0);
       return acc;
     }, {});
-    const courseRevenueLabel = Object.entries(volumeByCurrency)
+    const purchaseVolumeLabel = Object.entries(volumeByCurrency)
+      .filter(([, amount]) => amount > 0)
+      .map(([currency, amount]) => `${currency} ${(amount / 100).toLocaleString()}`)
+      .join(" / ");
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const paidPurchases = purchases.filter((purchase) => purchase.status === "paid");
+    const activePurchases = paidPurchases.filter((purchase) => !purchase.expires_at || new Date(purchase.expires_at).getTime() >= Date.now());
+    const recentPurchases = paidPurchases.filter((purchase) => new Date(purchase.created_at).getTime() >= sevenDaysAgo);
+    const recentRevenueByCurrency = paidPurchases
+      .filter((purchase) => new Date(purchase.created_at).getTime() >= thirtyDaysAgo)
+      .reduce((acc, purchase) => {
+        const currency = String(purchase.currency || "unknown").toUpperCase();
+        acc[currency] = (acc[currency] || 0) + (Number(purchase.amount) || 0);
+        return acc;
+      }, {});
+    const recentRevenueLabel = Object.entries(recentRevenueByCurrency)
       .filter(([, amount]) => amount > 0)
       .map(([currency, amount]) => `${currency} ${(amount / 100).toLocaleString()}`)
       .join(" / ");
@@ -199,9 +256,16 @@ const CatalogAdmin = () => {
       return {
         totalCourses: dashboardSummaryViewData.total_courses ?? courses.length,
         activeCourseAccess: activeAccess.length,
-        totalCoursePurchases: courseAccess.length,
-        courseRevenueLabel: courseRevenueLabel || "No payments yet",
-        recentNotifications: adminNotifications.slice(0, 8),
+        totalCoursePurchases: purchases.length,
+        courseRevenueLabel: purchaseVolumeLabel || "No payments yet",
+        recentNotifications: [],
+        purchases: dashboardPurchaseRows,
+        chartData: dashboardChartData,
+        totalSubscribers: newsletterSubscriptions.filter((entry) => entry.status === "subscribed").length,
+        activePurchases: activePurchases.length,
+        courseEnrollments: courseAccess.length,
+        newPurchases7d: recentPurchases.length,
+        revenue30d: recentRevenueLabel || "No volume",
         dashboardSummaryViewData,
       };
     }
@@ -209,11 +273,18 @@ const CatalogAdmin = () => {
     return {
       totalCourses: courses.length,
       activeCourseAccess: activeAccess.length,
-      totalCoursePurchases: courseAccess.length,
-      courseRevenueLabel: courseRevenueLabel || "No payments yet",
-      recentNotifications: adminNotifications.slice(0, 8),
+      totalCoursePurchases: purchases.length,
+      courseRevenueLabel: purchaseVolumeLabel || "No payments yet",
+      recentNotifications: [],
+      purchases: dashboardPurchaseRows,
+      chartData: dashboardChartData,
+      totalSubscribers: newsletterSubscriptions.filter((entry) => entry.status === "subscribed").length,
+      activePurchases: activePurchases.length,
+      courseEnrollments: courseAccess.length,
+      newPurchases7d: recentPurchases.length,
+      revenue30d: recentRevenueLabel || "No volume",
     };
-  }, [adminNotifications, courseAccess, courses.length, dashboardSummaryViewData]);
+  }, [courseAccess, courses.length, dashboardChartData, dashboardPurchaseRows, dashboardSummaryViewData, newsletterSubscriptions, purchases, purchases.length]);
   const selectedAdminTab = adminTabs.find((tab) => tab.id === activeAdminTab) || adminTabs[0];
   const adminContentOffsetClass = isSidebarExpanded
     ? "md:pl-[6.25rem] lg:pl-[19.5rem]"
@@ -266,6 +337,8 @@ const CatalogAdmin = () => {
           supabase.from(courseModulesTable).select("*").order("sort_order", { ascending: true }),
           supabase.from(courseItemsTable).select("*").order("sort_order", { ascending: true }),
           supabase.from(courseAccessTable).select("*").order("created_at", { ascending: false }),
+          supabase.from(purchasesTable).select("*, offering:storefront_offerings(title)").order("created_at", { ascending: false }),
+          supabase.from(newsletterSubscriptionsTable).select("status,created_at"),
           supabase.from(adminNotificationsTable).select("*").order("created_at", { ascending: false }).limit(20),
           supabase.from(offeringPerformanceAnalyticsView).select("*"),
           supabase.from(userLearningPathView).select("*").order("last_activity_at", { ascending: false }).limit(50),
@@ -290,6 +363,8 @@ const CatalogAdmin = () => {
         courseModulesRes,
         courseItemsRes,
         courseAccessRes,
+        purchasesRes,
+        newsletterSubscriptionsRes,
         adminNotificationsRes,
         offeringAnalyticsRes,
         userLearningPathRes,
@@ -307,6 +382,8 @@ const CatalogAdmin = () => {
         courseModulesRes.error,
         courseItemsRes.error,
         courseAccessRes.error,
+        purchasesRes.error,
+        newsletterSubscriptionsRes.error,
         adminNotificationsRes.error,
         offeringAnalyticsRes.error,
         userLearningPathRes.error,
@@ -326,7 +403,13 @@ const CatalogAdmin = () => {
 
       const mergedOfferings = (offeringsRes.data || []).map((row) => ({
         ...row,
-        cta_type: row.cta_type || "contact",
+        cta_type: row.cta_type === "booking" ? "booking" : "checkout",
+        fulfillment_mode: row.fulfillment_mode || (row.booking_enabled ? "booking" : "digital"),
+        digital_delivery_type: row.digital_delivery_type || "download",
+        delivery_url: row.delivery_url || "",
+        reading_email_body: row.reading_email_body || "",
+        access_expiry_days: row.access_expiry_days || "",
+        fulfillment_version: Number(row.fulfillment_version || 1),
         booking_enabled: Boolean(row.booking_enabled),
         booking_provider: row.booking_provider || (row.booking_enabled ? "calcom" : null),
         booking_status: row.booking_status || "pending",
@@ -380,6 +463,8 @@ const CatalogAdmin = () => {
       setCourseModules(courseModulesRes.data || []);
       setCourseItems(courseItemsRes.data || []);
       setCourseAccess(courseAccessRes.data || []);
+      setPurchases(purchasesRes.data || []);
+      setNewsletterSubscriptions(newsletterSubscriptionsRes.data || []);
       setAdminNotifications(adminNotificationsRes.data || []);
       setOfferingAnalytics(offeringAnalyticsRes.data || []);
       setUserLearningPaths(userLearningPathRes.data || []);
@@ -455,7 +540,13 @@ const CatalogAdmin = () => {
     }
     setEditor({
       ...selected,
-      cta_type: selected.cta_type || "contact",
+      cta_type: selected.cta_type === "booking" ? "booking" : "checkout",
+      fulfillment_mode: selected.fulfillment_mode || (selected.booking_enabled ? "booking" : "digital"),
+      digital_delivery_type: selected.digital_delivery_type || "download",
+      delivery_url: selected.delivery_url || "",
+      reading_email_body: selected.reading_email_body || "",
+      access_expiry_days: selected.access_expiry_days || "",
+      fulfillment_version: Number(selected.fulfillment_version || 1),
       booking_enabled: Boolean(selected.booking_enabled),
       booking_provider: selected.booking_provider || (selected.cta_type === "booking" ? "calcom" : null),
       booking_status: selected.booking_status || "pending",
@@ -849,7 +940,7 @@ const CatalogAdmin = () => {
       setIsSavingCourse(false);
     }
   };
-  const { handleCourseMediaUpload, handleHeroImageUpload, handleOfferingImageUpload, handleProfileImageUpload, handleReviewImageUpload } =
+  const { handleCourseMediaUpload, handleHeroImageUpload, handleOfferingDeliveryUpload, handleOfferingImageUpload, handleProfileImageUpload, handleReviewImageUpload } =
     useCatalogAdminUploads({
       editor,
       reviewsEditor,
@@ -880,6 +971,7 @@ const CatalogAdmin = () => {
     persistReviews,
   } = useCatalogAdminSaves({
     editor,
+    courses,
     getSectionIdForOffering,
     globalEditor,
     newOffering,
@@ -905,7 +997,7 @@ const CatalogAdmin = () => {
     siteSettingsEditor,
   });
 
-  const selectedModeMeta = offeringModeMeta[editor?.cta_type || "contact"] || offeringModeMeta.contact;
+  const selectedModeMeta = offeringModeMeta[editor?.cta_type || "checkout"] || offeringModeMeta.checkout;
   const productsState = {
     editor,
     isCreatingOffering,
@@ -931,6 +1023,7 @@ const CatalogAdmin = () => {
     handleCreateOffering,
     handleCreateSection,
     handleHeroImageUpload,
+    handleOfferingDeliveryUpload,
     handleOfferingImageUpload,
     handleSaveOffering,
     handleSaveSection,
@@ -1046,8 +1139,9 @@ const CatalogAdmin = () => {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.32em] text-teal-200/70">Admin</p>
             <h1 className="mt-2 text-3xl font-semibold">Catalog Admin</h1>
+            <p className="mt-2 text-sm text-white/55">Manage offerings, courses, site content, and checkout experiences from one place.</p>
           </div>
-          <div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
+          <div className="rounded-full border border-teal-300/20 bg-teal-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-teal-100">
             {selectedAdminTab.label}
           </div>
         </div>
@@ -1197,6 +1291,8 @@ const CatalogAdmin = () => {
               {activeAdminTab === "reviews" ? <ReviewsTab state={reviewsState} actions={reviewsActions} /> : null}
 
               {activeAdminTab === "fulfillment" ? <FulfillmentTab /> : null}
+
+              {activeAdminTab === "legal-documents" ? <LegalDocumentsManager /> : null}
             </section>
           </div>
         ) : null}

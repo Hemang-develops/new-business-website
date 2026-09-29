@@ -1,4 +1,4 @@
-const COUNTRY_API = "https://restcountries.com/v3.1/all?fields=name,cca2,currencies";
+const COUNTRY_API = "/api/market/countries";
 const RATES_API = "https://open.er-api.com/v6/latest/USD";
 const RATES_CACHE_KEY = "usd_rates_cache_v1";
 const RATES_TTL_MS = 1000 * 60 * 60 * 12;
@@ -33,9 +33,13 @@ export const getCountries = async () => {
       .then((data) =>
         (Array.isArray(data) ? data : [])
           .map((entry) => {
-            const name = entry?.name?.common;
-            const code = entry?.cca2;
-            const currencies = entry?.currencies ? Object.keys(entry.currencies) : [];
+            const name = entry?.name?.common || entry?.name;
+            const code = entry?.cca2 || entry?.code;
+            const currencies = Array.isArray(entry?.currencies)
+              ? entry.currencies
+              : entry?.currencies
+                ? Object.keys(entry.currencies)
+                : [];
             if (!name || !code) {
               return null;
             }

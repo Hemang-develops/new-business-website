@@ -305,9 +305,14 @@ export const defaultSiteSettings = {
     introHeading: "A devotional storefront for manifestation, ritual, and private transformation.",
     statusLabel: "All frequencies aligned",
     termsLabel: "Terms of Service",
-    termsHref: "#contact",
+    termsHref: "/terms-of-service",
     privacyLabel: "Privacy Policy",
-    privacyHref: "#contact",
+    privacyHref: "/privacy-policy",
+  },
+  legal: {
+    privacyPolicyDocUrl: null,
+    termsOfServiceDocUrl: null,
+    cookiePolicyDocUrl: null,
   },
   faqs: [
     { question: "What is the purpose of this website?", answer: "This website serves as a portal to explore and purchase specialized offerings delivered directly to you. Our focus is on providing high-quality digital content and experiences." },
@@ -431,6 +436,11 @@ export const normalizeSiteSettingsFromRows = ({ global = {}, sections = [], sect
       termsHref: normalizeString(global.footer_terms_href, defaultSiteSettings.footer.termsHref),
       privacyLabel: normalizeString(global.footer_privacy_label, defaultSiteSettings.footer.privacyLabel),
       privacyHref: normalizeString(global.footer_privacy_href, defaultSiteSettings.footer.privacyHref),
+    },
+    legal: {
+      privacyPolicyDocUrl: normalizeString(global.legal_privacy_policy_doc_url, defaultSiteSettings.legal.privacyPolicyDocUrl),
+      termsOfServiceDocUrl: normalizeString(global.legal_terms_of_service_doc_url, defaultSiteSettings.legal.termsOfServiceDocUrl),
+      cookiePolicyDocUrl: normalizeString(global.legal_cookie_policy_doc_url, defaultSiteSettings.legal.cookiePolicyDocUrl),
     },
     faqs: Array.isArray(global.faqs) ? global.faqs : defaultSiteSettings.faqs,
     sections: normalizedSections,

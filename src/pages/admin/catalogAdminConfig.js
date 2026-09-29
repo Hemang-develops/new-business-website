@@ -1,19 +1,12 @@
 export const ctaTypeOptions = [
-  { value: "contact", label: "Contact" },
   { value: "checkout", label: "Checkout" },
   { value: "booking", label: "Booking" },
 ];
 
 export const offeringModeMeta = {
-  contact: {
-    label: "Contact",
-    description: "Visitors contact you manually after reading the offer.",
-    badgeClass: "border-white/10 bg-white/5 text-white/70",
-    accentClass: "text-white/70",
-  },
   checkout: {
     label: "Checkout",
-    description: "Visitors pay inside your storefront before receiving access.",
+    description: "Visitors pay inside your storefront before fulfillment begins.",
     badgeClass: "border-amber-300/30 bg-amber-300/10 text-amber-100",
     accentClass: "text-amber-200",
   },
@@ -22,6 +15,24 @@ export const offeringModeMeta = {
     description: "Visitors pay first, then unlock the Google Meet booking step.",
     badgeClass: "border-teal-300/30 bg-teal-300/10 text-teal-100",
     accentClass: "text-teal-200",
+  },
+};
+
+export const fulfillmentModeOptions = [
+  { value: "digital", label: "Digital delivery" },
+  { value: "booking", label: "Booking" },
+  { value: "reading", label: "Reading" },
+];
+
+export const fulfillmentModeMeta = {
+  digital: {
+    description: "Send a download link or grant access to a linked course immediately after payment.",
+  },
+  booking: {
+    description: "Send the scheduling path after payment. If booking fails, the customer can contact the admin.",
+  },
+  reading: {
+    description: "Send the purchase confirmation and the admin-authored reading email immediately after payment.",
   },
 };
 

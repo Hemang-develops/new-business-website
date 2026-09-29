@@ -9,6 +9,7 @@ import './styles/globals.css';
 import SiteLoadingScreen from './components/storefront/SiteLoadingScreen';
 import GlobalErrorBoundary from './components/common/GlobalErrorBoundary';
 import logger from './utils/logger';
+import CookieConsentBanner from './components/common/CookieConsentBanner';
 
 const Home = lazy(() => import('./pages/storefront/Home').then((module) => ({ default: module.Home })));
 const Buy = lazy(() => import('./pages/storefront/Buy'));
@@ -19,6 +20,9 @@ const CourseAccess = lazy(() => import('./pages/storefront/CourseAccess'));
 const NewsletterUnsubscribe = lazy(() => import('./pages/storefront/NewsletterUnsubscribe'));
 
 const ThankYou = lazy(() => import('./pages/storefront/ThankYou').then((module) => ({ default: module.ThankYou })));
+const PrivacyPolicyPage = lazy(() => import('./pages/storefront/LegalPages').then((module) => ({ default: module.PrivacyPolicyPage })));
+const TermsOfServicePage = lazy(() => import('./pages/storefront/LegalPages').then((module) => ({ default: module.TermsOfServicePage })));
+const CookiePolicyPage = lazy(() => import('./pages/storefront/LegalPages').then((module) => ({ default: module.CookiePolicyPage })));
 const ErrorPage = lazy(() => import('./pages/storefront/ErrorPage').then((module) => ({ default: module.ErrorPage })));
 
 // Apply any saved theme at startup
@@ -31,7 +35,9 @@ function RouteScrollController() {
     const shouldResetScroll =
       location.pathname.startsWith('/buy') ||
       location.pathname.startsWith('/offerings') ||
-
+      location.pathname === '/privacy-policy' ||
+      location.pathname === '/terms-of-service' ||
+      location.pathname === '/cookie-policy' ||
       location.pathname === '/sign-in' ||
       location.pathname === '/sign-up';
 
@@ -93,6 +99,7 @@ function App() {
                 <RouteScrollController />
                 <LoggerContextBinder />
                 <div className="flex flex-col min-h-screen">
+                  <CookieConsentBanner />
                   <main className="flex-1">
                     <Routes>
                     <Route
@@ -175,6 +182,31 @@ function App() {
                           <ThankYou />
                         </Suspense>
                       }
+                    />
+                    <Route
+                      path="/privacy-policy"
+                      element={
+                        <Suspense fallback={<SiteLoadingScreen />}>
+                          <PrivacyPolicyPage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/terms-of-service"
+                      element={
+                        <Suspense fallback={<SiteLoadingScreen />}>
+                          <TermsOfServicePage />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="/cookie-policy"
+                      element={
+                        <Suspense fallback={<SiteLoadingScreen />}>
+                          <CookiePolicyPage />
+                        </Suspense>
+                      }
+                    />
                     />
                     <Route
                       path="*"

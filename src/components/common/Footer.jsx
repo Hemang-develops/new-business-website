@@ -129,12 +129,12 @@ const Footer = () => {
         <div className="relative flex flex-col gap-6 border-t border-white/5 pt-10 text-[13px] font-medium text-white/30 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
             <span className="text-white/20 whitespace-nowrap">© {new Date().getFullYear()} {siteSettings.brand.fullTitle}</span>
-            <a href={siteSettings.footer.termsHref} className="transition-colors hover:text-teal-300">
+            <Link to={siteSettings.footer.termsHref} className="transition-colors hover:text-teal-300">
               {siteSettings.footer.termsLabel}
-            </a>
-            <a href={siteSettings.footer.privacyHref} className="transition-colors hover:text-teal-300">
+            </Link>
+            <Link to={siteSettings.footer.privacyHref} className="transition-colors hover:text-teal-300">
               {siteSettings.footer.privacyLabel}
-            </a>
+            </Link>
           </div>
 
           <div className="inline-flex items-center gap-2.5 rounded-full border border-white/5 bg-white/[0.02] px-4 py-2 text-white/40 transition-all hover:bg-white/[0.05] hover:border-white/10">

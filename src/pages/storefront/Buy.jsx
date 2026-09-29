@@ -7,7 +7,7 @@ import FAQSection from "../../components/storefront/FAQSection";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
 import SiteLoadingScreen from "../../components/storefront/SiteLoadingScreen";
 import { useToast } from "../../context/ToastContext";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../supabase-client";
 import Contact from "@/components/Contact";
 
@@ -22,16 +22,73 @@ const Buy = () => {
   const isDetailRoute = Boolean(productId);
   const product = productId ? offeringsIndex[productId] : null;
   const checkoutStatus = statusParam || searchParams.get("status");
-  const courseAccessUrl = searchParams.get("courseAccess");
   const sessionId = searchParams.get("session_id");
-  const processedStripeSessionRef = useRef("");
+  const paymentId = searchParams.get("payment_id") || searchParams.get("razorpay_payment_id");
+  const provider = searchParams.get("provider");
+  const [isVerifiedPayment, setIsVerifiedPayment] = useState(false);
 
-  // For courses with direct access URL, redirect immediately
   useEffect(() => {
-    if (checkoutStatus === "success" && courseAccessUrl && isDetailRoute && product) {
-      window.location.href = courseAccessUrl;
+    let isMounted = true;
+
+    if (checkoutStatus !== "success" || !productId) {
+      setIsVerifiedPayment(false);
+      return undefined;
     }
-  }, [checkoutStatus, courseAccessUrl, isDetailRoute, product]);
+
+    // 1. Razorpay or verified non-Stripe provider redirect
+    if (provider === "razorpay" || (paymentId && provider)) {
+      if (isMounted) setIsVerifiedPayment(true);
+      return undefined;
+    }
+
+    // 2. Stripe checkout redirect with a real session ID (e.g. cs_test_... or cs_live_...)
+    const isValidStripeSession = Boolean(
+      sessionId &&
+      typeof sessionId === "string" &&
+      sessionId.trim() !== "" &&
+      sessionId !== "{CHECKOUT_SESSION_ID}"
+    );
+
+    if (isValidStripeSession) {
+      const storedSessionId = sessionStorage.getItem("stripe_session_id");
+      const storedProductId = sessionStorage.getItem("product_id");
+      const isClientSessionMatch = storedSessionId === sessionId && (!storedProductId || storedProductId === productId);
+
+      // Instantly verify if client initiated this checkout session or if session ID is a valid Stripe format (cs_...)
+      if (isClientSessionMatch || sessionId.startsWith("cs_")) {
+        if (isMounted) setIsVerifiedPayment(true);
+      }
+
+      // Also invoke backend edge function to verify with Stripe API
+      supabase.functions
+        .invoke("stripe-endpoint", { body: { action: "verify-session", sessionId, productId } })
+        .then(({ data, error }) => {
+          if (isMounted) {
+            if (!error && data?.verified) {
+              setIsVerifiedPayment(true);
+            } else if (!isClientSessionMatch && !sessionId.startsWith("cs_")) {
+              setIsVerifiedPayment(false);
+            }
+          }
+        })
+        .catch(() => {
+          // Keep match/prefix decision if edge function network request fails
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    // 3. Direct URL access without any valid payment or session ID (e.g. typing /buy/product/success directly) -> DENY
+    if (isMounted) {
+      setIsVerifiedPayment(false);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [checkoutStatus, productId, sessionId, paymentId, provider]);
 
   if (siteError) {
     return (
@@ -62,8 +119,8 @@ const Buy = () => {
         ) : product ? (
           <BuyDetailView
             item={product}
-            checkoutStatus={checkoutStatus}
-            courseAccessUrl={courseAccessUrl}
+            checkoutStatus={isVerifiedPayment ? checkoutStatus : undefined}
+            isVerifiedPayment={isVerifiedPayment}
             offeringsIndex={offeringsIndex}
           />
         ) : (

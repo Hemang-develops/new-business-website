@@ -5,6 +5,7 @@ const contentTypes = [
   { value: "youtube", label: "YouTube video" },
   { value: "video", label: "Video file" },
   { value: "audio", label: "Audio file" },
+  { value: "document", label: "Document" },
   { value: "link", label: "External link" },
 ];
 
@@ -247,7 +248,7 @@ const CoursesTab = ({ state, actions }) => {
                         </label>
                       ) : null}
 
-                      {["video", "audio"].includes(item.content_type) ? (
+                      {["video", "audio", "document"].includes(item.content_type) ? (
                         <div className="space-y-1 text-xs text-white/60 w-full rounded-xl border border-white/10 bg-black/40 p-4">
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-semibold text-white/80">Upload File</span>
@@ -258,7 +259,7 @@ const CoursesTab = ({ state, actions }) => {
                             Choose file
                             <input
                               type="file"
-                              accept={item.content_type === "video" ? "video/*" : item.content_type === "audio" ? "audio/*" : "*"}
+                              accept={item.content_type === "video" ? "video/*" : item.content_type === "audio" ? "audio/*" : ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"}
                               className="hidden"
                               onChange={(e) => handleCourseMediaUpload?.(e, selectedCourse.id, item.id, updateCourseItem)}
                               disabled={uploadingTarget === `course-media-${item.id}`}
@@ -285,7 +286,7 @@ const CoursesTab = ({ state, actions }) => {
                       ) : null}
 
                       <div className="flex flex-wrap gap-4 w-full">
-                        {["video", "audio"].includes(item.content_type) ? (
+                        {["video", "audio", "document"].includes(item.content_type) ? (
                           <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
                             <input type="checkbox" checked={Boolean(item.allow_download)} onChange={(event) => updateCourseItem(item.id, "allow_download", event.target.checked)} />
                             Allow customer to download

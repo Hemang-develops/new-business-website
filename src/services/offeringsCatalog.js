@@ -100,7 +100,7 @@ const mapOffering = (row, section, sharedContent, reviewMap) => {
   const offeringSpecificReviews = reviewMap.byOffering[row.id] || [];
   const sharedBuyReviews = reviewMap.sharedBuy || [];
   const mergedReviews = [...offeringSpecificReviews, ...sharedBuyReviews];
-  const ctaType = row.cta_type || (storedCheckoutOptions ? "checkout" : "contact");
+  const ctaType = row.cta_type === "booking" ? "booking" : "checkout";
   const checkoutOptions =
     storedCheckoutOptions || (ctaType === "checkout" || ctaType === "booking" ? buildCheckoutOptionsFromPrice(row) : null);
   const booking = row.booking_enabled
@@ -129,6 +129,9 @@ const mapOffering = (row, section, sharedContent, reviewMap) => {
     longDescription: row.long_description || undefined,
     price: mapPrice(row),
     ctaType,
+    fulfillmentMode: row.fulfillment_mode || undefined,
+    digitalDeliveryType: row.digital_delivery_type || undefined,
+    accessExpiryDays: row.access_expiry_days || undefined,
     ctaLabel:
       (ctaType === "booking"
         ? booking?.ctaLabel
@@ -232,6 +235,9 @@ const fetchCatalogFromSupabase = async () => {
           long_description,
           price_usd,
           cta_type,
+          fulfillment_mode,
+          digital_delivery_type,
+          access_expiry_days,
           cta_label,
           action_link,
           booking_enabled,

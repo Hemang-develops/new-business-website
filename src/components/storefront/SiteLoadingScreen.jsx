@@ -13,7 +13,6 @@ const loadingMessages = [
 const SiteLoadingScreen = ({
   eyebrow = defaultSiteSettings.brand.fullTitle,
   title = "Loading the live experience",
-  description = "The latest content is loading now so you see the current website, not stale copy.",
 }) => {
   const loadingRef = useRef(null);
 
@@ -78,9 +77,6 @@ const SiteLoadingScreen = ({
                   <h1 className="text-3xl font-bold leading-tight text-white sm:text-5xl">
                     {title}
                   </h1>
-                  <p className="max-w-xl text-base leading-relaxed text-white/40 font-medium">
-                    {description}
-                  </p>
                 </div>
 
                 <div className="flex flex-wrap gap-4">

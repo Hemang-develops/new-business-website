@@ -77,6 +77,7 @@ const persistCheckoutConfig = async ({ id, title, priceUsd, enabled }) => {
 
 export default function useCatalogAdminSaves({
   editor,
+  courses,
   getSectionIdForOffering,
   globalEditor,
   newOffering,
@@ -127,32 +128,62 @@ export default function useCatalogAdminSaves({
     };
   };
 
-  const handleSaveOffering = async () => {
+  const handleSaveOffering = async ({ publishVersion = false } = {}) => {
     if (!editor) {
       return;
     }
     setIsSavingOffering(true);
     setStatus({ type: "idle", message: "" });
     try {
-      const ctaType = editor.cta_type || "contact";
+      const ctaType = editor.cta_type === "booking" ? "booking" : "checkout";
+      const fulfillmentMode = editor.fulfillment_mode || "digital";
       const bookingEnabled = ctaType === "booking";
       const checkoutEnabled = ctaType === "checkout" || bookingEnabled;
       const priceUsd = parseUsdPrice(editor.price_usd);
-      if (checkoutEnabled && priceUsd == null) {
-        setStatus({ type: "error", message: "Add a USD price before enabling checkout or booking." });
+      const shouldPublish = Boolean(publishVersion);
+      if (priceUsd == null) {
+        setStatus({ type: "error", message: "Add a USD price before saving a paid product." });
         return;
       }
+      if (!["digital", "booking", "reading"].includes(fulfillmentMode)) {
+        setStatus({ type: "error", message: "Choose a fulfillment mode before saving the product." });
+        return;
+      }
+      if (shouldPublish && fulfillmentMode === "digital") {
+        if (editor.digital_delivery_type === "course") {
+          if (!courses.some((course) => course.offering_id === editor.id && course.is_active)) {
+            setStatus({ type: "error", message: "Link an active course before publishing this digital product." });
+            return;
+          }
+        } else if (!String(editor.delivery_url || "").trim()) {
+          setStatus({ type: "error", message: "Add a download URL before publishing this digital product." });
+          return;
+        }
+      }
+      if (shouldPublish && fulfillmentMode === "reading" && !String(editor.reading_email_body || "").trim()) {
+        setStatus({ type: "error", message: "Add the reading email body before publishing this reading product." });
+        return;
+      }
+      const nextVersion = publishVersion
+        ? Number(editor.fulfillment_version || 1) + 1
+        : Number(editor.fulfillment_version || 1);
       const basePayload = {
         id: editor.id,
         section_id: editor.section_id,
         sort_order: Number(editor.sort_order || 0),
-        is_active: Boolean(editor.is_active),
+        is_active: Boolean(publishVersion),
         title: editor.title || "",
         subtitle: editor.subtitle || null,
         summary: editor.summary || null,
         long_description: editor.long_description || null,
         price_usd: editor.price_usd || null,
         cta_type: ctaType,
+        fulfillment_mode: fulfillmentMode,
+        digital_delivery_type: fulfillmentMode === "digital" ? editor.digital_delivery_type || "download" : null,
+        delivery_url: fulfillmentMode === "digital" ? editor.delivery_url || null : null,
+        reading_email_body: fulfillmentMode === "reading" ? editor.reading_email_body || null : null,
+        access_expiry_days: editor.access_expiry_days ? Number(editor.access_expiry_days) : null,
+        fulfillment_version: nextVersion,
         cta_label: editor.cta_label || null,
         action_link: editor.action_link || null,
         checkout_fallback_message: editor.checkout_fallback_message || null,
@@ -390,24 +421,31 @@ export default function useCatalogAdminSaves({
       }
 
       const scopedOfferings = offerings.filter((entry) => entry.section_id === selectedSectionId);
-      const ctaType = newOffering.cta_type || "contact";
+      const ctaType = newOffering.cta_type === "booking" ? "booking" : "checkout";
+      const fulfillmentMode = newOffering.fulfillment_mode || "digital";
       const checkoutEnabled = ctaType === "checkout" || ctaType === "booking";
       const priceUsd = parseUsdPrice(newOffering.price_usd);
-      if (checkoutEnabled && priceUsd == null) {
-        setStatus({ type: "error", message: "Add a USD price before creating a checkout or booking product." });
+      if (priceUsd == null) {
+        setStatus({ type: "error", message: "Add a USD price before creating a paid product." });
         return;
       }
       const payload = {
         id: nextId,
         section_id: selectedSectionId,
         sort_order: scopedOfferings.length,
-        is_active: true,
+        is_active: false,
         title,
         subtitle: newOffering.subtitle.trim() || null,
         summary: null,
         long_description: null,
         price_usd: newOffering.price_usd || null,
         cta_type: ctaType,
+        fulfillment_mode: fulfillmentMode,
+        digital_delivery_type: fulfillmentMode === "digital" ? "download" : null,
+        delivery_url: null,
+        reading_email_body: null,
+        access_expiry_days: null,
+        fulfillment_version: 1,
         cta_label: null,
         action_link: null,
         checkout_fallback_message: null,
@@ -440,7 +478,7 @@ export default function useCatalogAdminSaves({
         [...prev, payload].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)),
       );
       setSelectedOfferingId(payload.id);
-      setNewOffering({ title: "", subtitle: "", price_usd: "", cta_type: "contact" });
+      setNewOffering({ title: "", subtitle: "", price_usd: "", cta_type: "checkout", fulfillment_mode: "digital" });
       setShowNewOfferingForm(false);
       setStatus({ type: "success", message: "Product created successfully." });
     } catch (error) {

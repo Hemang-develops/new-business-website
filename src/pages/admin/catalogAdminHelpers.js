@@ -27,6 +27,10 @@ export const userProgressTable = import.meta.env.VITE_SUPABASE_USER_PROGRESS_TAB
 export const courseAccessTable = import.meta.env.VITE_SUPABASE_COURSE_ACCESS_TABLE || "storefront_course_access";
 export const adminNotificationsTable =
   import.meta.env.VITE_SUPABASE_ADMIN_NOTIFICATIONS_TABLE || "storefront_admin_notifications";
+export const purchasesTable =
+  import.meta.env.VITE_SUPABASE_PURCHASES_TABLE || "storefront_purchases";
+export const newsletterSubscriptionsTable =
+  import.meta.env.VITE_SUPABASE_NEWSLETTER_SUBSCRIPTIONS_TABLE || "storefront_newsletter_subscriptions";
 export const adminDashboardSummaryView =
   import.meta.env.VITE_SUPABASE_ADMIN_DASHBOARD_SUMMARY_VIEW || "storefront_admin_dashboard_summary_v";
 export const offeringPerformanceAnalyticsView =
@@ -36,6 +40,7 @@ export const userLearningPathView =
 export const contentAuditTrailView =
   import.meta.env.VITE_SUPABASE_CONTENT_AUDIT_TRAIL_VIEW || "storefront_content_audit_trail_v";
 export const storageBucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || "site-media";
+export const courseStorageBucket = import.meta.env.VITE_SUPABASE_COURSE_STORAGE_BUCKET || "course-content";
 export const defaultCalcomHostId = import.meta.env.VITE_CALCOM_DEFAULT_HOST_ID || "";
 
 export const toLines = (value) => (Array.isArray(value) ? value.join("\n") : "");

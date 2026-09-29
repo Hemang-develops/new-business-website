@@ -32,8 +32,9 @@ import {
 
 export const description = "An interactive area chart"
 
-const chartData = [
-  { date: "2024-04-01", desktop: 222, mobile: 150 },
+const fallbackChartData = [
+  { date: new Date().toISOString().slice(0, 10), purchases: 0, subscribers: 0 },
+/*
   { date: "2024-04-02", desktop: 97, mobile: 180 },
   { date: "2024-04-03", desktop: 167, mobile: 120 },
   { date: "2024-04-04", desktop: 242, mobile: 260 },
@@ -123,24 +124,24 @@ const chartData = [
   { date: "2024-06-27", desktop: 448, mobile: 490 },
   { date: "2024-06-28", desktop: 149, mobile: 200 },
   { date: "2024-06-29", desktop: 103, mobile: 160 },
-  { date: "2024-06-30", desktop: 446, mobile: 400 },
+  { date: "2024-06-30", desktop: 446, mobile: 400 },*/
 ]
 
 const chartConfig = {
   visitors: {
-    label: "Platform Growth",
+    label: "Recorded activity",
   },
-  desktop: {
-    label: "Yearly Subscribers",
+  purchases: {
+    label: "Purchases",
     color: "#f8fafc",
   },
-  mobile: {
-    label: "Monthly Subscribers",
+  subscribers: {
+    label: "Subscribers",
     color: "#93c5fd",
   },
 } satisfies ChartConfig
 
-export function ChartAreaInteractive() {
+export function ChartAreaInteractive({ data = fallbackChartData }: { data?: Array<{ date: string; purchases: number; subscribers: number }> }) {
   const isMobile = useIsMobile()
   const [timeRange, setTimeRange] = React.useState("90d")
 
@@ -150,9 +151,9 @@ export function ChartAreaInteractive() {
     }
   }, [isMobile])
 
-  const filteredData = chartData.filter((item) => {
+  const filteredData = data.filter((item) => {
     const date = new Date(item.date)
-    const referenceDate = new Date("2024-06-30")
+    const referenceDate = new Date()
     let daysToSubtract = 90
     if (timeRange === "30d") {
       daysToSubtract = 30
@@ -170,7 +171,7 @@ export function ChartAreaInteractive() {
         <CardTitle className="text-white">Platform Growth</CardTitle>
         <CardDescription className="text-[#b2b8c3]">
           <span className="hidden @[540px]/card:block">
-            New subscribers over the last 3 months
+            Purchases and subscribers over the last 3 months
           </span>
           <span className="@[540px]/card:hidden">Last 3 months</span>
         </CardDescription>
@@ -271,7 +272,7 @@ export function ChartAreaInteractive() {
               }
             />
             <Area
-              dataKey="mobile"
+              dataKey="subscribers"
               type="natural"
               fill="url(#fillMobile)"
               stroke="var(--color-mobile)"
@@ -279,7 +280,7 @@ export function ChartAreaInteractive() {
               stackId="a"
             />
             <Area
-              dataKey="desktop"
+              dataKey="purchases"
               type="natural"
               fill="url(#fillDesktop)"
               stroke="var(--color-desktop)"

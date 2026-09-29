@@ -65,7 +65,7 @@ const PaymentSuccessBanner = () => (
     <div className="mb-4 text-4xl">✅</div>
     <h3 className="text-xl font-bold text-teal-100">Payment Successful!</h3>
     <p className="mt-2 text-base">
-      Your order for this offering has been confirmed. Check your email for the receipt and download links.
+      Your order is confirmed. Check your email for your receipt and course-access link, if your offering includes one.
     </p>
   </div>
 );
@@ -296,7 +296,7 @@ export const BuyListView = ({ buySections = [] }) => {
   );
 };
 
-export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offeringsIndex = {} }) => {
+export const BuyDetailView = ({ item, checkoutStatus, isVerifiedPayment = false, offeringsIndex = {} }) => {
   const navigate = useNavigate();
   const [hasImageError, setHasImageError] = useState(false);
   const toast = useToast();
@@ -360,7 +360,8 @@ export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offerings
 
   const hasCheckout = Boolean(item.checkoutOptions);
   const bookingEnabled = Boolean(item.booking?.enabled);
-  const bookingUnlocked = bookingEnabled && (!hasCheckout || String(checkoutStatus || "").toLowerCase() === "success");
+  const isPaymentSuccessful = String(checkoutStatus || "").toLowerCase() === "success";
+  const bookingUnlocked = bookingEnabled && (!hasCheckout || isVerifiedPayment);
 
   const detailHeroRef = useRef(null);
 
@@ -461,9 +462,6 @@ export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offerings
       <section className="bg-gray-950 px-6 pb-24 pt-12">
         <div className="mx-auto max-w-6xl space-y-10">
           {bookingUnlocked && hasCheckout ? <BookingNextStepBanner item={item} /> : null}
-          {String(checkoutStatus || "").toLowerCase() === "success" && !courseAccessUrl ? (
-            <PaymentSuccessBanner />
-          ) : null}
           <div className="flex flex-col gap-10">
             <div className="space-y-8 lg:flex-1">
               <SuccessStory successStory={item.successStory} reviews={item.reviews} />
@@ -511,6 +509,8 @@ export const BuyDetailView = ({ item, checkoutStatus, courseAccessUrl, offerings
                 ) : (
                   <PaymentSection item={item} />
                 )
+              ) : isPaymentSuccessful && hasCheckout ? (
+                <PaymentSuccessBanner />
               ) : (
                 <PaymentSection item={item} />
               )}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BookOpen, Camera, Check, LogOut, Pencil, Video, X } from "lucide-react";
+import { BookOpen, Camera, Check, LogOut, Pencil, ShoppingBag, Video, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { useAuth } from "../../context/AuthContext";
@@ -8,6 +8,7 @@ import { useToast } from "../../context/ToastContext";
 import { supabase } from "../../supabase-client";
 import MyCoursesPage from "../storefront/MyCoursesPage";
 import MyMeetingsTab from "../storefront/MyMeetingsTab";
+import MyPurchasesTab from "../storefront/MyPurchasesTab";
 import { slugify } from "../../utils/slugify";
 import { storageBucket } from "../admin/catalogAdminHelpers";
 import { processImageToWebP } from "../../lib/imageUtils";
@@ -36,6 +37,7 @@ const getInitials = (name, email) => {
 const TABS = [
   { id: "courses", label: "My Courses", icon: BookOpen },
   { id: "meetings", label: "My Meetings", icon: Video },
+  { id: "purchases", label: "My Purchases", icon: ShoppingBag },
 ];
 
 const UserProfile = () => {
@@ -336,6 +338,7 @@ const UserProfile = () => {
           {/* Tab content */}
           {activeTab === "courses" && <MyCoursesPage embedded />}
           {activeTab === "meetings" && <MyMeetingsTab />}
+          {activeTab === "purchases" && <MyPurchasesTab />}
         </section>}
       </div>
 

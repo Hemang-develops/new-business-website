@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
   let event;
   try {
     const bodyText = await req.text();
-    event = stripe.webhooks.constructEvent(bodyText, signature, webhookSecret);
+    event = await stripe.webhooks.constructEventAsync(bodyText, signature, webhookSecret);
   } catch (err) {
     console.error(`⚠️ Webhook signature verification failed:`, err.message);
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
@@ -58,9 +58,16 @@ Deno.serve(async (req) => {
     // OR we can just hit the Supabase function URL.
     try {
       const supabase = getAdminClient();
+      const fulfillmentSecret = Deno.env.get("FULFILLMENT_SECRET");
+      if (!fulfillmentSecret) {
+        throw new Error("Missing FULFILLMENT_SECRET for internal fulfillment invocation.");
+      }
       console.log(`Triggering fulfillment for ${email} / product: ${productId}`);
       
       const { error } = await supabase.functions.invoke("course-access-fulfill", {
+        headers: {
+          Authorization: `Bearer ${fulfillmentSecret}`,
+        },
         body: {
           productId,
           email,
@@ -69,6 +76,7 @@ Deno.serve(async (req) => {
           provider: "stripe",
           amount: session.amount_total,
           currency: session.currency,
+          country: metadata.country || session.customer_details?.address?.country || null,
           customerName: session.customer_details?.name || `${metadata.firstName || ""} ${metadata.lastName || ""}`.trim() || null,
         },
       });

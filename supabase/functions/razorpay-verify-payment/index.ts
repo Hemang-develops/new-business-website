@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fulfillCourseAccess as fulfillUnifiedPurchase } from "../_shared/course-fulfillment.ts";
 
 const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
@@ -32,6 +33,8 @@ const sendEmail = async ({ to, subject, html }: { to: string; subject: string; h
   const apiKey = Deno.env.get("RESEND_API_KEY");
   const from = Deno.env.get("EMAIL_FROM");
 
+  const replyTo = Deno.env.get("EMAIL_REPLY_TO");
+
   if (!apiKey || !from || !to) {
     return { skipped: true };
   }
@@ -42,7 +45,13 @@ const sendEmail = async ({ to, subject, html }: { to: string; subject: string; h
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from, to, subject, html }),
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      html,
+      ...(replyTo ? { reply_to: replyTo } : {}),
+    }),
   });
 
   if (!response.ok) {
@@ -95,6 +104,69 @@ const fulfillCourseAccess = async ({
     throw courseError;
   }
   if (!course) {
+    // Non-course product (e.g. Email Coaching, Audio Calls, Consultations)
+    const { data: offering } = await supabase
+      .from("storefront_offerings")
+      .select("id,title,summary,booking_url")
+      .eq("id", normalizedProductId)
+      .maybeSingle();
+
+    const offeringTitle = offering?.title || normalizedProductId;
+    const bookingUrl = offering?.booking_url || "";
+    const adminEmail = Deno.env.get("ADMIN_NOTIFY_EMAIL_1") || Deno.env.get("ADMIN_NOTIFY_EMAIL_2") || Deno.env.get("EMAIL_REPLY_TO");
+
+    try {
+      await supabase.from("storefront_admin_notifications").insert({
+        type: "offering_purchase",
+        title: `Order placed: ${offeringTitle}`,
+        message: `${customerName || normalizedEmail} purchased ${offeringTitle}.`,
+        offering_id: normalizedProductId,
+        customer_email: normalizedEmail,
+        customer_name: customerName || null,
+        metadata: { provider, paymentId, orderId, packageId, amount, currency },
+      });
+    } catch (e) {
+      console.warn("[Fulfill] Failed to insert admin notification:", e);
+    }
+
+    await sendEmail({
+      to: normalizedEmail,
+      subject: `Order Confirmation: ${offeringTitle}`,
+      html: `
+        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #030406; color: #ffffff; padding: 40px 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+          <h2 style="color: #5eead4; margin-top: 0;">Thank you for your purchase!</h2>
+          <p style="color: rgba(255,255,255,0.8);">Hi ${customerName || "there"},</p>
+          <p style="color: rgba(255,255,255,0.8);">Your order for <strong style="color: #fff;">${offeringTitle}</strong> has been confirmed.</p>
+          
+          ${bookingUrl 
+            ? `<p style="margin: 32px 0;"><a href="${bookingUrl}" style="background-color: #5eead4; color: #030406; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block;">Schedule Your Session</a></p>` 
+            : `<p style="color: rgba(255,255,255,0.8);">If your purchase includes email coaching or a custom service, simply reply directly to this email or reach out to us at <strong style="color: #fff;">support@nehalpatel.store</strong> to begin!</p>`}
+          
+          <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <p style="margin: 0; color: rgba(255,255,255,0.8);">Warmly,<br/><strong style="color: #fff;">Nehal Patel</strong><br/><span style="color: #5eead4; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">High Frequencies 11</span></p>
+          </div>
+        </div>
+      `,
+    });
+
+    if (adminEmail) {
+      await sendEmail({
+        to: adminEmail,
+        subject: `New purchase: ${offeringTitle}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px;">
+            <h3>New Purchase Received</h3>
+            <p><strong>Item:</strong> ${offeringTitle}</p>
+            <p><strong>Customer Email:</strong> ${normalizedEmail}</p>
+            <p><strong>Customer Name:</strong> ${customerName || "N/A"}</p>
+            <p><strong>Payment Provider:</strong> ${provider}</p>
+            <p><strong>Payment ID:</strong> ${paymentId || "N/A"}</p>
+            <p><strong>Amount:</strong> ${amount ? `${amount} ${currency || ""}` : "N/A"}</p>
+          </div>
+        `,
+      });
+    }
+
     return { hasCourse: false, accessUrl: "", course: null };
   }
 
@@ -172,7 +244,7 @@ const fulfillCourseAccess = async ({
   }
 
   const accessUrl = access.access_url || buildAccessUrl(access.access_token);
-  const adminEmail = Deno.env.get("ADMIN_NOTIFY_EMAIL");
+  const adminEmail = Deno.env.get("ADMIN_NOTIFY_EMAIL_1") || Deno.env.get("ADMIN_NOTIFY_EMAIL_2") || Deno.env.get("EMAIL_REPLY_TO");
 
   if (createdAccess) {
     await supabase.from("storefront_admin_notifications").insert({
@@ -342,11 +414,12 @@ Deno.serve(async (request) => {
     const customerName =
       String(fullName || paymentPayload.notes?.fullName || [firstName, lastName].filter(Boolean).join(" ") || "").trim();
     const courseAccess = productId && customerEmail
-      ? await fulfillCourseAccess({
+      ? await fulfillUnifiedPurchase({
           amount: paymentPayload.amount ?? null,
           currency: paymentPayload.currency || null,
           customerEmail,
           customerName,
+          country: paymentPayload.notes?.country || null,
           orderId: normalizedOrderId,
           packageId: packageId || paymentPayload.notes?.packageId || null,
           paymentId: normalizedPaymentId,

@@ -417,7 +417,7 @@ const PaymentSection = ({ item }) => {
     }
     return resolved.filter((instruction) => !/support button below/i.test(instruction));
   }, [backupLink, manualInstructions, upiInstructionLabel]);
-  const successPath = `/buy/${item.id}/success`;
+  const successPath = `/buy/${item.id}/success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelPath = `/buy/${item.id}/cancel`;
   const canUseRazorpay = hasCheckout && typeof presentmentUnitAmount === "number";
   const razorpayCurrency = presentmentCurrency.toUpperCase();
@@ -626,10 +626,12 @@ const PaymentSection = ({ item }) => {
                   // For courses, redirect directly to course access
                   window.location.href = accessUrl;
                 } else {
-                  // For regular products, redirect to success page
+                  // For regular products, redirect to success page with actual payment ID
+                  const paymentId = response?.razorpay_payment_id || orderId || "verified";
+                  const resolvedSuccessUrl = `/buy/${item.id}/success?payment_id=${encodeURIComponent(paymentId)}&provider=razorpay`;
                   window.location.href = accessUrl
-                    ? `${successPath}?courseAccess=${encodeURIComponent(accessUrl)}`
-                    : successPath;
+                    ? `${resolvedSuccessUrl}&courseAccess=${encodeURIComponent(accessUrl)}`
+                    : resolvedSuccessUrl;
                 }
                 resolve(true);
               } catch (verificationError) {
@@ -673,13 +675,12 @@ const PaymentSection = ({ item }) => {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           fullName: `${firstName.trim()} ${lastName.trim()}`.trim(),
-          email: email.trim(),
+          email: email.trim() || user?.email?.trim() || "",
           userId: user?.id || null,
           country,
           returnUrl: window.location.href,
-          cancelUrl: window.location.href,
-          cancelPath: window.location.pathname,
-          successUrl: window.location.origin,
+          cancelPath,
+          successPath,
         },
       });
 

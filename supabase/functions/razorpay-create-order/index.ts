@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const json = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
@@ -31,6 +33,35 @@ const getRazorpayErrorStatus = (status: number) => {
   return 500;
 };
 
+const assertPurchasable = async (productId: string, email: string) => {
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") || "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+    { auth: { persistSession: false } },
+  );
+  const { data: offering, error: offeringError } = await supabase
+    .from("storefront_offerings")
+    .select("id,is_active,fulfillment_mode,fulfillment_version")
+    .eq("id", productId)
+    .maybeSingle();
+  if (offeringError) throw offeringError;
+  if (!offering || !offering.is_active) throw new Error("This product is not currently available.");
+  if (offering.fulfillment_mode !== "digital") return;
+
+  const { data: purchase, error: purchaseError } = await supabase
+    .from("storefront_purchases")
+    .select("id,expires_at")
+    .eq("offering_id", productId)
+    .eq("fulfillment_version", offering.fulfillment_version || 1)
+    .eq("status", "paid")
+    .ilike("customer_email", email.trim().toLowerCase())
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+    .limit(1)
+    .maybeSingle();
+  if (purchaseError) throw purchaseError;
+  if (purchase) throw new Error("You already have access to this product.");
+};
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return json(200, { ok: true });
@@ -62,6 +93,10 @@ Deno.serve(async (request) => {
     if (!productId) {
       return json(400, { error: "Missing productId." });
     }
+    if (!email) {
+      return json(400, { error: "Email is required." });
+    }
+    await assertPurchasable(String(productId), String(email));
     if (!Number.isFinite(normalizedAmount) || normalizedAmount < 100) {
       return json(400, { error: "Invalid Razorpay order amount. Minimum amount is 100 paise." });
     }

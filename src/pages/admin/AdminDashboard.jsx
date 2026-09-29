@@ -19,22 +19,22 @@ export default function AdminDashboard({ stats }) {
             </p>
           </div>
         </div>
-        <SectionCards />
+        <SectionCards stats={stats} />
         <div className="mt-4 grid gap-4 px-4 lg:grid-cols-4 lg:px-6">
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <p className="text-xs uppercase tracking-[0.24em] text-white/45">Courses</p>
             <p className="mt-2 text-2xl font-semibold text-white">{stats?.totalCourses ?? 0}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-white/45">Course purchases</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-white/45">All purchases</p>
             <p className="mt-2 text-2xl font-semibold text-white">{stats?.totalCoursePurchases ?? 0}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-white/45">Active access</p>
-            <p className="mt-2 text-2xl font-semibold text-white">{stats?.activeCourseAccess ?? 0}</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-white/45">Active purchases</p>
+            <p className="mt-2 text-2xl font-semibold text-white">{stats?.totalCoursePurchases ?? 0}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-white/45">Payment volume</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-white/45">Purchase volume</p>
             <p className="mt-2 text-2xl font-semibold text-white">{stats?.courseRevenueLabel || "$0.00"}</p>
           </div>
         </div>
@@ -42,7 +42,7 @@ export default function AdminDashboard({ stats }) {
           <div className="mt-4 grid gap-4 px-4 lg:grid-cols-4 lg:px-6">
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-white/45">New purchases (7d)</p>
-              <p className="mt-2 text-2xl font-semibold text-white">{stats.dashboardSummaryViewData.new_purchases_7d ?? 0}</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{stats.newPurchases7d ?? 0}</p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-white/45">Completions (7d)</p>
@@ -51,9 +51,7 @@ export default function AdminDashboard({ stats }) {
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
               <p className="text-xs uppercase tracking-[0.24em] text-white/45">Revenue (30d)</p>
               <p className="mt-2 text-2xl font-semibold text-white">
-                {stats.dashboardSummaryViewData.revenue_30d != null
-                  ? `$${Number(stats.dashboardSummaryViewData.revenue_30d).toLocaleString()}`
-                  : "No volume"}
+                {stats.revenue30d || "No volume"}
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -62,26 +60,11 @@ export default function AdminDashboard({ stats }) {
             </div>
           </div>
         ) : null}
-        {stats?.recentNotifications?.length ? (
-          <div className="mt-4 px-4 lg:px-6">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-200/80">Recent course purchases</p>
-              <div className="mt-4 divide-y divide-white/10">
-                {stats.recentNotifications.map((notification) => (
-                  <div key={notification.id} className="py-3 text-sm text-white/70 first:pt-0 last:pb-0">
-                    <p className="font-semibold text-white">{notification.title}</p>
-                    <p className="mt-1 text-xs text-white/50">{notification.customer_email}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
         <div className="mt-4 px-4 lg:px-6">
-          <ChartAreaInteractive />
+          <ChartAreaInteractive data={stats?.chartData} />
         </div>
         <div className="mt-4">
-          <DataTable data={stats?.courseAccess || []} />
+          <DataTable data={stats?.purchases || []} />
         </div>
       </div>
     </div>

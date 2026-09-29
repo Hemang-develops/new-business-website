@@ -6,6 +6,10 @@ export const schema = z.object({
   offering: z.string(),
   purchaseDate: z.string(),
   amount: z.number(),
+  currency: z.string(),
   country: z.string(),
   purchaseCount: z.number(),
+  paymentStatus: z.string(),
+  deliveryStatus: z.string(),
+  paymentProvider: z.string(),
 })

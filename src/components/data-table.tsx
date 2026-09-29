@@ -147,13 +147,13 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
   {
     accessorKey: "purchaseCount",
-    header: "Customer Type",
+    header: "Purchase Count",
     cell: ({ row }) => (
       <Badge
         variant="outline"
-        className={`px-1.5 ${row.original.purchaseCount > 1 ? "border-blue-400/20 bg-blue-400/10 text-blue-200" : "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"}`}
+        className="border-emerald-400/20 bg-emerald-400/10 px-1.5 text-emerald-200"
       >
-        {row.original.purchaseCount > 1 ? `Repeated (${row.original.purchaseCount}x)` : "New Customer"}
+        {row.original.purchaseCount}
       </Badge>
     ),
   },
@@ -161,8 +161,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     accessorKey: "amount",
     header: () => <div className="w-full text-right">Amount (₹)</div>,
     cell: ({ row }) => (
-      <div className="w-full text-right text-white/80 font-medium">
-        ₹{row.original.amount.toLocaleString()}
+      <div className="w-full text-right font-medium text-white/80">
+        {row.original.currency} {row.original.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
       </div>
     ),
   },
@@ -219,6 +219,10 @@ export function DataTable({
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
   )
+
+  React.useEffect(() => {
+    setData(initialData)
+  }, [initialData])
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => data?.map(({ id }) => id) || [],
@@ -506,10 +510,16 @@ export function DataTable({
               <DrawerHeader className="gap-1">
                 <DrawerTitle className="text-white">{selectedItem.name}</DrawerTitle>
                 <DrawerDescription className="text-white/60">
-                  Showing platform engagement for {selectedItem.name}
+                  Payment and fulfillment details for {selectedItem.name}
                 </DrawerDescription>
               </DrawerHeader>
               <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
+                <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-4 text-xs">
+                  <div><span className="text-white/45">Payment status</span><p className="mt-1 capitalize text-white">{selectedItem.paymentStatus}</p></div>
+                  <div><span className="text-white/45">Fulfillment status</span><p className="mt-1 capitalize text-white">{selectedItem.deliveryStatus}</p></div>
+                  <div><span className="text-white/45">Provider</span><p className="mt-1 capitalize text-white">{selectedItem.paymentProvider}</p></div>
+                  <div><span className="text-white/45">Country</span><p className="mt-1 text-white">{selectedItem.country}</p></div>
+                </div>
                 {!isMobile && (
                   <>
                     <ChartContainer config={chartConfig}>

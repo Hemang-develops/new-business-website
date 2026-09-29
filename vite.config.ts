@@ -6,7 +6,37 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const marketApis = {
+  "/api/market/countries": "https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/countries.json",
+  "/api/market/rates": "https://open.er-api.com/v6/latest/USD",
+};
 
+const marketApi = () => ({
+  name: "market-api",
+  configureServer(server) {
+    Object.entries(marketApis).forEach(([route, url]) => {
+      server.middlewares.use(route, async (_request, response) => {
+        try {
+          const upstream = await fetch(url);
+          const data = await upstream.json();
+          response.statusCode = upstream.status;
+          response.setHeader("Content-Type", "application/json");
+          response.setHeader("Cache-Control", "public, max-age=3600");
+          response.end(
+            JSON.stringify(
+              route === "/api/market/countries" && Array.isArray(data)
+                ? data.map(({ name, iso2: code, currency }) => ({ name, code, currencies: currency ? [currency] : [] }))
+                : data,
+            ),
+          );
+        } catch {
+          response.statusCode = 502;
+          response.end("{}");
+        }
+      });
+    });
+  },
+});
 const getPackageName = (id: string) => {
   const nodeModulesPath = id.split("node_modules/")[1];
   if (!nodeModulesPath) {
@@ -42,6 +72,7 @@ export default defineConfig({
       },
     }),
     tailwindcss(),
+    marketApi(),
   ],
   build: {
     rollupOptions: {

@@ -1,6 +1,4 @@
 import { useRef, useState } from "react";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../supabase-client";
 import { useAuth } from "../../context/AuthContext";
@@ -15,89 +13,123 @@ import { Input } from "@/components/ui/input";
  * We redirect to /account; AuthPage will handle the session and can
  * navigate onward once the user is confirmed authenticated.
  */
-const REDIRECT_URL = `${window.location.origin}/account`;
+const REDIRECT_URL = `${window.location.origin}/sign-in`;
 
-const authAppearance = {
-  theme: ThemeSupa,
-  variables: {
-    default: {
-      colors: {
-        brand: "#5eead4",
-        brandAccent: "#99f6e4",
-        inputBackground: "rgba(0,0,0,0.3)",
-        inputBorder: "rgba(255,255,255,0.15)",
-        inputBorderFocus: "#5eead4",
-        inputText: "#ffffff",
-        inputPlaceholder: "rgba(255,255,255,0.4)",
-        messageText: "#f43f5e",
-        anchorTextColor: "transparent",
-        anchorTextHoverColor: "transparent",
-      },
-      radii: {
-        borderRadiusButton: "9999px",
-        buttonBorderRadius: "9999px",
-        inputBorderRadius: "0.75rem",
-      },
-      fonts: {
-        bodyFontFamily: "inherit",
-        buttonFontFamily: "inherit",
-        inputFontFamily: "inherit",
-        labelFontFamily: "inherit",
-      },
-      fontSizes: {
-        baseBodySize: "0.875rem",
-        baseInputSize: "0.875rem",
-        baseLabelSize: "0.875rem",
-        baseButtonSize: "0.875rem",
-      },
-      space: {
-        buttonPadding: "0.625rem 1.25rem",
-        inputPadding: "0.5rem 0.75rem",
-      },
-    },
-  },
-  style: {
-    anchor: { display: "none" },
-  },
-  className: {
-    button: "!font-semibold !transition-colors",
-    input: "!text-white placeholder:!text-white/40",
-    label: "!text-white/75 !text-sm !mb-1",
-  },
+// ─── Sign-in: custom form matching sign-up style ─────────────────────────────
+const EyeIcon = ({ open }) => open
+  ? <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+  : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+
+const SignInForm = () => {
+  const { signIn } = useAuth();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: REDIRECT_URL } });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      await signIn({ email: email.trim(), password });
+      navigate("/", { replace: true });
+    } catch (err) {
+      const msg = err.message || "Invalid email or password.";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087c1.7018-1.5668 2.6836-3.874 2.6836-6.615z" fill="#4285F4" />
+          <path d="M9 18c2.43 0 4.4673-.806 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.859-3.0477.859-2.344 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853" />
+          <path d="M3.964 10.71A5.41 5.41 0 0 1 3.6818 9c0-.5891.1009-1.1618.2822-1.71V4.9582H.9574A8.9959 8.9959 0 0 0 0 9c0 1.4514.3477 2.8255.9574 4.0418L3.964 10.71z" fill="#FBBC05" />
+          <path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.426 0 9 0 5.4818 0 2.4382 2.0168.9574 4.9582L3.964 7.29C4.6718 5.1632 6.656 3.5795 9 3.5795z" fill="#EA4335" />
+        </svg>
+        Continue with Google
+      </button>
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="text-xs text-white/40">or</span>
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
+
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <label className="block space-y-2">
+          <span className="text-sm text-white/75">Email</span>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border-white/15 bg-black/30 focus-visible:border-teal-300"
+            placeholder="you@example.com"
+            required
+          />
+        </label>
+
+        <label className="block space-y-2">
+          <span className="text-sm text-white/75">Password</span>
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="border-white/15 bg-black/30 pr-10 focus-visible:border-teal-300"
+              placeholder="Your password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-3 flex items-center text-white/40 hover:text-white/70"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              <EyeIcon open={showPassword} />
+            </button>
+          </div>
+        </label>
+
+        {error && (
+          <p className="rounded-2xl border border-rose-300/50 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">{error}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="inline-flex w-full items-center justify-center rounded-full bg-teal-300 px-5 py-3 text-sm font-semibold text-gray-900 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isSubmitting ? "Signing in..." : "Sign in"}
+        </button>
+      </form>
+
+      <p className="text-center text-sm text-white/65">
+        New here?{" "}
+        <Link to="/sign-up" className="font-semibold text-teal-200 underline-offset-4 transition hover:underline">
+          Create account
+        </Link>
+      </p>
+    </div>
+  );
 };
 
-// ─── Sign-in: Auth UI with Google + email/password ────────────────────────────
-const SignInForm = () => (
-  <>
-    <Auth
-      supabaseClient={supabase}
-      view="sign_in"
-      appearance={authAppearance}
-      providers={["google"]}
-      redirectTo={REDIRECT_URL}
-      showLinks={false}
-      localization={{
-        variables: {
-          sign_in: {
-            email_label: "Email",
-            password_label: "Password",
-            button_label: "Sign in",
-            social_provider_text: "Continue with {{provider}}",
-          },
-        },
-      }}
-    />
-    <p className="mt-4 text-center text-sm text-white/65">
-      New here?{" "}
-      <Link
-        to="/sign-up"
-        className="font-semibold text-teal-200 underline-offset-4 transition hover:underline"
-      >
-        Create account
-      </Link>
-    </p>
-  </>
-);
 
 // ─── Sign-up: manual form (supports first name, last name, birthday) ──────────
 const SignUpForm = () => {
@@ -118,6 +150,7 @@ const SignUpForm = () => {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,7 +191,7 @@ const SignUpForm = () => {
       }
 
       toast.success("Your account is ready.", "Welcome in");
-      navigate("/account");
+      navigate("/sign-in");
     } catch (err) {
       const msg = err.message || "Unable to continue. Please try again.";
       setError(msg);
@@ -184,10 +217,10 @@ const SignUpForm = () => {
         className="inline-flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/10"
       >
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087c1.7018-1.5668 2.6836-3.874 2.6836-6.615z" fill="#4285F4"/>
-          <path d="M9 18c2.43 0 4.4673-.806 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.859-3.0477.859-2.344 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/>
-          <path d="M3.964 10.71A5.41 5.41 0 0 1 3.6818 9c0-.5891.1009-1.1618.2822-1.71V4.9582H.9574A8.9959 8.9959 0 0 0 0 9c0 1.4514.3477 2.8255.9574 4.0418L3.964 10.71z" fill="#FBBC05"/>
-          <path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.426 0 9 0 5.4818 0 2.4382 2.0168.9574 4.9582L3.964 7.29C4.6718 5.1632 6.656 3.5795 9 3.5795z" fill="#EA4335"/>
+          <path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087c1.7018-1.5668 2.6836-3.874 2.6836-6.615z" fill="#4285F4" />
+          <path d="M9 18c2.43 0 4.4673-.806 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.859-3.0477.859-2.344 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853" />
+          <path d="M3.964 10.71A5.41 5.41 0 0 1 3.6818 9c0-.5891.1009-1.1618.2822-1.71V4.9582H.9574A8.9959 8.9959 0 0 0 0 9c0 1.4514.3477 2.8255.9574 4.0418L3.964 10.71z" fill="#FBBC05" />
+          <path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.426 0 9 0 5.4818 0 2.4382 2.0168.9574 4.9582L3.964 7.29C4.6718 5.1632 6.656 3.5795 9 3.5795z" fill="#EA4335" />
         </svg>
         Continue with Google
       </button>
@@ -254,26 +287,54 @@ const SignUpForm = () => {
 
         <label className="block space-y-2">
           <span className="text-sm text-white/75">Password</span>
-          <Input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className="border-white/15 bg-black/30 focus-visible:border-teal-300"
-            placeholder="Minimum 8 characters"
-          />
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="border-white/15 bg-black/30 pr-10 focus-visible:border-teal-300"
+              placeholder="Minimum 8 characters"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-3 flex items-center text-white/40 hover:text-white/70"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              )}
+            </button>
+          </div>
         </label>
 
         <label className="block space-y-2">
           <span className="text-sm text-white/75">Confirm password</span>
-          <Input
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className="border-white/15 bg-black/30 focus-visible:border-teal-300"
-            placeholder="Re-enter password"
-          />
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="border-white/15 bg-black/30 pr-10 focus-visible:border-teal-300"
+              placeholder="Re-enter password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-3 flex items-center text-white/40 hover:text-white/70"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              )}
+            </button>
+          </div>
         </label>
 
         {error && (
