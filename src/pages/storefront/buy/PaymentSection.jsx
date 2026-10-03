@@ -815,21 +815,6 @@ const PaymentSection = ({ item }) => {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em]">PayPal</p>
                   <p className="mt-1 text-xs text-white/70">Pay via your PayPal account</p>
                 </button>
-                {canShowUpiOption ? (
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("upi")}
-                    className={`rounded-xl border px-4 py-3 text-left transition ${paymentMethod === "upi"
-                      ? "border-teal-200 bg-teal-300/20 text-teal-50"
-                      : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white"
-                      }`}
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em]">UPI</p>
-                    <p className="mt-1 text-xs text-white/70">
-                      {upiLink ? "Pay instantly via UPI app" : "Get UPI details via support"}
-                    </p>
-                  </button>
-                ) : null}
                 {canUseRazorpay ? (
                   <button
                     type="button"
