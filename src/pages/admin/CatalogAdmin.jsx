@@ -516,17 +516,27 @@ const CatalogAdmin = () => {
   }, [sections, selectedSectionId]);
 
   useEffect(() => {
-    if (!selectedOfferingId) {
-      setEditor(null);
+    if (!selectedSectionId) {
+      setSelectedOfferingId("");
       return;
     }
+
+    const scopedOfferings = offerings.filter((entry) => entry.section_id === selectedSectionId);
+    if (!scopedOfferings.length) {
+      setSelectedOfferingId("");
+      return;
+    }
+
+    if (!scopedOfferings.some((entry) => entry.id === selectedOfferingId)) {
+      setSelectedOfferingId(scopedOfferings[0].id);
+    }
+  }, [offerings, selectedOfferingId, selectedSectionId]);
+
+  useEffect(() => {
     const selected = offerings.find((entry) => entry.id === selectedOfferingId);
     if (!selected) {
       setEditor(null);
       return;
-    }
-    if (selected.section_id && selected.section_id !== selectedSectionId) {
-      setSelectedSectionId(selected.section_id);
     }
     setEditor({
       ...selected,
@@ -933,14 +943,12 @@ const CatalogAdmin = () => {
   const { handleCourseMediaUpload, handleHeroImageUpload, handleOfferingDeliveryUpload, handleOfferingImageUpload, handleProfileImageUpload, handleReviewImageUpload } =
     useCatalogAdminUploads({
       editor,
-      newOffering,
       reviewsEditor,
       selectedSection,
       setStatus,
       setUploadingTarget,
       siteSettingsEditor,
       updateEditor,
-      updateNewOffering,
       updateReviewEditor,
       updateSectionEditor,
       updateSiteSettings,
@@ -948,16 +956,13 @@ const CatalogAdmin = () => {
   const {
     handleCreateOffering,
     handleCreateSection,
-    handleDeleteOffering,
     handleSaveGlobalContent,
     handleSaveOffering,
     handleSaveReviews,
     handleSaveSection,
     handleSaveSiteSettings,
-    handleTogglePublishOffering,
     isCreatingOffering,
     isCreatingSection,
-    isDeletingOffering,
     isSavingGlobal,
     isSavingOffering,
     isSavingReviews,
@@ -976,7 +981,6 @@ const CatalogAdmin = () => {
     reviewsEditor,
     savedReviewsSnapshot,
     sections,
-    selectedOfferingId,
     selectedSection,
     selectedSectionId,
     setNewOffering,
@@ -998,7 +1002,6 @@ const CatalogAdmin = () => {
     editor,
     isCreatingOffering,
     isCreatingSection,
-    isDeletingOffering,
     isSavingOffering,
     isSavingSection,
     newOffering,
@@ -1019,13 +1022,11 @@ const CatalogAdmin = () => {
   const productsActions = {
     handleCreateOffering,
     handleCreateSection,
-    handleDeleteOffering,
     handleHeroImageUpload,
     handleOfferingDeliveryUpload,
     handleOfferingImageUpload,
     handleSaveOffering,
     handleSaveSection,
-    handleTogglePublishOffering,
     setSelectedOfferingId,
     setSelectedSectionId,
     setShowNewOfferingForm,
