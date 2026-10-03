@@ -5,6 +5,7 @@ import { useToast } from "../context/ToastContext";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { useOfferingsData } from "../hooks/useOfferingsData";
 import { useGsapReveal } from "../hooks/useGsapMotion";
+import { supabase } from "../supabase-client";
 import { Skeleton } from "./ui/skeleton";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -38,26 +39,13 @@ const Contact = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!formValues.support) {
-      const message = "Select the offering you are interested in.";
-      setSubmissionState({ status: "error", message });
-      toast.error(message);
-      return;
-    }
     setSubmissionState({ status: "submitting", message: "" });
 
     try {
-      const response = await fetch("/api/contact/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formValues),
+      const { data, error } = await supabase.functions.invoke("contact-submit", {
+        body: formValues,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "We were unable to send your message. Please try again.");
-      }
+      if (error) throw new Error(data?.error || error.message || "We were unable to send your message. Please try again.");
 
       setSubmissionState({
         status: "success",
@@ -190,18 +178,17 @@ const Contact = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 ml-1">Desired Support</label>
+                  <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 ml-1">Desired Support (optional)</label>
                   {isLoading ? (
                     <Skeleton className="h-12 w-full rounded-xl" />
                   ) : (
                     <select
                       name="support"
-                      required
                       value={formValues.support}
                       onChange={handleChange}
                       className="h-12 w-full rounded-xl border border-white/5 bg-white/[0.03] px-4 text-sm text-white/70 outline-none transition-all focus:border-teal-300 focus:ring-1 focus:ring-teal-300/10 appearance-none"
                     >
-                      <option value="" disabled className="bg-[#0a0a0a]">Select your path</option>
+                      <option value="" className="bg-[#0a0a0a]">Select your path (optional)</option>
                       {supportOptions.map((option, index) => (
                         <option key={`${option}-${index}`} value={option} className="bg-[#0a0a0a]">{option}</option>
                       ))}

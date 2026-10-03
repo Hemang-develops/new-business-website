@@ -83,6 +83,9 @@ EMAIL_FROM="Your Brand <sender@example.com>"
 SITE_URL=https://your-site.com
 ```
 
+### Contact Form
+Deploy the contact submission function with `supabase functions deploy contact-submit`. Configure `RESEND_API_KEY` and `EMAIL_FROM` as Supabase function secrets. The function sends inquiries to the `brand_support_email` value in `storefront_site_settings_composed_v`.
+
 ### Sentry Error Logging
 To enable production error tracking, simply add your Sentry project DSN to your environment variables:
 `VITE_SENTRY_DSN="your-dsn-here"`

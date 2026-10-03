@@ -205,7 +205,7 @@ const PersonalizedCoachingCTA = () => {
                   {settings.brand.supportEmail}
                 </a>
                 <a
-                  href={`mailto:${settings.brand.supportEmail}?subject=Personalised%20Coaching%20Inquiry`}
+                  href="/#contact"
                   className="inline-flex h-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-8 text-[11px] font-bold uppercase tracking-widest text-white transition-all hover:bg-white/[0.08] hover:border-white/20 active:scale-95"
                 >
                   Send Inquiry
