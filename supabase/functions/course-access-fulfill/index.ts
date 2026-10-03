@@ -198,18 +198,12 @@ const fulfillCourseAccess = async ({
       to: normalizedEmail,
       subject: `Order Confirmation: ${offeringTitle}`,
       html: `
-        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #030406; color: #ffffff; padding: 40px 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-          <h2 style="color: #5eead4; margin-top: 0;">Thank you for your purchase!</h2>
-          <p style="color: rgba(255,255,255,0.8);">Hi ${customerName || "there"},</p>
-          <p style="color: rgba(255,255,255,0.8);">Your order for <strong style="color: #fff;">${offeringTitle}</strong> has been confirmed.</p>
-          
-          ${bookingUrl 
-            ? `<p style="margin: 32px 0;"><a href="${bookingUrl}" style="background-color: #5eead4; color: #030406; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block;">Schedule Your Session</a></p>` 
-            : `<p style="color: rgba(255,255,255,0.8);">If your purchase includes email coaching or a custom service, simply reply directly to this email or reach out to us at <strong style="color: #fff;">support@nehalpatel.store</strong> to begin!</p>`}
-          
-          <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <p style="margin: 0; color: rgba(255,255,255,0.8);">Warmly,<br/><strong style="color: #fff;">Nehal Patel</strong><br/><span style="color: #5eead4; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">High Frequencies 11</span></p>
-          </div>
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
+          <h2 style="color: #0d9488;">Thank you for your purchase!</h2>
+          <p>Hi ${customerName || "there"},</p>
+          <p>Your order for <strong>${offeringTitle}</strong> has been confirmed and payment is received.</p>
+          ${bookingUrl ? `<p style="margin: 24px 0;"><a href="${bookingUrl}" style="background-color: #0d9488; color: #fff; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: bold;">Schedule Your Session Here</a></p>` : `<p>If your purchase includes email coaching or a custom service, simply reply directly to this email or reach out to us at <strong>support@nehalpatel.store</strong> to begin!</p>`}
+          <p style="margin-top: 30px; border-top: 1px solid #eee; pt: 16px;">Warmly,<br/><strong>Nehal Patel</strong><br/><span style="color: #666; font-size: 13px;">High Frequencies 11</span></p>
         </div>
       `,
     });

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emailButton, emailText, renderBrandedEmail } from "./email-template.ts";
 
 export const corsHeaders = {
   "Content-Type": "application/json",
@@ -248,30 +249,29 @@ export const fulfillCourseAccess = async ({
       console.warn("[Fulfill] Failed to insert admin notification:", e);
     }
 
+    const safeCustomerName = emailText(customerName || "there");
+    const safeOfferingTitle = emailText(offeringTitle);
+    const confirmationContent = `
+      <p style="margin:0 0 16px;">Hi ${safeCustomerName},</p>
+      <p style="margin:0 0 16px;">Your order for <strong style="color:#ffffff;">${safeOfferingTitle}</strong> is confirmed and payment has been received.</p>
+      ${bookingUrl
+        ? `<p style="margin:0 0 8px;">Choose a time for your session:</p>${emailButton(bookingUrl, "Schedule your session")}`
+        : offering.fulfillment_mode === "booking"
+          ? `<p style="margin:0 0 16px;">Your payment is confirmed. If a scheduling link is not available, reply to this email and we will arrange your session.</p>`
+          : `<p style="margin:0 0 16px;">We will begin fulfilling your purchase using the details for this offering.</p>`}
+      ${offering.fulfillment_mode === "digital" && offering.digital_delivery_type === "download" && offering.delivery_url
+        ? `${emailButton(String(offering.delivery_url), "Open your digital product")}`
+        : ""}
+    `;
     const confirmationEmail = await sendEmail({
       to: normalizedEmail,
       subject: `Order Confirmation: ${offeringTitle}`,
-      html: `
-        <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #030406; color: #ffffff; padding: 40px 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-          <h2 style="color: #5eead4; margin-top: 0;">Thank you for your purchase!</h2>
-          <p style="color: rgba(255,255,255,0.8);">Hi ${escapeHtml(customerName || "there")},</p>
-          <p style="color: rgba(255,255,255,0.8);">Your order for <strong style="color: #fff;">${escapeHtml(offeringTitle)}</strong> has been confirmed.</p>
-          
-          ${bookingUrl 
-            ? `<p style="margin: 32px 0;"><a href="${bookingUrl}" style="background-color: #5eead4; color: #030406; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block;">Schedule Your Session</a></p>` 
-            : offering.fulfillment_mode === "booking" 
-              ? `<p style="color: rgba(255,255,255,0.8);">Your payment is confirmed. If the scheduling link is not available, reply to this email and the admin will arrange your session manually.</p>` 
-              : `<p style="color: rgba(255,255,255,0.8);">Your purchase is confirmed. We will begin fulfillment using the details on this product.</p>`}
-          
-          ${offering.fulfillment_mode === "digital" && offering.digital_delivery_type === "download" && offering.delivery_url 
-            ? `<p style="margin: 32px 0;"><a href="${offering.delivery_url}" style="background-color: #5eead4; color: #030406; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block;">Open your digital product</a></p>` 
-            : ""}
-          
-          <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <p style="margin: 0; color: rgba(255,255,255,0.8);">Warmly,<br/><strong style="color: #fff;">Nehal Patel</strong><br/><span style="color: #5eead4; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">High Frequencies 11</span></p>
-          </div>
-        </div>
-      `,
+      html: renderBrandedEmail({
+        title: "Thank you for your purchase",
+        previewText: `Your order for ${offeringTitle} is confirmed.`,
+        label: "Order confirmed",
+        contentHtml: confirmationContent,
+      }),
     });
 
     let readingEmail = { skipped: true };
@@ -279,16 +279,12 @@ export const fulfillCourseAccess = async ({
       readingEmail = await sendEmail({
         to: normalizedEmail,
         subject: `${offeringTitle} - your reading`,
-        html: `
-          <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #030406; color: #ffffff; padding: 40px 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-            <h2 style="color: #5eead4; margin-top: 0;">Your reading is ready</h2>
-            <p style="color: rgba(255,255,255,0.8);">Hi ${escapeHtml(customerName || "there")},</p>
-            <div style="white-space: pre-wrap; color: rgba(255,255,255,0.9); line-height: 1.8;">${escapeHtml(String(offering.reading_email_body))}</div>
-            <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
-              <p style="margin: 0; color: rgba(255,255,255,0.8);">Warmly,<br/><strong style="color: #fff;">Nehal Patel</strong><br/><span style="color: #5eead4; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">High Frequencies 11</span></p>
-            </div>
-          </div>
-        `,
+        html: renderBrandedEmail({
+          title: "Your reading is ready",
+          previewText: `${offeringTitle}: your reading is ready.`,
+          label: "Your reading",
+          contentHtml: `<p style="margin:0 0 18px;">Hi ${emailText(customerName || "there")},</p><div style="white-space:pre-wrap;">${escapeHtml(String(offering.reading_email_body))}</div>`,
+        }),
       });
     }
 
@@ -296,17 +292,13 @@ export const fulfillCourseAccess = async ({
       await sendEmail({
         to: adminEmail,
         subject: `New purchase: ${offeringTitle}`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px;">
-            <h3>New Purchase Received</h3>
-            <p><strong>Item:</strong> ${offeringTitle}</p>
-            <p><strong>Customer Email:</strong> ${normalizedEmail}</p>
-            <p><strong>Customer Name:</strong> ${customerName || "N/A"}</p>
-            <p><strong>Payment Provider:</strong> ${provider}</p>
-            <p><strong>Payment ID:</strong> ${paymentId || "N/A"}</p>
-            <p><strong>Amount:</strong> ${amount ? `${amount} ${currency || ""}` : "N/A"}</p>
-          </div>
-        `,
+        html: renderBrandedEmail({
+          title: "New purchase received",
+          previewText: `${offeringTitle} was purchased by ${customerName || normalizedEmail}.`,
+          label: "Admin notification",
+          footerText: "Storefront purchase notification",
+          contentHtml: `<p><strong>Item:</strong> ${emailText(offeringTitle)}</p><p><strong>Customer email:</strong> ${emailText(normalizedEmail)}</p><p><strong>Customer name:</strong> ${emailText(customerName || "N/A")}</p><p><strong>Payment provider:</strong> ${emailText(provider)}</p><p><strong>Payment ID:</strong> ${emailText(paymentId || "N/A")}</p><p><strong>Amount:</strong> ${amount ? `${emailText(amount)} ${emailText(currency || "")}` : "N/A"}</p>`,
+        }),
       });
     }
 
@@ -427,36 +419,25 @@ export const fulfillCourseAccess = async ({
   const courseEmail = await sendEmail({
     to: normalizedEmail,
     subject: `Your access link for ${course.title}`,
-    html: `
-      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; background-color: #030406; color: #ffffff; padding: 40px 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-        <h2 style="color: #5eead4; margin-top: 0;">Your course access is ready</h2>
-        <p style="color: rgba(255,255,255,0.8);">Hi ${escapeHtml(customerName || "there")},</p>
-        <p style="color: rgba(255,255,255,0.8);">Your access to <strong style="color: #fff;">${escapeHtml(course.title)}</strong> has been granted.</p>
-        
-        <p style="margin: 32px 0;"><a href="${accessUrl}" style="background-color: #5eead4; color: #030406; padding: 14px 28px; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block;">Open ${escapeHtml(course.title)}</a></p>
-        
-        ${access.expires_at 
-          ? `<p style="color: rgba(255,255,255,0.7); font-size: 14px;">This access link is valid until ${new Date(access.expires_at).toLocaleDateString()}.</p>` 
-          : `<p style="color: rgba(255,255,255,0.7); font-size: 14px;">You have lifetime access to this course.</p>`}
-        
-        <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
-          <p style="margin: 0; color: rgba(255,255,255,0.8);">Warmly,<br/><strong style="color: #fff;">Nehal Patel</strong><br/><span style="color: #5eead4; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">High Frequencies 11</span></p>
-        </div>
-      </div>
-    `,
+    html: renderBrandedEmail({
+      title: "Your course access is ready",
+      previewText: `Open ${course.title} and continue your course.`,
+      label: "Course access",
+      contentHtml: `<p style="margin:0 0 16px;">Hi ${emailText(customerName || "there")},</p><p style="margin:0 0 8px;">Your access to <strong style="color:#ffffff;">${emailText(course.title)}</strong> is ready.</p>${emailButton(accessUrl, `Open ${course.title}`)}${access.expires_at ? `<p style="margin:18px 0 0;font-size:13px;color:#a7b8b3;">Access is available until ${emailText(access.expires_at)}.</p>` : `<p style="margin:18px 0 0;font-size:13px;color:#a7b8b3;">You have lifetime access to this course.</p>`}`,
+    }),
   });
 
   if (adminEmail && createdAccess) {
     await sendEmail({
       to: adminEmail,
       subject: `New course purchase: ${course.title}`,
-      html: `
-        <p>${customerName || normalizedEmail} bought ${course.title}.</p>
-        <p>Email: ${normalizedEmail}</p>
-        <p>Provider: ${provider}</p>
-        <p>Payment ID: ${paymentId || "N/A"}</p>
-        <p>Access link: <a href="${accessUrl}">${accessUrl}</a></p>
-      `,
+      html: renderBrandedEmail({
+        title: "New course purchase",
+        previewText: `${course.title} was purchased by ${customerName || normalizedEmail}.`,
+        label: "Admin notification",
+        footerText: "Storefront course purchase notification",
+        contentHtml: `<p>${emailText(customerName || normalizedEmail)} bought ${emailText(course.title)}.</p><p><strong>Email:</strong> ${emailText(normalizedEmail)}</p><p><strong>Provider:</strong> ${emailText(provider)}</p><p><strong>Payment ID:</strong> ${emailText(paymentId || "N/A")}</p><p><strong>Access link:</strong> ${emailButton(accessUrl, "Open course access")}</p>`,
+      }),
     });
   }
 
