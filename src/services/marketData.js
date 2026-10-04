@@ -1,4 +1,5 @@
-const COUNTRY_API = "/api/market/countries";
+// Hit the CDN directly so production gets the full country list.
+const COUNTRY_API = "https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/countries.json";
 const RATES_API = "https://open.er-api.com/v6/latest/USD";
 const RATES_CACHE_KEY = "usd_rates_cache_v1";
 const RATES_TTL_MS = 1000 * 60 * 60 * 12;
