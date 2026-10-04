@@ -35,16 +35,16 @@ export const getCountries = async () => {
         (Array.isArray(data) ? data : [])
           .map((entry) => {
             const name = entry?.name?.common || entry?.name;
-            const code = entry?.cca2 || entry?.code;
+            const iso2 = entry?.iso2 || '';
             const currencies = Array.isArray(entry?.currencies)
               ? entry.currencies
               : entry?.currencies
                 ? Object.keys(entry.currencies)
                 : [];
-            if (!name || !code) {
+            if (!name || !iso2) {
               return null;
             }
-            return { name, code, currencies };
+            return { name, iso2, currencies };
           })
           .filter(Boolean)
           .sort((a, b) => a.name.localeCompare(b.name)),

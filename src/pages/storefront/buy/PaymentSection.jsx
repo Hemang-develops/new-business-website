@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
-import { formatAmountFromMajor, formatUnitAmountLabel, roundUpAestheticAmount } from "../../../services/pricing";
+import { formatAmountFromMajor } from "../../../services/pricing";
 import { Input } from "../../../components/ui/input";
 import { useAuth } from "../../../context/AuthContext";
 import { useToast } from "../../../context/ToastContext";
@@ -19,51 +19,7 @@ const fallbackCountryData = [
   { name: "United Kingdom", code: "GB", currencies: ["GBP"] },
 ];
 const DEFAULT_PAYPAL_LINK = "https://www.paypal.com/paypalme/NehalPatel64";
-const MIN_INSTALLMENT_AMOUNT_INR = 15000000; // to enable disable installment
 
-const defaultInstallmentPresets = [
-  {
-    id: "pay-in-full",
-    label: "Pay in full",
-    mode: "payment",
-    installmentCount: 1,
-    feePercent: 0,
-    description: "Lowest total cost",
-    badge: "Best price",
-  },
-  {
-    id: "two-installments",
-    label: "2 installments",
-    mode: "payment",
-    installmentCount: 2,
-    feePercent: 8,
-    description: "Split your payment across 2 parts",
-    badge: "Easy start",
-  },
-  {
-    id: "four-installments",
-    label: "4 installments",
-    mode: "payment",
-    installmentCount: 4,
-    feePercent: 15,
-    description: "Lowest upfront commitment",
-    badge: "Most flexible",
-  },
-];
-
-const applyInstallmentFeeToCurrencies = (currencies, feePercent) => {
-  const multiplier = 1 + feePercent / 100;
-  return Object.entries(currencies || {}).reduce((acc, [code, config]) => {
-    const next = { ...config };
-    if (typeof config?.unitAmount === "number") {
-      const adjusted = Math.max(1, Math.round(config.unitAmount * multiplier));
-      next.unitAmount = adjusted;
-      next.amount = formatUnitAmountLabel(adjusted, code);
-    }
-    acc[code] = next;
-    return acc;
-  }, {});
-};
 
 const loadRazorpayCheckout = () =>
   new Promise((resolve, reject) => {
@@ -106,50 +62,18 @@ const PaymentSection = ({ item }) => {
   const paypalLink = item.paypalLink || import.meta.env.VITE_PAYPAL_ME_LINK || DEFAULT_PAYPAL_LINK;
   const upiLink = item.upiLink || import.meta.env.VITE_UPI_PAY_LINK || "";
 
-  const rawPackageOptions = useMemo(() => {
-    if (!checkoutOptions) {
-      return [];
-    }
-    if (checkoutOptions.installments && typeof checkoutOptions.installments === "object") {
-      return Object.entries(checkoutOptions.installments)
-        .map(([id, config]) => ({
-          id,
-          label: config.label || id,
-          mode: config.mode || "payment",
-          installmentCount: config.installmentCount || 1,
-          feePercent: config.feePercent || 0,
-          description: config.description || "",
-          badge: config.badge || "",
-          currencies: config.currencies || {},
-          defaultCurrency: config.defaultCurrency || checkoutOptions.defaultCurrency || "usd",
-        }))
-        .filter((entry) => Object.keys(entry.currencies || {}).length > 0);
-    }
-    if (!checkoutOptions.currencies) {
-      return [];
-    }
-    return defaultInstallmentPresets.map((preset) => ({
-      ...preset,
-      currencies: applyInstallmentFeeToCurrencies(checkoutOptions.currencies, preset.feePercent || 0),
+  // Single plan: full price only
+  const packageOptions = useMemo(() => {
+    if (!checkoutOptions?.currencies) return [];
+    return [{
+      id: "pay-in-full",
+      label: "Pay in full",
+      mode: "payment",
+      currencies: checkoutOptions.currencies,
       defaultCurrency: checkoutOptions.defaultCurrency || "usd",
-    }));
+    }];
   }, [checkoutOptions]);
   const [usdRates, setUsdRates] = useState(null);
-  const estimatedBaseAmountInInr = useMemo(() => {
-    const usdUnitAmount = rawPackageOptions[0]?.currencies?.usd?.unitAmount;
-    if (typeof usdUnitAmount === "number" && usdRates?.INR) {
-      return (usdUnitAmount / 100) * usdRates.INR;
-    }
-    return null;
-  }, [rawPackageOptions, usdRates]);
-  const installmentEligible = estimatedBaseAmountInInr == null || estimatedBaseAmountInInr >= MIN_INSTALLMENT_AMOUNT_INR;
-  const packageOptions = useMemo(
-    () =>
-      rawPackageOptions.filter((option) =>
-        installmentEligible ? true : Math.max(1, option.installmentCount || 1) === 1,
-      ),
-    [installmentEligible, rawPackageOptions],
-  );
   const [selectedPackageId, setSelectedPackageId] = useState(() => packageOptions[0]?.id || "");
   const selectedPackage = useMemo(
     () => packageOptions.find((entry) => entry.id === selectedPackageId) || packageOptions[0] || null,
@@ -216,7 +140,7 @@ const PaymentSection = ({ item }) => {
         }, {}),
       );
       if (browserRegion) {
-        const detected = parsed.find((entry) => entry.code === browserRegion);
+        const detected = parsed.find((entry) => entry.iso2 === browserRegion);
         if (detected?.name) {
           setCountry(detected.name);
         }
@@ -282,56 +206,20 @@ const PaymentSection = ({ item }) => {
       packageOptions.reduce((acc, option) => {
         const usdUnitAmount = option?.currencies?.usd?.unitAmount;
         if (typeof usdUnitAmount !== "number") {
-          acc[option.id] = {
-            totalLabel: option.label,
-            perInstallmentLabel: option.label,
-            totalMajor: null,
-            perInstallmentMajor: null,
-            currencyCode: previewCurrencyCode,
-          };
+          acc[option.id] = { totalLabel: option.label, totalMajor: null, currencyCode: previewCurrencyCode };
           return acc;
         }
-        const installments = Math.max(1, option.installmentCount || 1);
-        const totalMajorAmount = usdUnitAmount / 100;
         const rawTotalMajor =
-          previewCurrencyCode === "USD" ? totalMajorAmount : totalMajorAmount * (countryRate || 1);
-
-        // commented below as asthetic rounding is removed for now
-        // const roundedPerInstallmentMajor = roundUpAestheticAmount(
-        //   rawTotalMajor / installments,
-        //   previewCurrencyCode,
-        // );
-        // const roundedTotalMajor = roundedPerInstallmentMajor * installments;
-
+          previewCurrencyCode === "USD" ? usdUnitAmount / 100 : (usdUnitAmount / 100) * (countryRate || 1);
         acc[option.id] = {
           totalLabel: formatAmountFromMajor(rawTotalMajor, previewCurrencyCode),
-          perInstallmentLabel: formatAmountFromMajor(rawTotalMajor / installments, previewCurrencyCode),
           totalMajor: rawTotalMajor,
-          perInstallmentMajor: rawTotalMajor / installments,
           currencyCode: previewCurrencyCode,
         };
         return acc;
       }, {}),
     [countryRate, packageOptions, previewCurrencyCode],
   );
-  const averageRoundedExtraLabel = useMemo(() => {
-    const baseTotal = packagePricePreviews["pay-in-full"]?.totalMajor;
-    if (typeof baseTotal !== "number") {
-      return null;
-    }
-    const extras = packageOptions
-      .filter((option) => option.id !== "pay-in-full")
-      .map((option) => {
-        const planTotal = packagePricePreviews[option.id]?.totalMajor;
-        return typeof planTotal === "number" ? Math.max(0, planTotal - baseTotal) : null;
-      })
-      .filter((value) => typeof value === "number");
-    if (!extras.length) {
-      return null;
-    }
-    const averageExtra = extras.reduce((sum, value) => sum + value, 0) / extras.length;
-    return formatAmountFromMajor(averageExtra, previewCurrencyCode);
-  }, [packageOptions, packagePricePreviews, previewCurrencyCode]);
   const showReferenceConversion = Boolean(
     hasCheckout &&
     referenceUsdAmount &&
@@ -341,43 +229,17 @@ const PaymentSection = ({ item }) => {
   );
   const presentmentCurrency = selectedCountryCurrencyCode.toLowerCase();
   const presentmentUnitAmount = useMemo(() => {
-    if (referenceUsdAmount == null) {
-      return null;
-    }
-    const installments = Math.max(1, selectedPackage?.installmentCount || 1);
+    if (referenceUsdAmount == null) return null;
     const rawTotal =
-      presentmentCurrency === "usd"
-        ? referenceUsdAmount
-        : countryRate
-          ? referenceUsdAmount * countryRate
-          : null;
-    if (rawTotal == null) {
-      return null;
-    }
-
-    // commented below as asthetic rounding is removed for now
-    // const roundedPerInstallment = roundUpAestheticAmount(
-    //   rawTotal / installments,
-    //   presentmentCurrency.toUpperCase(),
-    // );
-    // const roundedTotal = roundedPerInstallment * installments;
-    return Math.max(1, Math.round(rawTotal * 100));
-  }, [countryRate, presentmentCurrency, referenceUsdAmount, selectedPackage?.installmentCount]);
+      presentmentCurrency === "usd" ? referenceUsdAmount : countryRate ? referenceUsdAmount * countryRate : null;
+    return rawTotal == null ? null : Math.max(1, Math.round(rawTotal * 100));
+  }, [countryRate, presentmentCurrency, referenceUsdAmount]);
   const amountDueLabel = useMemo(() => {
-    const selectedPreview = selectedPackage?.id ? packagePricePreviews[selectedPackage.id] : null;
-    if (selectedPreview?.perInstallmentLabel) {
-      return selectedPreview.perInstallmentLabel;
-    }
-    if (!currencyConfig?.amount) {
-      return item.price?.usd ? `$${item.price.usd} USD` : "Choose your checkout method";
-    }
+    const preview = selectedPackage?.id ? packagePricePreviews[selectedPackage.id] : null;
+    if (preview?.totalLabel) return preview.totalLabel;
+    if (!currencyConfig?.amount) return item.price?.usd ? `$${item.price.usd} USD` : "Choose your checkout method";
     return String(currencyConfig.amount).trim();
-  }, [
-    currencyConfig?.amount,
-    item.price?.usd,
-    packagePricePreviews,
-    selectedPackage?.id,
-  ]);
+  }, [currencyConfig?.amount, item.price?.usd, packagePricePreviews, selectedPackage?.id]);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -419,7 +281,9 @@ const PaymentSection = ({ item }) => {
   }, [backupLink, manualInstructions, upiInstructionLabel]);
   const successPath = `/buy/${item.id}/success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelPath = `/buy/${item.id}/cancel`;
-  const canUseRazorpay = hasCheckout && typeof presentmentUnitAmount === "number";
+  // ponytail: set VITE_STRIPE_ONLY=true to hide Razorpay+UPI once Stripe handles them natively
+  const stripeOnly = import.meta.env.VITE_STRIPE_ONLY === "true";
+  const canUseRazorpay = !stripeOnly && hasCheckout && typeof presentmentUnitAmount === "number";
   const razorpayCurrency = presentmentCurrency.toUpperCase();
 
   useEffect(() => {
@@ -456,12 +320,7 @@ const PaymentSection = ({ item }) => {
     }
   }, [canShowUpiOption, canUseRazorpay, paymentMethod]);
 
-  useEffect(() => {
-    if (!import.meta.env.DEV || !averageRoundedExtraLabel) {
-      return;
-    }
-    console.info(`[Checkout pricing] Average extra added vs pay-in-full: ${averageRoundedExtraLabel}`);
-  }, [averageRoundedExtraLabel]);
+
 
   const apiBase = useMemo(() => {
     const base = import.meta.env.VITE_API_BASE_URL;
@@ -658,14 +517,8 @@ const PaymentSection = ({ item }) => {
           productId: item.id,
           packageId: selectedPackage?.id || null,
           packageLabel: selectedPackage?.label || null,
-          installmentPlanId: selectedPackage?.id || null,
-          installmentPlanLabel: selectedPackage?.label || null,
-          installmentCount: selectedPackage?.installmentCount || 1,
-          installmentFeePercent: selectedPackage?.feePercent || 0,
           currency: selectedCurrency,
-          preferredPaymentMethod: paymentMethod,
           mode: selectedPackage?.mode || "payment",
-          recurringInterval: null,
           presentmentCurrency,
           presentmentUnitAmount,
           baseCurrency: "usd",
@@ -694,7 +547,7 @@ const PaymentSection = ({ item }) => {
       if (data?.url) {
         console.log("[PaymentSection] Stripe checkout created - email:", email.trim(), 'product:', item.id, 'session:', data?.session_id);
         toast.info("Redirecting you to secure Stripe checkout.", "Redirecting");
-        
+
         // Store session info in sessionStorage for later retrieval (persists through redirect)
         if (data?.session_id) {
           const normalizedEmail = email.trim().toLowerCase();
@@ -708,7 +561,7 @@ const PaymentSection = ({ item }) => {
           }
           console.log("[PaymentSection] Stored in sessionStorage - email:", normalizedEmail);
         }
-        
+
         window.location.href = data.url;
         return;
       }
@@ -831,59 +684,7 @@ const PaymentSection = ({ item }) => {
               </div>
             </label>
 
-            {installmentEligible ? (
-              <label className="flex flex-col space-y-2 text-sm text-white/70">
-                <span className="font-semibold text-white">Installment plan</span>
-                <p className="text-xs text-white/55">
-                  Need lower upfront payment? Choose more installments. Total price increases with each split.
-                </p>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {packageOptions.map((option) => {
-                    const isSelected = option.id === selectedPackage?.id;
-                    const previewAmount = packagePricePreviews[option.id];
-                    const perInstallmentAmount = previewAmount?.perInstallmentLabel || option.label;
-                    const totalAmount = previewAmount?.totalLabel || option.label;
-                    const nonSelectedClass =
-                      option.installmentCount >= 4
-                        ? "border-amber-300/35 bg-amber-300/10 text-white/80 hover:border-amber-200/60"
-                        : "border-white/20 bg-black/25 text-white/70 hover:border-teal-300/40 hover:text-white";
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setSelectedPackageId(option.id)}
-                        aria-pressed={isSelected}
-                        className={`rounded-2xl border p-4 text-left transition ${isSelected
-                          ? "border-teal-200 bg-teal-300/20 text-teal-50 shadow-[0_0_0_1px_rgba(45,212,191,0.25)]"
-                          : nonSelectedClass
-                          }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-xs font-semibold uppercase tracking-[0.22em]">{option.label}</p>
-                          {option.badge ? (
-                            <span className="rounded-full border border-teal-200/30 bg-teal-300/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-100">
-                              {option.badge}
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="mt-2 text-2xl font-semibold text-white">
-                          {perInstallmentAmount}
-                        </p>
-                        <p className="mt-1 text-xs text-white/50">Per payment</p>
-                        <p className="mt-2 text-xs text-white/65">
-                          {option.installmentCount > 1
-                            ? `${option.installmentCount} x payments`
-                            : "1 x payment"}
-                        </p>
-                        <p className="mt-1 text-xs text-white/55">
-                          Total payable: {totalAmount}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </label>
-            ) : null}
+
 
             <label className="flex flex-col space-y-2 text-sm text-white/70">
               <span className="font-semibold text-white">Country</span>
@@ -903,32 +704,22 @@ const PaymentSection = ({ item }) => {
             <div className="space-y-3 rounded-2xl border border-white/10 bg-black/40 p-6">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm font-semibold uppercase tracking-[0.3em] text-teal-200/80">
-                  {installmentEligible ? "Per installment" : "Your investment"}
+                  Your investment
                 </span>
                 <span className="text-lg font-semibold text-white">
                   {amountDueLabel}
                 </span>
               </div>
-              {packagePricePreviews[selectedPackage?.id || ""]?.totalLabel ? (
-                <p className="text-xs text-white/55">
-                  Total payable: {packagePricePreviews[selectedPackage?.id || ""].totalLabel}
-                </p>
-              ) : null}
-              {installmentEligible ? (
-                <p className="text-xs text-white/60">
-                  Installment plan: {selectedPackage?.label || "Pay in full"}
-                </p>
-              ) : null}
               <p className="text-xs text-white/60">
                 {paymentMethod === "paypal"
                   ? "You will be redirected to PayPal to complete payment securely."
                   : paymentMethod === "razorpay"
                     ? `Razorpay checkout will open in a secure modal for your ${razorpayCurrency} payment.`
-                  : paymentMethod === "upi"
-                    ? upiLink
-                      ? "You will be redirected to your UPI payment flow."
-                      : "UPI instructions will be shared via support."
-                    : "You'll be redirected to Stripe to complete your payment over a secure SSL connection."}
+                    : paymentMethod === "upi"
+                      ? upiLink
+                        ? "You will be redirected to your UPI payment flow."
+                        : "UPI instructions will be shared via support."
+                      : "You'll be redirected to Stripe to complete your payment over a secure SSL connection."}
               </p>
               {showReferenceConversion ? (
                 <p className="text-xs text-white/50">
