@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import Navigation from "../../components/Navigation";
 import Footer from "../../components/common/Footer";
@@ -30,7 +30,7 @@ import FulfillmentTab from "./FulfillmentTab";
 import ReviewSaveSummaryModal from "./ReviewSaveSummaryModal";
 import ProductsTab from "./ProductsTab";
 import WebsiteTab from "./WebsiteTab";
-import CoursesTab from "./CoursesTab";
+import CoursesTab from "./CourseWorkspaceTab";
 import useCatalogAdminSaves from "./useCatalogAdminSaves";
 import useCatalogAdminUploads from "./useCatalogAdminUploads";
 import { offeringModeMeta, siteSectionEditorMeta } from "./catalogAdminConfig";
@@ -117,6 +117,8 @@ const CatalogAdmin = () => {
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [newCourseOfferingId, setNewCourseOfferingId] = useState("");
   const [isSavingCourse, setIsSavingCourse] = useState(false);
+  const [courseSaveRevision, setCourseSaveRevision] = useState(0);
+  const courseNavigationGuardRef = useRef(null);
   const [deletedCourseItemIds, setDeletedCourseItemIds] = useState([]);
   const [deletedCourseModuleIds, setDeletedCourseModuleIds] = useState([]);
   const [savedReviewsSnapshot, setSavedReviewsSnapshot] = useState([]);
@@ -189,7 +191,7 @@ const CatalogAdmin = () => {
   const selectedSiteSectionMeta = selectedSiteSection ? siteSectionEditorMeta[selectedSiteSection.id] || {} : {};
   const getSectionIdForOffering = (offeringId) =>
     offerings.find((entry) => entry.id === offeringId)?.section_id || "";
-  const selectedCourse = courses.find((course) => course.id === selectedCourseId) || courses[0] || null;
+  const selectedCourse = courses.find((course) => course.id === selectedCourseId) || null;
   const dashboardPurchaseRows = useMemo(() => purchases.map((purchase, index) => ({
     id: index + 1,
     name: purchase.customer_name || purchase.customer_email || "Unknown customer",
@@ -470,9 +472,6 @@ const CatalogAdmin = () => {
       setUserLearningPaths(userLearningPathRes.data || []);
       setContentAuditTrail(contentAuditTrailRes.data || []);
       setDashboardSummaryViewData(adminDashboardSummaryViewRes.data || null);
-      if (!selectedCourseId && coursesRes.data?.length) {
-        setSelectedCourseId(coursesRes.data[0].id);
-      }
       if (!selectedSectionId && sectionsRes.data?.length) {
         setSelectedSectionId(sectionsRes.data[0].id);
       }
@@ -521,14 +520,9 @@ const CatalogAdmin = () => {
       return;
     }
 
-    const scopedOfferings = offerings.filter((entry) => entry.section_id === selectedSectionId);
-    if (!scopedOfferings.length) {
+    const selectedOffering = offerings.find((entry) => entry.id === selectedOfferingId);
+    if (selectedOfferingId && selectedOffering?.section_id !== selectedSectionId) {
       setSelectedOfferingId("");
-      return;
-    }
-
-    if (!scopedOfferings.some((entry) => entry.id === selectedOfferingId)) {
-      setSelectedOfferingId(scopedOfferings[0].id);
     }
   }, [offerings, selectedOfferingId, selectedSectionId]);
 
@@ -743,18 +737,33 @@ const CatalogAdmin = () => {
     setCourses((prev) =>
       prev.map((course) => (course.id === selectedCourse?.id ? { ...course, [name]: value } : course)),
     );
+  const restoreCourseDraft = ({ course, items, modules }) => {
+    setCourses((previous) => previous.map((entry) => entry.id === course.id ? course : entry));
+    setCourseItems((previous) => [
+      ...previous.filter((entry) => entry.course_id !== course.id),
+      ...items,
+    ]);
+    setCourseModules((previous) => [
+      ...previous.filter((entry) => entry.course_id !== course.id),
+      ...modules,
+    ]);
+    setDeletedCourseItemIds([]);
+    setDeletedCourseModuleIds([]);
+  };
   const updateCourseItem = (itemId, name, value) =>
     setCourseItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, [name]: value } : item)));
-  const addCourseItem = () => {
+  const addCourseItem = (moduleId = null) => {
     if (!selectedCourse) {
       return;
     }
     const scopedItems = courseItems.filter((item) => item.course_id === selectedCourse.id);
+    const itemId = crypto.randomUUID();
     setCourseItems((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id: itemId,
         course_id: selectedCourse.id,
+        module_id: moduleId,
         sort_order: scopedItems.length,
         title: "New content",
         description: "",
@@ -768,6 +777,7 @@ const CatalogAdmin = () => {
         is_active: true,
       },
     ]);
+    return itemId;
   };
   const deleteCourseItem = (itemId) => {
     setDeletedCourseItemIds((prev) => [...new Set([...prev, itemId])]);
@@ -778,10 +788,11 @@ const CatalogAdmin = () => {
   const addCourseModule = () => {
     if (!selectedCourse) return;
     const scopedModules = courseModules.filter((m) => m.course_id === selectedCourse.id);
+    const moduleId = crypto.randomUUID();
     setCourseModules((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id: moduleId,
         course_id: selectedCourse.id,
         sort_order: scopedModules.length,
         title: "New module",
@@ -789,6 +800,7 @@ const CatalogAdmin = () => {
         is_active: true,
       },
     ]);
+    return moduleId;
   };
   const deleteCourseModule = (moduleId) => {
     setDeletedCourseModuleIds((prev) => [...new Set([...prev, moduleId])]);
@@ -845,6 +857,9 @@ const CatalogAdmin = () => {
       if (courseError) {
         throw courseError;
       }
+      setCourses((previous) => previous.map((course) => course.id === selectedCourse.id
+        ? { ...course, ...coursePayload }
+        : course));
 
       const currentItems = courseItems.filter((item) => item.course_id === selectedCourse.id);
       const currentModules = courseModules.filter((m) => m.course_id === selectedCourse.id);
@@ -934,12 +949,18 @@ const CatalogAdmin = () => {
       setDeletedCourseItemIds([]);
       setDeletedCourseModuleIds([]);
       setStatus({ type: "success", message: "Course saved successfully." });
+      setCourseSaveRevision((revision) => revision + 1);
+      return true;
     } catch (error) {
       setStatus({ type: "error", message: error?.message || "Unable to save course." });
+      return false;
     } finally {
       setIsSavingCourse(false);
     }
   };
+  const registerCourseNavigationGuard = useCallback((handler) => {
+    courseNavigationGuardRef.current = handler;
+  }, []);
   const { handleCourseMediaUpload, handleHeroImageUpload, handleOfferingDeliveryUpload, handleOfferingImageUpload, handleProfileImageUpload, handleReviewImageUpload } =
     useCatalogAdminUploads({
       editor,
@@ -1092,6 +1113,7 @@ const CatalogAdmin = () => {
     courseAccess,
     courseItems,
     courseModules,
+    courseSaveRevision,
     courses,
     isSavingCourse,
     newCourseOfferingId,
@@ -1108,6 +1130,8 @@ const CatalogAdmin = () => {
     deleteCourseModule,
     handleCourseMediaUpload,
     handleSaveCourse,
+    registerCourseNavigationGuard,
+    restoreCourseDraft,
     setNewCourseOfferingId,
     setSelectedCourseId,
     updateCourse,
@@ -1241,9 +1265,16 @@ const CatalogAdmin = () => {
                           id={`account-${tab.id}-tab`}
                           title={tab.label}
                           onClick={() => {
-                            setActiveAdminTab(tab.id);
-                            if (window.matchMedia("(max-width: 767px)").matches) {
-                              setIsMobileDrawerOpen(false);
+                            const navigateToTab = () => {
+                              setActiveAdminTab(tab.id);
+                              if (window.matchMedia("(max-width: 767px)").matches) {
+                                setIsMobileDrawerOpen(false);
+                              }
+                            };
+                            if (activeAdminTab === "courses" && tab.id !== "courses" && courseNavigationGuardRef.current) {
+                              courseNavigationGuardRef.current(navigateToTab);
+                            } else {
+                              navigateToTab();
                             }
                           }}
                           className={`group relative flex h-12 w-full items-center rounded-2xl border text-sm font-semibold transition ${isMobileDrawerOpen ? "justify-start gap-3 px-3 text-left" : isSidebarExpanded ? "justify-center px-0 lg:justify-start lg:gap-3 lg:px-3 lg:text-left" : "justify-center px-0"} ${isActive
