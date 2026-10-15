@@ -7,6 +7,8 @@ import { SimpleEditor } from "../../components/tiptap-templates/simple/simple-ed
 import { supabase } from "../../supabase-client";
 import ImageUploader from "../../components/ui/ImageUploader";
 import { useSiteSettings } from "../../context/SiteSettingsContext";
+import { sanitizeRichText } from "../../lib/sanitizeRichText";
+import TablePagination from "./TablePagination";
 
 const bucketName = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || "site-media";
 
@@ -83,8 +85,10 @@ const renderPreviewBlock = (block) => {
   switch (block.type) {
     case "heading":
       return <h2 key={block.id} className="text-2xl font-bold text-white">{block.value}</h2>;
-    case "rich_text":
-      return <div key={block.id} className="prose prose-invert max-w-none text-white/75" dangerouslySetInnerHTML={{ __html: block.value || "" }} />;
+    case "rich_text": {
+      const safeHtml = sanitizeRichText(block.value || "");
+      return <div key={block.id} className="prose prose-invert max-w-none text-white/75" dangerouslySetInnerHTML={{ __html: safeHtml }} />;
+    }
     case "image":
       return block.url ? (
         <div key={block.id} className="flex justify-center my-4">
@@ -162,12 +166,19 @@ const NewsletterTab = () => {
   });
   
   const [history, setHistory] = useState([]);
+  const [historyPageIndex, setHistoryPageIndex] = useState(0);
   const [selectedBroadcast, setSelectedBroadcast] = useState(null);
   const [selectedRecipients, setSelectedRecipients] = useState([]);
+  const [recipientPageIndex, setRecipientPageIndex] = useState(0);
   const [isLoadingRecipients, setIsLoadingRecipients] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [testEmail, setTestEmail] = useState(user?.email || "");
   const toast = useToast();
+  const tablePageSize = 10;
+  const currentHistoryPageIndex = Math.min(historyPageIndex, Math.max(0, Math.ceil(history.length / tablePageSize) - 1));
+  const paginatedHistory = history.slice(currentHistoryPageIndex * tablePageSize, (currentHistoryPageIndex + 1) * tablePageSize);
+  const currentRecipientPageIndex = Math.min(recipientPageIndex, Math.max(0, Math.ceil(selectedRecipients.length / tablePageSize) - 1));
+  const paginatedRecipients = selectedRecipients.slice(currentRecipientPageIndex * tablePageSize, (currentRecipientPageIndex + 1) * tablePageSize);
 
   const [uploadingBlockId, setUploadingBlockId] = useState(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
@@ -296,6 +307,7 @@ const NewsletterTab = () => {
     try {
       const historyRows = await fetchBroadcastHistory();
       setHistory(historyRows || []);
+      setHistoryPageIndex(0);
     } catch (error) {
       console.error("Error fetching newsletter history:", error);
       setHistory([]);
@@ -359,6 +371,7 @@ const NewsletterTab = () => {
 
   const openRecipients = async (broadcast) => {
     setSelectedBroadcast(broadcast);
+    setRecipientPageIndex(0);
     setIsLoadingRecipients(true);
     try {
       const rows = await fetchNewsletterRecipients({ broadcastId: broadcast.id });
@@ -931,7 +944,7 @@ const NewsletterTab = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {history.length > 0 ? history.map((item) => (
+                {history.length > 0 ? paginatedHistory.map((item) => (
                   <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
@@ -991,6 +1004,12 @@ const NewsletterTab = () => {
               </tbody>
             </table>
           </div>
+          <TablePagination
+            pageIndex={currentHistoryPageIndex}
+            pageSize={tablePageSize}
+            totalItems={history.length}
+            onPageChange={setHistoryPageIndex}
+          />
         </div>
       )}
 
@@ -1112,8 +1131,9 @@ const NewsletterTab = () => {
             {isLoadingRecipients ? (
               <p className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/60">Loading recipients...</p>
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-white/10">
-                <table className="w-full text-left">
+              <>
+                <div className="overflow-hidden rounded-2xl border border-white/10">
+                  <table className="w-full text-left">
                   <thead className="bg-white/[0.03]">
                     <tr>
                       <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">Email</th>
@@ -1123,7 +1143,7 @@ const NewsletterTab = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {selectedRecipients.length ? selectedRecipients.map((recipient) => (
+                    {selectedRecipients.length ? paginatedRecipients.map((recipient) => (
                       <tr key={recipient.id}>
                         <td className="px-5 py-4 text-sm text-white/80">{recipient.email}</td>
                         <td className="px-5 py-4 text-xs uppercase tracking-[0.16em] text-white/45">{recipient.source}</td>
@@ -1136,8 +1156,15 @@ const NewsletterTab = () => {
                       </tr>
                     )}
                   </tbody>
-                </table>
-              </div>
+                  </table>
+                </div>
+                <TablePagination
+                  pageIndex={currentRecipientPageIndex}
+                  pageSize={tablePageSize}
+                  totalItems={selectedRecipients.length}
+                  onPageChange={setRecipientPageIndex}
+                />
+              </>
             )}
           </div>
         </div>

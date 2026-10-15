@@ -1,3 +1,6 @@
+import { useMemo, useState } from "react";
+import TablePagination from "./TablePagination";
+
 const formatCurrency = (value) => {
   const amount = Number(value || 0);
   if (Number.isNaN(amount)) {
@@ -22,12 +25,28 @@ const formatDate = (value) => {
 };
 
 const AnalyticsTab = ({ offeringAnalytics = [], userLearningPaths = [] }) => {
-  const topOfferings = [...offeringAnalytics]
-    .sort((a, b) => Number(b.total_sales || 0) - Number(a.total_sales || 0))
-    .slice(0, 12);
-
-  const activeUsers = userLearningPaths.filter((row) => row.engagement_status === "active").slice(0, 12);
-  const atRiskUsers = userLearningPaths.filter((row) => row.engagement_status === "at_risk").slice(0, 12);
+  const pageSize = 10;
+  const [offeringPageIndex, setOfferingPageIndex] = useState(0);
+  const [activeLearnerPageIndex, setActiveLearnerPageIndex] = useState(0);
+  const [atRiskLearnerPageIndex, setAtRiskLearnerPageIndex] = useState(0);
+  const topOfferings = useMemo(
+    () => [...offeringAnalytics].sort((a, b) => Number(b.total_sales || 0) - Number(a.total_sales || 0)),
+    [offeringAnalytics],
+  );
+  const activeUsers = useMemo(
+    () => userLearningPaths.filter((row) => row.engagement_status === "active"),
+    [userLearningPaths],
+  );
+  const atRiskUsers = useMemo(
+    () => userLearningPaths.filter((row) => row.engagement_status === "at_risk"),
+    [userLearningPaths],
+  );
+  const currentOfferingPageIndex = Math.min(offeringPageIndex, Math.max(0, Math.ceil(topOfferings.length / pageSize) - 1));
+  const currentActiveLearnerPageIndex = Math.min(activeLearnerPageIndex, Math.max(0, Math.ceil(activeUsers.length / pageSize) - 1));
+  const currentAtRiskLearnerPageIndex = Math.min(atRiskLearnerPageIndex, Math.max(0, Math.ceil(atRiskUsers.length / pageSize) - 1));
+  const pageOfferings = topOfferings.slice(currentOfferingPageIndex * pageSize, (currentOfferingPageIndex + 1) * pageSize);
+  const pageActiveUsers = activeUsers.slice(currentActiveLearnerPageIndex * pageSize, (currentActiveLearnerPageIndex + 1) * pageSize);
+  const pageAtRiskUsers = atRiskUsers.slice(currentAtRiskLearnerPageIndex * pageSize, (currentAtRiskLearnerPageIndex + 1) * pageSize);
 
   return (
     <section className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -56,8 +75,9 @@ const AnalyticsTab = ({ offeringAnalytics = [], userLearningPaths = [] }) => {
       <div className="rounded-3xl border border-white/10 bg-black/40 p-4">
         <h3 className="text-sm font-semibold text-white">Top offerings by sales</h3>
         {topOfferings.length ? (
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-left text-sm text-white/80">
+          <>
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-left text-sm text-white/80">
               <thead className="border-b border-white/10 text-white/70">
                 <tr>
                   <th className="py-3 pr-6">Offering</th>
@@ -68,7 +88,7 @@ const AnalyticsTab = ({ offeringAnalytics = [], userLearningPaths = [] }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
-                {topOfferings.map((offering) => (
+                {pageOfferings.map((offering) => (
                   <tr key={offering.offering_id} className="hover:bg-white/5">
                     <td className="py-3 pr-6 font-medium text-white">{offering.title || offering.offering_id}</td>
                     <td className="py-3 pr-6">{offering.total_sales ?? 0}</td>
@@ -78,8 +98,15 @@ const AnalyticsTab = ({ offeringAnalytics = [], userLearningPaths = [] }) => {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+            <TablePagination
+              pageIndex={currentOfferingPageIndex}
+              pageSize={pageSize}
+              totalItems={topOfferings.length}
+              onPageChange={setOfferingPageIndex}
+            />
+          </>
         ) : (
           <p className="mt-4 text-sm text-white/60">No offering analytics available yet.</p>
         )}
@@ -100,7 +127,7 @@ const AnalyticsTab = ({ offeringAnalytics = [], userLearningPaths = [] }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
-                  {activeUsers.map((profile) => (
+                  {pageActiveUsers.map((profile) => (
                     <tr key={profile.user_id} className="hover:bg-white/5">
                       <td className="py-3 pr-6 font-medium text-white">{profile.email}</td>
                       <td className="py-3 pr-6">{profile.total_enrolled ?? 0}</td>
@@ -110,6 +137,12 @@ const AnalyticsTab = ({ offeringAnalytics = [], userLearningPaths = [] }) => {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              pageIndex={currentActiveLearnerPageIndex}
+              pageSize={pageSize}
+              totalItems={activeUsers.length}
+              onPageChange={setActiveLearnerPageIndex}
+            />
           </div>
 
           <div>
@@ -124,7 +157,7 @@ const AnalyticsTab = ({ offeringAnalytics = [], userLearningPaths = [] }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
-                  {atRiskUsers.map((profile) => (
+                  {pageAtRiskUsers.map((profile) => (
                     <tr key={profile.user_id} className="hover:bg-white/5">
                       <td className="py-3 pr-6 font-medium text-white">{profile.email}</td>
                       <td className="py-3 pr-6">{profile.currently_learning ?? 0}</td>
@@ -134,6 +167,12 @@ const AnalyticsTab = ({ offeringAnalytics = [], userLearningPaths = [] }) => {
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              pageIndex={currentAtRiskLearnerPageIndex}
+              pageSize={pageSize}
+              totalItems={atRiskUsers.length}
+              onPageChange={setAtRiskLearnerPageIndex}
+            />
           </div>
         </div>
       </div>

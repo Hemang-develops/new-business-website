@@ -1,3 +1,6 @@
+import { useState } from "react";
+import TablePagination from "./TablePagination";
+
 const formatDate = (value) => {
   const date = value ? new Date(value) : null;
   return date instanceof Date && !Number.isNaN(date.getTime())
@@ -16,6 +19,11 @@ const getPayloadSummary = (payload) => {
 const ContentAuditTab = ({ contentAuditTrail = [] }) => {
   const visibleTrail = contentAuditTrail.slice(0, 100);
   const recentChanges = visibleTrail.length;
+  const pageSize = 10;
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(recentChanges / pageSize));
+  const currentPageIndex = Math.min(pageIndex, pageCount - 1);
+  const pageTrail = visibleTrail.slice(currentPageIndex * pageSize, (currentPageIndex + 1) * pageSize);
 
   return (
     <section className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -56,7 +64,7 @@ const ContentAuditTab = ({ contentAuditTrail = [] }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
-            {visibleTrail.map((row, index) => (
+            {pageTrail.map((row, index) => (
               <tr key={`${row.content_type}-${row.content_id}-${row.revision_number}-${index}`} className="hover:bg-white/5">
                 <td className="py-3 pr-6">{formatDate(row.changed_at)}</td>
                 <td className="py-3 pr-6 capitalize">{row.content_type}</td>
@@ -68,6 +76,12 @@ const ContentAuditTab = ({ contentAuditTrail = [] }) => {
             ))}
           </tbody>
         </table>
+        <TablePagination
+          pageIndex={currentPageIndex}
+          pageSize={pageSize}
+          totalItems={recentChanges}
+          onPageChange={setPageIndex}
+        />
       </div>
     </section>
   );
