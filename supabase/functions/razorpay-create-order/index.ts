@@ -33,12 +33,72 @@ const getRazorpayErrorStatus = (status: number) => {
   return 500;
 };
 
+const getSupabaseAdminClient = () => createClient(
+  Deno.env.get("SUPABASE_URL") || "",
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+  { auth: { persistSession: false } },
+);
+
+const getFxRate = async (currencyCode: string) => {
+  const normalized = String(currencyCode || "").trim().toUpperCase();
+  if (!normalized || normalized === "USD") {
+    return 1;
+  }
+
+  const response = await fetch("https://open.er-api.com/v6/latest/USD");
+  if (!response.ok) {
+    throw new Error("Unable to fetch live FX rates.");
+  }
+
+  const payload = await response.json() as Record<string, unknown>;
+  const rate = Number((payload.rates as Record<string, number> | undefined)?.[normalized]);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    throw new Error(`Unsupported checkout currency: ${currencyCode}.`);
+  }
+
+  return rate;
+};
+
+const getCanonicalProductAmount = async (productId: string, currency: string) => {
+  const normalizedProductId = String(productId || "").trim();
+  const normalizedCurrency = String(currency || "").trim().toLowerCase();
+
+  if (!normalizedProductId || !normalizedCurrency) {
+    throw new Error("Product and currency are required.");
+  }
+
+  const supabase = getSupabaseAdminClient();
+  const { data: configRow, error: configError } = await supabase
+    .from("storefront_checkout_configs")
+    .select("config")
+    .eq("product_id", normalizedProductId)
+    .maybeSingle();
+
+  if (configError) {
+    throw configError;
+  }
+
+  const config = configRow?.config && typeof configRow.config === "object" ? configRow.config as Record<string, any> : null;
+  if (!config) {
+    throw new Error("Checkout pricing for this product is not configured.");
+  }
+
+  const currencies = config.currencies && typeof config.currencies === "object" ? config.currencies as Record<string, any> : {};
+  const usdAmount = Number(currencies.usd?.unitAmount ?? 0);
+  if (!Number.isFinite(usdAmount) || usdAmount <= 0) {
+    throw new Error("This product does not have a valid USD base price.");
+  }
+
+  if (normalizedCurrency === "usd") {
+    return usdAmount;
+  }
+
+  const fxRate = await getFxRate(normalizedCurrency);
+  return Math.max(1, Math.round(usdAmount * fxRate));
+};
+
 const assertPurchasable = async (productId: string, email: string) => {
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") || "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
-    { auth: { persistSession: false } },
-  );
+  const supabase = getSupabaseAdminClient();
   const { data: offering, error: offeringError } = await supabase
     .from("storefront_offerings")
     .select("id,is_active,fulfillment_mode,fulfillment_version")
@@ -102,6 +162,14 @@ Deno.serve(async (request) => {
     }
     if (!/^[A-Z]{3}$/.test(normalizedCurrency)) {
       return json(400, { error: "Invalid Razorpay order currency." });
+    }
+
+    const expectedAmount = await getCanonicalProductAmount(String(productId), normalizedCurrency);
+    // ponytail: live FX rates can drift slightly between checkout preview and order creation,
+    // so accept a small tolerance instead of rejecting valid local-currency purchases.
+    const tolerance = Math.max(1, Math.round(expectedAmount * 0.01));
+    if (Math.abs(normalizedAmount - expectedAmount) > tolerance) {
+      return json(400, { error: "The order amount does not match the configured price for this product." });
     }
 
     const receipt = `${String(productId).slice(0, 20)}-${Date.now()}`.slice(0, 40);

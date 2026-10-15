@@ -25,283 +25,63 @@ const getAdminClient = () => {
   });
 };
 
-const getSiteUrl = () => (Deno.env.get("SITE_URL") || Deno.env.get("PUBLIC_SITE_URL") || "").replace(/\/$/, "");
-
-const buildAccessUrl = (token: string) => `${getSiteUrl() || ""}/courses/access/${token}`;
-
-const sendEmail = async ({ to, subject, html }: { to: string; subject: string; html: string }) => {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  const from = Deno.env.get("EMAIL_FROM");
-
-  const replyTo = Deno.env.get("EMAIL_REPLY_TO");
-
-  if (!apiKey || !from || !to) {
-    return { skipped: true };
+const getFxRate = async (currencyCode: string) => {
+  const normalized = String(currencyCode || "").trim().toUpperCase();
+  if (!normalized || normalized === "USD") {
+    return 1;
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to,
-      subject,
-      html,
-      ...(replyTo ? { reply_to: replyTo } : {}),
-    }),
-  });
-
+  const response = await fetch("https://open.er-api.com/v6/latest/USD");
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Unable to send email: ${text}`);
+    throw new Error("Unable to fetch live FX rates.");
   }
 
-  return { skipped: false };
+  const payload = await response.json() as Record<string, unknown>;
+  const rate = Number((payload.rates as Record<string, number> | undefined)?.[normalized]);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    throw new Error(`Unsupported checkout currency: ${currencyCode}.`);
+  }
+
+  return rate;
 };
 
-const fulfillCourseAccess = async ({
-  amount,
-  currency,
-  customerEmail,
-  customerName,
-  orderId,
-  packageId,
-  paymentId,
-  provider,
-  productId,
-  userId,
-}: {
-  amount?: number | null;
-  currency?: string | null;
-  customerEmail?: string | null;
-  customerName?: string | null;
-  orderId?: string | null;
-  packageId?: string | null;
-  paymentId?: string | null;
-  provider: string;
-  productId: string;
-  userId?: string | null;
-}) => {
-  const supabase = getAdminClient();
+const getCanonicalProductAmount = async (productId: string, currency: string) => {
   const normalizedProductId = String(productId || "").trim();
-  const normalizedEmail = String(customerEmail || "").trim().toLowerCase();
+  const normalizedCurrency = String(currency || "").trim().toLowerCase();
 
-  if (!normalizedProductId || !normalizedEmail) {
-    return { hasCourse: false, accessUrl: "", course: null };
+  if (!normalizedProductId || !normalizedCurrency) {
+    throw new Error("Product and currency are required.");
   }
 
-  const { data: course, error: courseError } = await supabase
-    .from("storefront_courses")
-    .select("id,offering_id,title,description,access_period_days,is_active")
-    .eq("offering_id", normalizedProductId)
-    .eq("is_active", true)
+  const supabase = getAdminClient();
+  const { data: configRow, error: configError } = await supabase
+    .from("storefront_checkout_configs")
+    .select("config")
+    .eq("product_id", normalizedProductId)
     .maybeSingle();
 
-  if (courseError) {
-    throw courseError;
-  }
-  if (!course) {
-    // Non-course product (e.g. Email Coaching, Audio Calls, Consultations)
-    const { data: offering } = await supabase
-      .from("storefront_offerings")
-      .select("id,title,summary,booking_url")
-      .eq("id", normalizedProductId)
-      .maybeSingle();
-
-    const offeringTitle = offering?.title || normalizedProductId;
-    const bookingUrl = offering?.booking_url || "";
-    const adminEmail = Deno.env.get("ADMIN_NOTIFY_EMAIL_1") || Deno.env.get("ADMIN_NOTIFY_EMAIL_2") || Deno.env.get("EMAIL_REPLY_TO");
-
-    try {
-      await supabase.from("storefront_admin_notifications").insert({
-        type: "offering_purchase",
-        title: `Order placed: ${offeringTitle}`,
-        message: `${customerName || normalizedEmail} purchased ${offeringTitle}.`,
-        offering_id: normalizedProductId,
-        customer_email: normalizedEmail,
-        customer_name: customerName || null,
-        metadata: { provider, paymentId, orderId, packageId, amount, currency },
-      });
-    } catch (e) {
-      console.warn("[Fulfill] Failed to insert admin notification:", e);
-    }
-
-    await sendEmail({
-      to: normalizedEmail,
-      subject: `Order Confirmation: ${offeringTitle}`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
-          <h2 style="color: #0d9488;">Thank you for your purchase!</h2>
-          <p>Hi ${customerName || "there"},</p>
-          <p>Your order for <strong>${offeringTitle}</strong> has been confirmed and payment is received.</p>
-          ${bookingUrl ? `<p style="margin: 24px 0;"><a href="${bookingUrl}" style="background-color: #0d9488; color: #fff; padding: 12px 24px; border-radius: 9999px; text-decoration: none; font-weight: bold;">Schedule Your Session Here</a></p>` : `<p>If your purchase includes email coaching or a custom service, simply reply directly to this email or reach out to us at <strong>support@nehalpatel.store</strong> to begin!</p>`}
-          <p style="margin-top: 30px; border-top: 1px solid #eee;">Warmly,<br/><strong>Nehal Patel</strong><br/><span style="color: #666; font-size: 13px;">High Frequencies 11</span></p>
-        </div>
-      `,
-    });
-
-    if (adminEmail) {
-      await sendEmail({
-        to: adminEmail,
-        subject: `New purchase: ${offeringTitle}`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px;">
-            <h3>New Purchase Received</h3>
-            <p><strong>Item:</strong> ${offeringTitle}</p>
-            <p><strong>Customer Email:</strong> ${normalizedEmail}</p>
-            <p><strong>Customer Name:</strong> ${customerName || "N/A"}</p>
-            <p><strong>Payment Provider:</strong> ${provider}</p>
-            <p><strong>Payment ID:</strong> ${paymentId || "N/A"}</p>
-            <p><strong>Amount:</strong> ${amount ? `${amount} ${currency || ""}` : "N/A"}</p>
-          </div>
-        `,
-      });
-    }
-
-    return { hasCourse: false, accessUrl: "", course: null };
+  if (configError) {
+    throw configError;
   }
 
-  const now = new Date();
-  const expiresAt =
-    Number.isFinite(Number(course.access_period_days)) && Number(course.access_period_days) > 0
-      ? new Date(now.getTime() + Number(course.access_period_days) * 24 * 60 * 60 * 1000).toISOString()
-      : null;
-
-  const { data: existing } = await supabase
-    .from("storefront_course_access")
-    .select("id,access_token,access_url,expires_at")
-    .eq("course_id", course.id)
-    .eq("customer_email", normalizedEmail)
-    .is("revoked_at", null)
-    .maybeSingle();
-
-  let access = existing;
-  let createdAccess = false;
-
-  if (!access) {
-    const { data: inserted, error: insertError } = await supabase
-      .from("storefront_course_access")
-      .insert({
-        course_id: course.id,
-        offering_id: normalizedProductId,
-        customer_email: normalizedEmail,
-        customer_name: customerName || null,
-        user_id: userId || null,
-        payment_provider: provider,
-        payment_id: paymentId || null,
-        order_id: orderId || null,
-        package_id: packageId || null,
-        amount: amount ?? null,
-        currency: currency || null,
-        starts_at: now.toISOString(),
-        expires_at: expiresAt,
-      })
-      .select("id,access_token,expires_at")
-      .single();
-
-    if (insertError) {
-      throw insertError;
-    }
-
-    const accessUrl = buildAccessUrl(inserted.access_token);
-    const { data: updated, error: updateError } = await supabase
-      .from("storefront_course_access")
-      .update({ access_url: accessUrl })
-      .eq("id", inserted.id)
-      .select("id,access_token,access_url,expires_at")
-      .single();
-
-    if (updateError) {
-      throw updateError;
-    }
-    access = updated;
-    createdAccess = true;
-  } else if (access && (userId || !access.access_url)) {
-    const accessUrl = access.access_url || buildAccessUrl(access.access_token);
-    const { data: updatedExisting, error: updateExistingError } = await supabase
-      .from("storefront_course_access")
-      .update({
-        ...(userId ? { user_id: userId } : {}),
-        ...(!access.access_url ? { access_url: accessUrl } : {}),
-      })
-      .eq("id", access.id)
-      .select("id,access_token,access_url,expires_at")
-      .single();
-
-    if (updateExistingError) {
-      throw updateExistingError;
-    }
-    access = updatedExisting;
+  const config = configRow?.config && typeof configRow.config === "object" ? configRow.config as Record<string, any> : null;
+  if (!config) {
+    throw new Error("Checkout pricing for this product is not configured.");
   }
 
-  const accessUrl = access.access_url || buildAccessUrl(access.access_token);
-  const adminEmail = Deno.env.get("ADMIN_NOTIFY_EMAIL_1") || Deno.env.get("ADMIN_NOTIFY_EMAIL_2") || Deno.env.get("EMAIL_REPLY_TO");
-
-  if (createdAccess) {
-    await supabase.from("storefront_admin_notifications").insert({
-      type: "course_purchase",
-      title: `Course purchased: ${course.title}`,
-      message: `${customerName || normalizedEmail} bought ${course.title}.`,
-      course_id: course.id,
-      offering_id: normalizedProductId,
-      purchase_id: access.id,
-      customer_email: normalizedEmail,
-      customer_name: customerName || null,
-      metadata: {
-        provider,
-        paymentId,
-        orderId,
-        packageId,
-        amount,
-        currency,
-        accessUrl,
-      },
-    });
-
-    await sendEmail({
-      to: normalizedEmail,
-      subject: `Your access link for ${course.title}`,
-      html: `
-      <p>Hi ${customerName || "there"},</p>
-      <p>Your course access is ready.</p>
-      <p><a href="${accessUrl}">Open ${course.title}</a></p>
-      ${access.expires_at ? `<p>This access link is valid until ${access.expires_at}.</p>` : "<p>You have lifetime access to this course.</p>"}
-    `,
-    });
-
-    if (adminEmail) {
-      await sendEmail({
-        to: adminEmail,
-        subject: `New course purchase: ${course.title}`,
-        html: `
-          <p>${customerName || normalizedEmail} bought ${course.title}.</p>
-          <p>Email: ${normalizedEmail}</p>
-          <p>Provider: ${provider}</p>
-          <p>Payment ID: ${paymentId || "N/A"}</p>
-          <p>Access link: <a href="${accessUrl}">${accessUrl}</a></p>
-        `,
-      });
-    }
+  const currencies = config.currencies && typeof config.currencies === "object" ? config.currencies as Record<string, any> : {};
+  const usdAmount = Number(currencies.usd?.unitAmount ?? 0);
+  if (!Number.isFinite(usdAmount) || usdAmount <= 0) {
+    throw new Error("This product does not have a valid USD base price.");
   }
 
-  return {
-    hasCourse: true,
-    accessUrl,
-    course: {
-      id: course.id,
-      title: course.title,
-      expiresAt: access.expires_at,
-    },
-  };
+  if (normalizedCurrency === "usd") {
+    return usdAmount;
+  }
+
+  const fxRate = await getFxRate(normalizedCurrency);
+  return Math.max(1, Math.round(usdAmount * fxRate));
 };
-
-const hex = (buffer: ArrayBuffer) =>
-  Array.from(new Uint8Array(buffer))
-    .map((value) => value.toString(16).padStart(2, "0"))
-    .join("");
 
 const sign = async (value: string, secret: string) => {
   const key = await crypto.subtle.importKey(
@@ -348,6 +128,31 @@ Deno.serve(async (request) => {
   }
 
   try {
+    const requestBody = await request.json();
+    const action = String(requestBody?.action || "").trim();
+
+    if (action === "verify-return") {
+      const paymentId = String(requestBody?.paymentId || requestBody?.razorpay_payment_id || "").trim();
+      const productId = String(requestBody?.productId || "").trim();
+
+      if (!paymentId || !productId) {
+        return json(400, { verified: false, error: "Payment and product are required." });
+      }
+
+      const { data: purchase, error: purchaseError } = await getAdminClient()
+        .from("storefront_purchases")
+        .select("id")
+        .eq("payment_provider", "razorpay")
+        .eq("payment_id", paymentId)
+        .eq("offering_id", productId)
+        .eq("status", "paid")
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .maybeSingle();
+
+      if (purchaseError) throw purchaseError;
+      return json(200, { verified: Boolean(purchase) });
+    }
+
     const {
       orderId,
       razorpayOrderId,
@@ -365,7 +170,7 @@ Deno.serve(async (request) => {
       lastName,
       packageId,
       userId,
-    } = await request.json();
+    } = requestBody;
 
     const normalizedOrderId = String(orderId || razorpayOrderId || razorpay_order_id || "").trim();
     const normalizedPaymentId = String(paymentId || razorpay_payment_id || "").trim();
@@ -399,8 +204,38 @@ Deno.serve(async (request) => {
       });
     }
 
-    if (paymentPayload.status !== "captured" && paymentPayload.status !== "authorized") {
-      throw new Error(`Unexpected Razorpay payment status: ${paymentPayload.status || "unknown"}.`);
+    if (paymentPayload.status !== "captured") {
+      throw new Error(`Razorpay payment is not captured yet (status: ${paymentPayload.status || "unknown"}).`);
+    }
+
+    const orderResponse = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(normalizedOrderId)}`, {
+      headers: {
+        Authorization: header,
+        "Content-Type": "application/json",
+      },
+    });
+    const orderPayload = await orderResponse.json();
+    if (!orderResponse.ok) {
+      return json(getRazorpayErrorStatus(orderResponse.status), {
+        status: "failed",
+        error: orderPayload?.error?.description || "Unable to fetch Razorpay order details.",
+      });
+    }
+
+    const orderProductId = String(orderPayload?.notes?.productId || "").trim();
+    if (!orderProductId || orderProductId !== String(productId || "").trim()) {
+      return json(400, {
+        status: "failed",
+        error: "Razorpay payment does not match the requested product.",
+      });
+    }
+
+    const expectedAmount = await getCanonicalProductAmount(orderProductId, String(paymentPayload.currency || orderPayload.currency || "usd"));
+    if (Math.abs(Number(paymentPayload.amount || orderPayload.amount || 0) - expectedAmount) > 1) {
+      return json(400, {
+        status: "failed",
+        error: "Razorpay payment amount does not match the configured product price.",
+      });
     }
 
     const customerEmail =
