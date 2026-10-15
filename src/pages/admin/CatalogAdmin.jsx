@@ -54,6 +54,7 @@ import {
   siteSectionItemsTable,
   siteSectionsTable,
   courseModulesTable,
+  courseStorageBucket,
   toLines,
 } from "./catalogAdminHelpers";
 import NewsletterTab from "./NewsletterTab";
@@ -121,6 +122,8 @@ const CatalogAdmin = () => {
   const courseNavigationGuardRef = useRef(null);
   const [deletedCourseItemIds, setDeletedCourseItemIds] = useState([]);
   const [deletedCourseModuleIds, setDeletedCourseModuleIds] = useState([]);
+  // ponytail: parallel to deletedCourseItemIds — storage paths to remove on save or cancel
+  const [deletedCourseStoragePaths, setDeletedCourseStoragePaths] = useState([]);
   const [savedReviewsSnapshot, setSavedReviewsSnapshot] = useState([]);
   const [reviewSaveSummary, setReviewSaveSummary] = useState(null);
   const [globalEditor, setGlobalEditor] = useState({
@@ -738,6 +741,17 @@ const CatalogAdmin = () => {
       prev.map((course) => (course.id === selectedCourse?.id ? { ...course, [name]: value } : course)),
     );
   const restoreCourseDraft = ({ course, items, modules }) => {
+    // Delete files uploaded this session that will be abandoned on cancel.
+    // Diff: paths in current items for this course that aren't in the saved snapshot.
+    const savedPaths = new Set(items.map((i) => i.storage_path).filter(Boolean));
+    const orphanedPaths = courseItems
+      .filter((i) => i.course_id === course.id && i.storage_path && !savedPaths.has(i.storage_path))
+      .map((i) => i.storage_path);
+    const pathsToDelete = [...new Set([...orphanedPaths, ...deletedCourseStoragePaths])];
+    if (pathsToDelete.length) {
+      // fire-and-forget — storage is best-effort, DB is source of truth
+      supabase.storage.from(courseStorageBucket).remove(pathsToDelete).catch(() => {});
+    }
     setCourses((previous) => previous.map((entry) => entry.id === course.id ? course : entry));
     setCourseItems((previous) => [
       ...previous.filter((entry) => entry.course_id !== course.id),
@@ -749,6 +763,7 @@ const CatalogAdmin = () => {
     ]);
     setDeletedCourseItemIds([]);
     setDeletedCourseModuleIds([]);
+    setDeletedCourseStoragePaths([]);
   };
   const updateCourseItem = (itemId, name, value) =>
     setCourseItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, [name]: value } : item)));
@@ -780,8 +795,12 @@ const CatalogAdmin = () => {
     return itemId;
   };
   const deleteCourseItem = (itemId) => {
+    const item = courseItems.find((i) => i.id === itemId);
+    if (item?.storage_path) {
+      setDeletedCourseStoragePaths((prev) => [...new Set([...prev, item.storage_path])]);
+    }
     setDeletedCourseItemIds((prev) => [...new Set([...prev, itemId])]);
-    setCourseItems((prev) => prev.filter((item) => item.id !== itemId));
+    setCourseItems((prev) => prev.filter((i) => i.id !== itemId));
   };
   const updateCourseModule = (moduleId, name, value) =>
     setCourseModules((prev) => prev.map((m) => (m.id === moduleId ? { ...m, [name]: value } : m)));
@@ -871,6 +890,11 @@ const CatalogAdmin = () => {
           const { error: deleteError } = await supabase.from(courseItemsTable).delete().in("id", realDeleteIds);
           if (deleteError) throw deleteError;
         }
+        // Delete associated storage files after DB rows are gone
+        if (deletedCourseStoragePaths.length) {
+          await supabase.storage.from(courseStorageBucket).remove(deletedCourseStoragePaths);
+          // ponytail: storage errors are non-fatal — orphaned files are recoverable manually
+        }
       }
       if (deletedCourseModuleIds.length) {
         const realDeleteModuleIds = deletedCourseModuleIds.filter(id => typeof id === "string" && !id.startsWith("new-"));
@@ -948,6 +972,7 @@ const CatalogAdmin = () => {
       ]);
       setDeletedCourseItemIds([]);
       setDeletedCourseModuleIds([]);
+      setDeletedCourseStoragePaths([]);
       setStatus({ type: "success", message: "Course saved successfully." });
       setCourseSaveRevision((revision) => revision + 1);
       return true;
