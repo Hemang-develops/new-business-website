@@ -70,12 +70,47 @@ create policy "Users can view modules for courses they own"
     )
   );
 
--- User policies for progress (Read/Write own progress)
+-- User policies for progress (Read/Write only when a valid active course access exists)
+drop policy if exists "Users can manage own progress" on public.storefront_user_course_progress;
 create policy "Users can manage own progress"
   on public.storefront_user_course_progress
   for all
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
+  using (
+    user_id = auth.uid()
+    and exists (
+      select 1
+      from public.storefront_course_access a
+      where a.course_id = storefront_user_course_progress.course_id
+        and a.user_id = auth.uid()
+        and a.revoked_at is null
+        and (a.expires_at is null or a.expires_at > now())
+    )
+    and exists (
+      select 1
+      from public.storefront_course_items i
+      where i.id = storefront_user_course_progress.item_id
+        and i.course_id = storefront_user_course_progress.course_id
+        and i.is_active
+    )
+  )
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1
+      from public.storefront_course_access a
+      where a.course_id = storefront_user_course_progress.course_id
+        and a.user_id = auth.uid()
+        and a.revoked_at is null
+        and (a.expires_at is null or a.expires_at > now())
+    )
+    and exists (
+      select 1
+      from public.storefront_course_items i
+      where i.id = storefront_user_course_progress.item_id
+        and i.course_id = storefront_user_course_progress.course_id
+        and i.is_active
+    )
+  );
 
 -- User policies for achievements (Read own)
 create policy "Users can view own achievements"
