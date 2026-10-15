@@ -103,7 +103,11 @@ const recordPurchase = async ({
     throw existingError;
   }
   if (existing) {
-    return { purchase: existing, created: false };
+    return {
+      purchase: existing,
+      created: false,
+      alreadyDelivered: existing.delivery_status === "delivered",
+    };
   }
 
   const expiresAt = offering.access_expiry_days
@@ -137,11 +141,15 @@ const recordPurchase = async ({
         .eq("payment_provider", paymentProvider)
         .eq("payment_id", paymentId)
         .maybeSingle();
-      return { purchase: duplicate, created: false };
+      return {
+        purchase: duplicate,
+        created: false,
+        alreadyDelivered: duplicate?.delivery_status === "delivered",
+      };
     }
     throw error;
   }
-  return { purchase, created: true };
+  return { purchase, created: true, alreadyDelivered: false };
 };
 
 const updatePurchase = async (purchaseId: string, values: Record<string, unknown>) => {
@@ -216,7 +224,7 @@ export const fulfillCourseAccess = async ({
   if (!purchaseResult.purchase) {
     throw new Error("Unable to record purchase.");
   }
-  if (!purchaseResult.created) {
+  if (purchaseResult.alreadyDelivered) {
     return { hasCourse: false, accessUrl: purchaseResult.purchase.delivery_url || "", course: null };
   }
 
@@ -235,18 +243,20 @@ export const fulfillCourseAccess = async ({
     const bookingUrl = offering?.booking_url || "";
     const adminEmail = Deno.env.get("ADMIN_NOTIFY_EMAIL_1") ||Deno.env.get("ADMIN_NOTIFY_EMAIL_2") || Deno.env.get("EMAIL_REPLY_TO");
 
-    try {
-      await supabase.from("storefront_admin_notifications").insert({
-        type: "offering_purchase",
-        title: `Order placed: ${offeringTitle}`,
-        message: `${customerName || normalizedEmail} purchased ${offeringTitle}.`,
-        offering_id: normalizedProductId,
-        customer_email: normalizedEmail,
-        customer_name: customerName || null,
-        metadata: { provider, paymentId, orderId, packageId, amount, currency },
-      });
-    } catch (e) {
-      console.warn("[Fulfill] Failed to insert admin notification:", e);
+    if (purchaseResult.created) {
+      try {
+        await supabase.from("storefront_admin_notifications").insert({
+          type: "offering_purchase",
+          title: `Order placed: ${offeringTitle}`,
+          message: `${customerName || normalizedEmail} purchased ${offeringTitle}.`,
+          offering_id: normalizedProductId,
+          customer_email: normalizedEmail,
+          customer_name: customerName || null,
+          metadata: { provider, paymentId, orderId, packageId, amount, currency },
+        });
+      } catch (e) {
+        console.warn("[Fulfill] Failed to insert admin notification:", e);
+      }
     }
 
     const safeCustomerName = emailText(customerName || "there");
@@ -288,7 +298,7 @@ export const fulfillCourseAccess = async ({
       });
     }
 
-    if (adminEmail) {
+    if (adminEmail && purchaseResult.created) {
       await sendEmail({
         to: adminEmail,
         subject: `New purchase: ${offeringTitle}`,
