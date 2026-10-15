@@ -83,6 +83,7 @@ New action items:
 5. Improve smoke-test logging to print the full invoke response body from `admin.functions.invoke` (helpful for debugging fulfillment failures).
 6. If the current `FULFILLMENT_SECRET` is unknown, rotate it in Supabase and update local dev secrets and any callers.
 7. adding temp stripe_webhook_secret for testing, need to change to live once live
+8. remove Checking account... page modify it
 
 
 
