@@ -49,6 +49,24 @@ const CourseViewer = ({ course, modules, items, access }) => {
     }
 
     try {
+      const { data: accessRows, error: accessError } = await supabase
+        .from('storefront_course_access')
+        .select('id, revoked_at, expires_at')
+        .eq('course_id', course.id)
+        .eq('user_id', user.id)
+        .is('revoked_at', null);
+
+      if (accessError) throw accessError;
+
+      const hasActiveCourseAccess = (accessRows || []).some((accessRow) => {
+        return !accessRow?.expires_at || new Date(accessRow.expires_at).getTime() > Date.now();
+      });
+
+      if (!hasActiveCourseAccess) {
+        toast.error('Your course access has expired or is no longer available.');
+        return false;
+      }
+
       // 1. Update progress in DB
       const { data: savedProgress, error } = await supabase
         .from('storefront_user_course_progress')

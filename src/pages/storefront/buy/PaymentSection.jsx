@@ -239,7 +239,7 @@ const PaymentSection = ({ item }) => {
     if (preview?.totalLabel) return preview.totalLabel;
     if (!currencyConfig?.amount) return item.price?.usd ? `$${item.price.usd} USD` : "Choose your checkout method";
     return String(currencyConfig.amount).trim();
-  }, [currencyConfig?.amount, item.price?.usd, packagePricePreviews, selectedPackage?.id]);
+  }, [currencyConfig?.amount, item.price?.usd, packagePricePreviews, selectedPackage?.id], country);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");

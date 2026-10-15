@@ -35,9 +35,28 @@ const Buy = () => {
       return undefined;
     }
 
-    // 1. Razorpay or verified non-Stripe provider redirect
-    if (provider === "razorpay" || (paymentId && provider)) {
-      if (isMounted) setIsVerifiedPayment(true);
+    setIsVerifiedPayment(false);
+
+    // Verify Razorpay redirects against the fulfillment record; URL parameters are untrusted.
+    if (provider === "razorpay" && paymentId) {
+      supabase.functions
+        .invoke("razorpay-verify-payment", {
+          body: { action: "verify-return", paymentId, productId },
+        })
+        .then(({ data, error }) => {
+          if (isMounted) setIsVerifiedPayment(!error && data?.verified === true);
+        })
+        .catch(() => {
+          if (isMounted) setIsVerifiedPayment(false);
+        });
+
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    if (provider || paymentId) {
+      if (isMounted) setIsVerifiedPayment(false);
       return undefined;
     }
 
@@ -54,25 +73,25 @@ const Buy = () => {
       const storedProductId = sessionStorage.getItem("product_id");
       const isClientSessionMatch = storedSessionId === sessionId && (!storedProductId || storedProductId === productId);
 
-      // Instantly verify if client initiated this checkout session or if session ID is a valid Stripe format (cs_...)
-      if (isClientSessionMatch || sessionId.startsWith("cs_")) {
-        if (isMounted) setIsVerifiedPayment(true);
+      if (isClientSessionMatch) {
+        setIsVerifiedPayment(false);
       }
 
-      // Also invoke backend edge function to verify with Stripe API
       supabase.functions
         .invoke("stripe-endpoint", { body: { action: "verify-session", sessionId, productId } })
         .then(({ data, error }) => {
           if (isMounted) {
             if (!error && data?.verified) {
               setIsVerifiedPayment(true);
-            } else if (!isClientSessionMatch && !sessionId.startsWith("cs_")) {
+            } else {
               setIsVerifiedPayment(false);
             }
           }
         })
         .catch(() => {
-          // Keep match/prefix decision if edge function network request fails
+          if (isMounted) {
+            setIsVerifiedPayment(false);
+          }
         });
 
       return () => {
