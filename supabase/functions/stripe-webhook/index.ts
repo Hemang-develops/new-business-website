@@ -1,10 +1,16 @@
 import Stripe from "npm:stripe@^14.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-  apiVersion: "2023-10-16",
-  httpClient: Stripe.createFetchHttpClient(),
-});
+// ponytail: APP_ENV=prod → live keys; anything else → test keys
+const isProd = Deno.env.get("APP_ENV") === "prod";
+
+const stripe = new Stripe(
+  (isProd
+    ? Deno.env.get("STRIPE_SECRET_KEY_PROD")
+    : Deno.env.get("STRIPE_SECRET_KEY_TEST") ?? Deno.env.get("STRIPE_SECRET_KEY")
+  ) || "",
+  { apiVersion: "2023-10-16", httpClient: Stripe.createFetchHttpClient() },
+);
 
 const getAdminClient = () => {
   const url = Deno.env.get("SUPABASE_URL");
@@ -21,7 +27,9 @@ const getAdminClient = () => {
 
 Deno.serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
-  const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+  const webhookSecret = isProd
+    ? Deno.env.get("STRIPE_WEBHOOK_SECRET_PROD")
+    : Deno.env.get("STRIPE_WEBHOOK_SECRET_TEST") ?? Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
   if (!signature || !webhookSecret) {
     return new Response("Webhook secret or signature missing", { status: 400 });
