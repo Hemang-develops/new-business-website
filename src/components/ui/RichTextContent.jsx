@@ -1,3 +1,5 @@
+import { sanitizeRichText } from '../../lib/sanitizeRichText';
+
 const baseClasses = [
   "[&_p]:my-0",
   "[&_p+p]:mt-4",
@@ -62,7 +64,7 @@ const baseClasses = [
 ].join(" ");
 
 const RichTextContent = ({ value, className = "" }) => {
-  const html = String(value || "").trim();
+  const html = sanitizeRichText(value);
   if (!html) {
     return null;
   }
@@ -70,4 +72,5 @@ const RichTextContent = ({ value, className = "" }) => {
   return <div className={`${baseClasses} ${className}`.trim()} dangerouslySetInnerHTML={{ __html: html }} />;
 };
 
+export { sanitizeRichText };
 export default RichTextContent;
