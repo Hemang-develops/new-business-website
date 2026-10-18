@@ -18,7 +18,7 @@ const ProgramItem = ({ group }) => {
         title={group.title}
         subtitle={`${group.items.length} offering${group.items.length === 1 ? "" : "s"}`}
         description={`${group.description}${previewTitles ? ` Includes ${previewTitles}.` : ""}`}
-        buttonLink={`/offerings/${group.id}`}
+        buttonLink={group.items.length === 1 ? `/buy/${group.items[0].id}` : `/offerings/${group.id}`}
         buttonText="View more"
         maxDescriptionLength={260}
         clickableCard
