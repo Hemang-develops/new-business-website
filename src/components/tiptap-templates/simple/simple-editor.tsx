@@ -187,8 +187,6 @@ export function SimpleEditor({
     "main"
   )
   const toolbarRef = useRef<HTMLDivElement>(null)
-  const lastEmittedHtmlRef = useRef<string>(String(value || "").trim())
-
   const editor = useEditor({
     immediatelyRender: false,
     editorProps: {
@@ -246,9 +244,6 @@ export function SimpleEditor({
     }
 
     const nextHtml = String(value || "").trim()
-    if (lastEmittedHtmlRef.current === nextHtml) {
-      return
-    }
     if (editor.getHTML() !== nextHtml) {
       editor.commands.setContent(nextHtml || "<p></p>", false)
     }
@@ -261,7 +256,6 @@ export function SimpleEditor({
 
     const handleUpdate = () => {
       const nextHtml = String(editor.getHTML() || "").trim()
-      lastEmittedHtmlRef.current = nextHtml
       onChange(nextHtml)
     }
 

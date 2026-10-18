@@ -1,5 +1,6 @@
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { defaultSiteSettings } from "../services/siteSettings";
+import RichTextContent from "./ui/RichTextContent";
 
 const CTA = () => {
   const { getSection, settings } = useSiteSettings();
@@ -31,9 +32,10 @@ const CTA = () => {
           {ctaSection?.heading || "Your next quantum leap is one decision away."}
         </h2>
         
-        <p className="max-w-2xl text-lg leading-relaxed text-white/50 font-medium">
-          {ctaSection?.description || "When you say yes to yourself, the universe reschedules everything in your favor. Let's co-create the timeline where your desires are the new normal."}
-        </p>
+        <RichTextContent
+          value={ctaSection?.description || "<p>When you say yes to yourself, the universe reschedules everything in your favor. Let's co-create the timeline where your desires are the new normal.</p>"}
+          className="max-w-2xl text-lg leading-relaxed text-white/50 font-medium"
+        />
 
         <div className="flex flex-wrap justify-center gap-6">
           <a

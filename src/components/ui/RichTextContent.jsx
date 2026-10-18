@@ -1,67 +1,11 @@
 import { sanitizeRichText } from '../../lib/sanitizeRichText';
-
-const baseClasses = [
-  "[&_p]:my-0",
-  "[&_p+p]:mt-4",
-  "[&_h1]:mt-8",
-  "[&_h1]:text-4xl",
-  "[&_h1]:font-bold",
-  "[&_h1]:leading-tight",
-  "[&_h1]:tracking-tight",
-  "[&_h1]:text-white",
-  "[&_h1:first-child]:mt-0",
-  "[&_h2]:mt-6",
-  "[&_h2]:text-3xl",
-  "[&_h2]:font-semibold",
-  "[&_h2]:leading-tight",
-  "[&_h2]:tracking-tight",
-  "[&_h2]:text-white",
-  "[&_h2:first-child]:mt-0",
-  "[&_h3]:mt-5",
-  "[&_h3]:text-2xl",
-  "[&_h3]:font-semibold",
-  "[&_h3]:leading-snug",
-  "[&_h3]:text-white/95",
-  "[&_h3:first-child]:mt-0",
-  "[&_h4]:mt-4",
-  "[&_h4]:text-xl",
-  "[&_h4]:font-semibold",
-  "[&_h4]:leading-snug",
-  "[&_h4]:text-white/90",
-  "[&_h4:first-child]:mt-0",
-  "[&_ul]:my-4",
-  "[&_ul]:list-disc",
-  "[&_ul]:pl-5",
-  "[&_ol]:my-4",
-  "[&_ol]:list-decimal",
-  "[&_ol]:pl-5",
-  "[&_li]:my-1.5",
-  "[&_li]:leading-relaxed",
-  "[&_blockquote]:my-4",
-  "[&_blockquote]:border-l-2",
-  "[&_blockquote]:border-white/20",
-  "[&_blockquote]:pl-4",
-  "[&_blockquote]:italic",
-  "[&_blockquote]:text-white/70",
-  "[&_pre]:my-4",
-  "[&_pre]:overflow-x-auto",
-  "[&_pre]:rounded-xl",
-  "[&_pre]:bg-black/30",
-  "[&_pre]:p-4",
-  "[&_pre]:text-sm",
-  "[&_code]:rounded",
-  "[&_code]:bg-black/25",
-  "[&_code]:px-1.5",
-  "[&_code]:py-0.5",
-  "[&_hr]:my-6",
-  "[&_hr]:border-white/10",
-  "[&_a]:underline",
-  "[&_a]:underline-offset-4",
-  "[&_a]:text-teal-200",
-  "[&_strong]:font-semibold",
-  "[&_em]:italic",
-  "[&_s]:line-through",
-].join(" ");
+import '../tiptap-node/blockquote-node/blockquote-node.scss';
+import '../tiptap-node/code-block-node/code-block-node.scss';
+import '../tiptap-node/heading-node/heading-node.scss';
+import '../tiptap-node/horizontal-rule-node/horizontal-rule-node.scss';
+import '../tiptap-node/image-node/image-node.scss';
+import '../tiptap-node/list-node/list-node.scss';
+import '../tiptap-node/paragraph-node/paragraph-node.scss';
 
 const RichTextContent = ({ value, className = "" }) => {
   const html = sanitizeRichText(value);
@@ -69,7 +13,7 @@ const RichTextContent = ({ value, className = "" }) => {
     return null;
   }
 
-  return <div className={`${baseClasses} ${className}`.trim()} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className={`tiptap ProseMirror ${className}`.trim()} dangerouslySetInnerHTML={{ __html: html }} />;
 };
 
 export { sanitizeRichText };
