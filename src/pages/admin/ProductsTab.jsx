@@ -327,11 +327,10 @@ const ProductsTab = ({ state, actions }) => {
                 key={tab.id}
                 type="button"
                 onClick={() => setFilterStatus(tab.id)}
-                className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
-                  filterStatus === tab.id
-                    ? "bg-teal-300 text-gray-950 shadow-sm"
-                    : "text-white/60 hover:text-white"
-                }`}
+                className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${filterStatus === tab.id
+                  ? "bg-teal-300 text-gray-950 shadow-sm"
+                  : "text-white/60 hover:text-white"
+                  }`}
               >
                 {tab.label}
               </button>
@@ -472,9 +471,9 @@ const ProductsTab = ({ state, actions }) => {
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-semibold text-white group-hover:text-teal-200" title={offering.title}>
+                            <button type="button" onClick={() => { setShowNewOfferingForm(false); setSelectedSectionId(offering.section_id); setSelectedOfferingId(offering.id); }} className="block max-w-full truncate text-left font-semibold text-white transition hover:text-teal-200" title={`Edit ${offering.title}`}>
                               {offering.title}
-                            </p>
+                            </button>
                             <p className="truncate text-xs text-white/45" title={offering.subtitle || offering.id}>
                               {offering.subtitle || offering.summary || offering.id}
                             </p>
@@ -530,16 +529,14 @@ const ProductsTab = ({ state, actions }) => {
                               nextStatus: !offering.is_active,
                             })}
                             title={offering.is_active ? "Click to unpublish (draft)" : "Click to publish live"}
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold uppercase tracking-wider transition ${
-                              offering.is_active
-                                ? "border-teal-300/40 bg-teal-300/15 text-teal-200 hover:border-amber-400/50 hover:bg-amber-400/15 hover:text-amber-200"
-                                : "border-white/15 bg-white/5 text-white/45 hover:border-teal-300/50 hover:bg-teal-300/15 hover:text-teal-200"
-                            }`}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-semibold uppercase tracking-wider transition ${offering.is_active
+                              ? "border-teal-300/40 bg-teal-300/15 text-teal-200 hover:border-amber-400/50 hover:bg-amber-400/15 hover:text-amber-200"
+                              : "border-white/15 bg-white/5 text-white/45 hover:border-teal-300/50 hover:bg-teal-300/15 hover:text-teal-200"
+                              }`}
                           >
                             <span
-                              className={`h-2 w-2 rounded-full ${
-                                offering.is_active ? "bg-teal-300 shadow-[0_0_8px_rgba(45,212,191,0.8)]" : "bg-white/30"
-                              }`}
+                              className={`h-2 w-2 rounded-full ${offering.is_active ? "bg-teal-300 shadow-[0_0_8px_rgba(45,212,191,0.8)]" : "bg-white/30"
+                                }`}
                             />
                             {offering.is_active ? "Live" : "Draft"}
                           </button>
@@ -553,6 +550,7 @@ const ProductsTab = ({ state, actions }) => {
                             type="button"
                             onClick={() => {
                               setShowNewOfferingForm(false);
+                              setSelectedSectionId(offering.section_id);
                               setSelectedOfferingId(offering.id);
                             }}
                             className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:border-teal-300/40 hover:bg-teal-300/10 hover:text-teal-200"
@@ -647,13 +645,12 @@ const ProductsTab = ({ state, actions }) => {
                       <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${drawerModeMeta.badgeClass}`}>
                         {drawerModeMeta.label}
                       </span>
-                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-wider ${
-                        isCreateMode
-                          ? "border-amber-300/30 bg-amber-300/10 text-amber-200"
-                          : drawerOffering.is_active
-                            ? "border-teal-300/30 bg-teal-300/10 text-teal-200"
-                            : "border-white/10 text-white/40"
-                      }`}>
+                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] uppercase tracking-wider ${isCreateMode
+                        ? "border-amber-300/30 bg-amber-300/10 text-amber-200"
+                        : drawerOffering.is_active
+                          ? "border-teal-300/30 bg-teal-300/10 text-teal-200"
+                          : "border-white/10 text-white/40"
+                        }`}>
                         {isCreateMode ? "New Product" : drawerOffering.is_active ? "Published Live" : "Draft"}
                       </span>
                     </div>
@@ -679,7 +676,7 @@ const ProductsTab = ({ state, actions }) => {
                 {/* 1. Basic Information */}
                 <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
                   <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">Basic Information</p>
-                  
+
                   <label className="block space-y-1 text-xs text-white/60">
                     <span>Product Title *</span>
                     <input
@@ -731,7 +728,7 @@ const ProductsTab = ({ state, actions }) => {
                 {/* 2. Storefront Copy & Media */}
                 <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-4">
                   <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">Storefront Copy & Media</p>
-                  
+
                   <label className="block space-y-1 text-xs text-white/60">
                     <span className="inline-flex items-center gap-1.5">
                       Summary
@@ -930,11 +927,10 @@ const ProductsTab = ({ state, actions }) => {
                     <div className="rounded-xl border border-teal-300/20 bg-teal-300/5 p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold uppercase tracking-wider text-teal-300">Cal.com Booking Sync</span>
-                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${
-                          drawerOffering.booking_status === "synced"
-                            ? "bg-teal-400/10 text-teal-300 border border-teal-400/20"
-                            : "bg-amber-400/10 text-amber-300 border border-amber-400/20"
-                        }`}>
+                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${drawerOffering.booking_status === "synced"
+                          ? "bg-teal-400/10 text-teal-300 border border-teal-400/20"
+                          : "bg-amber-400/10 text-amber-300 border border-amber-400/20"
+                          }`}>
                           {drawerOffering.booking_status || "Pending sync"}
                         </span>
                       </div>
@@ -1123,11 +1119,10 @@ const ProductsTab = ({ state, actions }) => {
                         setSelectedSectionId(section.id);
                         setShowNewSectionInModal(false);
                       }}
-                      className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium transition flex items-center justify-between ${
-                        isSelected
-                          ? "bg-teal-300/15 text-teal-200 border border-teal-300/30"
-                          : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
-                      }`}
+                      className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium transition flex items-center justify-between ${isSelected
+                        ? "bg-teal-300/15 text-teal-200 border border-teal-300/30"
+                        : "text-white/70 hover:bg-white/5 hover:text-white border border-transparent"
+                        }`}
                     >
                       <span className="truncate">{section.title}</span>
                       <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/50">
@@ -1221,7 +1216,7 @@ const ProductsTab = ({ state, actions }) => {
                     {/* Hero Section Banner Settings */}
                     <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
                       <p className="text-xs font-semibold uppercase tracking-wider text-white/50">Category Hero Banner</p>
-                      
+
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <label className="block space-y-1 text-xs text-white/60">
                           <span>Hero Title</span>
@@ -1321,11 +1316,10 @@ const ProductsTab = ({ state, actions }) => {
           />
           <div className="relative w-full max-w-md rounded-3xl border border-white/15 bg-gray-950 p-6 shadow-2xl">
             <div className="flex items-center gap-3">
-              <div className={`rounded-xl p-2.5 border ${
-                statusChangeCandidate.nextStatus
-                  ? "bg-teal-400/10 border-teal-400/20 text-teal-300"
-                  : "bg-amber-400/10 border-amber-400/20 text-amber-300"
-              }`}>
+              <div className={`rounded-xl p-2.5 border ${statusChangeCandidate.nextStatus
+                ? "bg-teal-400/10 border-teal-400/20 text-teal-300"
+                : "bg-amber-400/10 border-amber-400/20 text-amber-300"
+                }`}>
                 {statusChangeCandidate.nextStatus ? (
                   <Globe className="h-5 w-5" />
                 ) : (
@@ -1374,11 +1368,10 @@ const ProductsTab = ({ state, actions }) => {
                   setStatusChangeCandidate(null);
                   await handleTogglePublishOffering(offering.id, !nextStatus);
                 }}
-                className={`rounded-xl px-4 py-2 text-xs font-semibold shadow transition ${
-                  statusChangeCandidate.nextStatus
-                    ? "bg-teal-400 text-gray-950 hover:bg-teal-300"
-                    : "bg-amber-400 text-gray-950 hover:bg-amber-300"
-                }`}
+                className={`rounded-xl px-4 py-2 text-xs font-semibold shadow transition ${statusChangeCandidate.nextStatus
+                  ? "bg-teal-400 text-gray-950 hover:bg-teal-300"
+                  : "bg-amber-400 text-gray-950 hover:bg-amber-300"
+                  }`}
               >
                 {statusChangeCandidate.nextStatus ? "Yes, Publish Live" : "Yes, Set to Draft"}
               </button>

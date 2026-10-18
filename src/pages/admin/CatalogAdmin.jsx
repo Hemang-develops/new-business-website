@@ -61,6 +61,7 @@ import NewsletterTab from "./NewsletterTab";
 import AnalyticsTab from "./AnalyticsTab";
 import ContentAuditTab from "./ContentAuditTab";
 import LegalDocumentsManager from "../../components/admin/LegalDocumentsManager";
+import SiteLoadingScreen from "@/components/storefront/SiteLoadingScreen";
 
 const adminTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -518,13 +519,8 @@ const CatalogAdmin = () => {
   }, [sections, selectedSectionId]);
 
   useEffect(() => {
-    if (!selectedSectionId) {
-      setSelectedOfferingId("");
-      return;
-    }
-
     const selectedOffering = offerings.find((entry) => entry.id === selectedOfferingId);
-    if (selectedOfferingId && selectedOffering?.section_id !== selectedSectionId) {
+    if (selectedSectionId && selectedOfferingId && selectedOffering?.section_id !== selectedSectionId) {
       setSelectedOfferingId("");
     }
   }, [offerings, selectedOfferingId, selectedSectionId]);
@@ -750,7 +746,7 @@ const CatalogAdmin = () => {
     const pathsToDelete = [...new Set([...orphanedPaths, ...deletedCourseStoragePaths])];
     if (pathsToDelete.length) {
       // fire-and-forget — storage is best-effort, DB is source of truth
-      supabase.storage.from(courseStorageBucket).remove(pathsToDelete).catch(() => {});
+      supabase.storage.from(courseStorageBucket).remove(pathsToDelete).catch(() => { });
     }
     setCourses((previous) => previous.map((entry) => entry.id === course.id ? course : entry));
     setCourseItems((previous) => [
@@ -1165,7 +1161,10 @@ const CatalogAdmin = () => {
   };
 
   if (isLoading) {
-    return <div className="min-h-screen bg-gray-950 p-8 text-white">Checking account...</div>;
+    return <div className="min-h-screen bg-gray-950 p-8 text-white">
+      {/* Checking account... */}
+      <SiteLoadingScreen />
+    </div>;
   }
 
   if (!isAuthenticated) {

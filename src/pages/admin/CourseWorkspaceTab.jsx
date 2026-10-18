@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { SimpleEditor } from "../../components/tiptap-templates/simple/simple-editor";
 import TablePagination from "./TablePagination";
+import { supabase } from "../../supabase-client";
+import { courseStorageBucket } from "./catalogAdminHelpers";
 
 const contentTypes = [
   { value: "text", label: "Text" },
@@ -129,6 +131,15 @@ const CourseLessonRow = ({
               <input value={item.external_url || ""} onChange={(event) => onUpdate("external_url", event.target.value)} className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-teal-300 focus:outline-none" placeholder="https://..." />
             </label>
           ) : null}
+          {item.storage_path ? (
+            <div className="sm:col-span-2">
+              <button type="button" onClick={async () => {
+                const { data, error } = await supabase.storage.from(courseStorageBucket).createSignedUrl(item.storage_path, 60);
+                if (error) { window.alert(error.message); return; }
+                window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+              }} className="text-sm font-medium text-teal-200 underline-offset-4 hover:underline">Download current file</button>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-3 sm:col-span-2">
             {["video", "audio", "document"].includes(item.content_type) ? (
               <label className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70">
@@ -162,7 +173,6 @@ const CoursesTab = ({ state, actions }) => {
     courseItems,
     courseModules,
     courses,
-    courseSaveRevision,
     isSavingCourse,
     newCourseOfferingId,
     offerings,
@@ -224,11 +234,13 @@ const CoursesTab = ({ state, actions }) => {
     setExpandedItemId(null);
   }, [selectedCourseId]);
 
-  useEffect(() => {
-    if (selectedCourseId && courseDraft) {
+  const saveCourse = async () => {
+    const saved = await handleSaveCourse();
+    if (saved && selectedCourseId && courseDraft) {
       savedDraftRef.current = { courseId: selectedCourseId, serialized: serializedDraft, data: courseDraft };
     }
-  }, [courseSaveRevision]);
+    return saved;
+  };
 
   const requestLeave = (onLeave) => {
     if (hasUnsavedChanges) {
@@ -262,7 +274,7 @@ const CoursesTab = ({ state, actions }) => {
   };
 
   const saveAndLeave = async () => {
-    const saved = await handleSaveCourse();
+    const saved = await saveCourse();
     if (saved && pendingLeave) {
       const leave = pendingLeave;
       setPendingLeave(null);
@@ -355,7 +367,7 @@ const CoursesTab = ({ state, actions }) => {
             <div className="flex items-center gap-2">
               {hasUnsavedChanges ? <span className="mr-1 text-xs text-amber-200/80">Unsaved changes</span> : <span className="mr-1 inline-flex items-center gap-1 text-xs text-teal-200/65"><Check className="h-3.5 w-3.5" /> Saved</span>}
               <button type="button" onClick={cancelCourseChanges} disabled={!hasUnsavedChanges || isSavingCourse} className="rounded-lg border border-white/10 px-3 py-2 text-sm font-medium text-white/70 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-35">Cancel changes</button>
-              <button type="button" onClick={handleSaveCourse} disabled={!hasUnsavedChanges || isSavingCourse} className="rounded-lg bg-teal-300 px-4 py-2 text-sm font-semibold text-gray-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-50">{isSavingCourse ? "Saving..." : "Save changes"}</button>
+              <button type="button" onClick={saveCourse} disabled={!hasUnsavedChanges || isSavingCourse} className="rounded-lg bg-teal-300 px-4 py-2 text-sm font-semibold text-gray-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-50">{isSavingCourse ? "Saving..." : "Save changes"}</button>
             </div>
           </header>
 
@@ -499,7 +511,7 @@ const CoursesTab = ({ state, actions }) => {
               <div className="overflow-x-auto rounded-xl border border-white/10">
                 <table className="w-full min-w-[560px] table-fixed text-left">
                   <thead className="bg-white/[0.03] text-xs font-semibold uppercase tracking-wide text-white/45">
-                    <tr><th className="w-[38%] px-4 py-3">Product</th><th className="w-[40%] px-4 py-3">Course content</th><th className="px-4 py-3">Status</th></tr>
+                    <tr><th className="w-[38%] px-4 py-3">Product</th><th className="w-[40%] px-4 py-3">Course content</th><th className="w-[22%] px-4 py-3">Status</th></tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
                     {paginatedCourses.map((course) => {
@@ -509,8 +521,8 @@ const CoursesTab = ({ state, actions }) => {
                       return (
                         <tr key={course.id} tabIndex={0} onClick={() => setSelectedCourseId(course.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedCourseId(course.id); } }} className="cursor-pointer bg-transparent transition hover:bg-white/[0.035] focus:bg-white/[0.05] focus:outline-none">
                           <td className="px-4 py-3.5"><p className="truncate text-sm font-medium text-white">{product?.title || course.offering_id}</p><p className="mt-1 truncate text-xs text-white/40">{course.offering_id}</p></td>
-                          <td className="px-4 py-3.5"><p className="truncate text-sm text-white/80">{course.title || "Untitled course"}</p><p className="mt-1 text-xs text-white/40">{moduleCount} modules · {lessonCount} lessons</p></td>
-                          <td className="px-4 py-3.5"><span className={`inline-flex items-center gap-1.5 text-xs ${course.is_active ? "text-teal-200" : "text-white/40"}`}><span className={`h-1.5 w-1.5 rounded-full ${course.is_active ? "bg-teal-300" : "bg-white/30"}`} />{course.is_active ? "Active" : "Inactive"}</span></td>
+                          <td className="min-w-0 overflow-hidden px-4 py-3.5"><button type="button" onClick={() => setSelectedCourseId(course.id)} className="block max-w-full truncate text-left text-sm text-white/80 hover:text-teal-200" title={course.title}>{course.title || "Untitled course"}</button><p className="mt-1 truncate text-xs text-white/40">{moduleCount} modules · {lessonCount} lessons</p></td>
+                          <td className="overflow-hidden px-4 py-3.5"><span className={`inline-flex max-w-full items-center gap-1.5 truncate text-xs ${course.is_active ? "text-teal-200" : "text-white/40"}`}><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${course.is_active ? "bg-teal-300" : "bg-white/30"}`} />{course.is_active ? "Active" : "Inactive"}</span></td>
                         </tr>
                       );
                     })}

@@ -51,6 +51,7 @@ export default function useCatalogAdminUploads({
     const { error: uploadError } = await supabase.storage.from(courseStorageBucket).upload(filePath, file, {
       cacheControl: "3600",
       upsert: false,
+      contentType: file.type || "application/octet-stream",
     });
 
     if (uploadError) {
