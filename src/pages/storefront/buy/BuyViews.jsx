@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 import { useSmoothScroll } from "../../../hooks/useSmoothScroll";
-import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
+import { getBrowserRegion, getCountries, getUserCountry, getUsdRates } from "../../../services/marketData";
 import { formatAmountFromMajor, getRoundedLocalizedUsdAmount } from "../../../services/pricing";
 import PaymentSection from "./PaymentSection";
 import HorizontalCard from "../../../components/common/HorizontalCard";
@@ -218,11 +218,13 @@ export const BuyListView = ({ buySections = [] }) => {
   useEffect(() => {
     let isMounted = true;
     const loadLocaleCurrency = async () => {
-      const countries = (await getCountries()) || fallbackCountryData;
-      if (!isMounted || !countries?.length || !browserRegion) {
+      const [countries, userCountry] = await Promise.all([getCountries(), getUserCountry()]);
+      const countryCode = userCountry?.countryCode || browserRegion;
+      if (!isMounted || !countryCode) {
         return;
       }
-      const detected = countries.find((entry) => entry.code === browserRegion);
+      const countryList = countries?.length ? countries : fallbackCountryData;
+      const detected = countryList.find((entry) => entry.code === countryCode);
       const currencyCode = detected?.currencies?.[0];
       if (currencyCode) {
         setLocalCurrency(currencyCode.toUpperCase());

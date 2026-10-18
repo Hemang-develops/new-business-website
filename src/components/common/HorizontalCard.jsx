@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { getBrowserRegion, getCountries, getUsdRates } from "../../services/marketData";
+import { getBrowserRegion, getCountries, getUserCountry, getUsdRates } from "../../services/marketData";
 import { roundUpAestheticAmount } from "../../services/pricing";
 
 const richTextToPlainText = (value) => {
@@ -47,9 +47,6 @@ function HorizontalCard({
   const plainDescription = useMemo(() => richTextToPlainText(description), [description]);
 
   const shouldTruncate = plainDescription && plainDescription.length > maxDescriptionLength;
-  const collapsedDescription =
-    shouldTruncate ? `${plainDescription.slice(0, maxDescriptionLength)}...` : plainDescription;
-
   const toggleExpanded = () => setIsExpanded(!isExpanded);
   const isExternalLink =
     buttonLink.startsWith("http") || buttonLink.startsWith("mailto:");
@@ -110,11 +107,11 @@ function HorizontalCard({
   useEffect(() => {
     let isMounted = true;
     const loadLocaleCurrency = async () => {
-      const browserRegion = getBrowserRegion();
+      const [browserCountry, countries] = await Promise.all([getUserCountry(), getCountries()]);
+      const browserRegion = browserCountry?.countryCode || getBrowserRegion();
       if (!browserRegion) {
         return;
       }
-      const countries = await getCountries();
       if (!isMounted || !countries?.length) {
         return;
       }
@@ -231,10 +228,8 @@ function HorizontalCard({
 
           {plainDescription && (
             <div className="mb-3 md:mb-4">
-              <div className={`${shouldTruncate && isExpanded ? "max-h-32 overflow-y-auto pr-2" : "min-h-[3.75rem]"}`}>
-                <p className="text-xs font-medium leading-relaxed text-gray-300 md:text-sm">
-                  {isExpanded ? plainDescription : collapsedDescription}
-                </p>
+              <div className={`${shouldTruncate && isExpanded ? "max-h-32 overflow-y-auto pr-2" : shouldTruncate ? "max-h-[4.5rem] overflow-hidden" : "min-h-[3.75rem]"}`}>
+                <p className="text-xs font-medium leading-relaxed text-gray-300 md:text-sm">{plainDescription}</p>
               </div>
 
               {shouldTruncate && (

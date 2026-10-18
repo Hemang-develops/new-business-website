@@ -1,8 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { lookupCountry } from "./api/market/location.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,11 +12,29 @@ const marketApis = {
   "/api/market/rates": "https://open.er-api.com/v6/latest/USD",
 };
 
+let geoapifyApiKey = "";
 const marketApi = () => ({
   name: "market-api",
+  configResolved(config) {
+    geoapifyApiKey = loadEnv(config.mode, config.root, "").GEOAPIFY_API_KEY || "";
+  },
   configureServer(server) {
+    server.middlewares.use("/api/market/location", async (request: any, response: any) => {
+      try {
+        if (!geoapifyApiKey) throw new Error("GEOAPIFY_API_KEY is not configured");
+        const country = await lookupCountry(geoapifyApiKey);
+        response.statusCode = 200;
+        response.setHeader("Content-Type", "application/json");
+        response.setHeader("Cache-Control", "private, max-age=86400");
+        response.end(JSON.stringify(country));
+      } catch {
+        response.statusCode = 503;
+        response.setHeader("Content-Type", "application/json");
+        response.end(JSON.stringify({ error: "Country lookup is unavailable" }));
+      }
+    });
     Object.entries(marketApis).forEach(([route, url]) => {
-      server.middlewares.use(route, async (_request, response) => {
+      server.middlewares.use(route, async (_request: any, response: any) => {
         try {
           const upstream = await fetch(url);
           const data = await upstream.json();

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { getBrowserRegion, getCountries, getUsdRates } from "../../../services/marketData";
+import { getBrowserRegion, getCountries, getUserCountry, getUsdRates } from "../../../services/marketData";
 import { formatAmountFromMajor } from "../../../services/pricing";
 import { Input } from "../../../components/ui/input";
 import { useAuth } from "../../../context/AuthContext";
@@ -96,6 +96,7 @@ const PaymentSection = ({ item }) => {
     }, {}),
   );
   const [country, setCountry] = useState("India");
+  const [detectedCountryCode, setDetectedCountryCode] = useState(browserRegion);
   const preferredCurrencyByCountry = useMemo(() => {
     const currencies = countryCurrencyMap[country] || [];
     for (const code of currencies) {
@@ -110,7 +111,7 @@ const PaymentSection = ({ item }) => {
     () => ((countryCurrencyMap[country] || [])[0] || "USD").toUpperCase(),
     [country, countryCurrencyMap],
   );
-  const canShowUpiOption = browserRegion === "IN" || country === "India" || selectedCountryCurrencyCode === "INR";
+  const canShowUpiOption = detectedCountryCode === "IN" || country === "India" || selectedCountryCurrencyCode === "INR";
 
   const [selectedCurrency, setSelectedCurrency] = useState(() => {
     if (!hasCheckout) {
@@ -128,7 +129,7 @@ const PaymentSection = ({ item }) => {
   useEffect(() => {
     let isMounted = true;
     const loadCountries = async () => {
-      const parsed = await getCountries();
+      const [parsed, userCountry] = await Promise.all([getCountries(), getUserCountry()]);
       if (!isMounted || !parsed?.length) {
         return;
       }
@@ -139,8 +140,10 @@ const PaymentSection = ({ item }) => {
           return acc;
         }, {}),
       );
-      if (browserRegion) {
-        const detected = parsed.find((entry) => entry.iso2 === browserRegion);
+      const countryCode = userCountry?.countryCode || browserRegion;
+      if (countryCode) {
+        setDetectedCountryCode(countryCode);
+        const detected = parsed.find((entry) => entry.code === countryCode);
         if (detected?.name) {
           setCountry(detected.name);
         }

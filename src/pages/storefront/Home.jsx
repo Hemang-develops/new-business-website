@@ -18,7 +18,7 @@ import Hero from '../../components/storefront/Hero';
 import SiteLoadingScreen from '../../components/storefront/SiteLoadingScreen';
 import { useSiteSettings } from '../../context/SiteSettingsContext';
 import { useGsapReveal } from '../../hooks/useGsapMotion';
-import { getBrowserRegion, getCountries, getUsdRates } from '../../services/marketData';
+import { getBrowserRegion, getCountries, getUserCountry, getUsdRates } from '../../services/marketData';
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
@@ -186,7 +186,6 @@ export function Home() {
   // useSmoothScroll();
   const { settings, isLoading, error } = useSiteSettings();
   const [localRateLabel, setLocalRateLabel] = useState("");
-  const browserRegion = useMemo(() => getBrowserRegion(), []);
   const sectionComponents = useMemo(
     () => ({
       hero: <Hero />,
@@ -209,7 +208,8 @@ export function Home() {
   useEffect(() => {
     let isMounted = true;
     const preloadMarketData = async () => {
-      const [countries, rates] = await Promise.all([getCountries(), getUsdRates()]);
+      const [countries, rates, userCountry] = await Promise.all([getCountries(), getUsdRates(), getUserCountry()]);
+      const browserRegion = userCountry?.countryCode || getBrowserRegion();
       if (!isMounted || !countries?.length || !rates || !browserRegion) {
         return;
       }
@@ -232,7 +232,7 @@ export function Home() {
     return () => {
       isMounted = false;
     };
-  }, [browserRegion]);
+  }, []);
 
   if (error) {
     return (

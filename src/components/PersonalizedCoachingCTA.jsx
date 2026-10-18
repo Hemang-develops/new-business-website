@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../context/SiteSettingsContext";
 import { useGsapHover, useGsapReveal } from "../hooks/useGsapMotion";
-import { getBrowserRegion, getCountries, getUsdRates } from "../services/marketData";
+import { getBrowserRegion, getCountries, getUserCountry, getUsdRates } from "../services/marketData";
 import { roundUpAestheticAmount } from "../services/pricing";
 import { useOfferingsData } from "../hooks/useOfferingsData";
 import RichTextContent from "./ui/RichTextContent";
@@ -33,11 +33,10 @@ const PersonalizedCoachingCTA = () => {
   useEffect(() => {
     let isMounted = true;
     const loadCountryCurrency = async () => {
-      const countries = (await getCountries()) || fallbackCountryData;
-      if (!isMounted || !countries?.length) {
-        return;
-      }
-      const detected = countries.find((entry) => entry.code === browserRegion);
+      const [countries, userCountry] = await Promise.all([getCountries(), getUserCountry()]);
+      if (!isMounted) return;
+      const countryList = countries?.length ? countries : fallbackCountryData;
+      const detected = countryList.find((entry) => entry.code === (userCountry?.countryCode || browserRegion));
       const code = detected?.currencies?.[0] || "USD";
       setCountryCurrencyCode(String(code).toUpperCase());
     };

@@ -3,12 +3,15 @@ const COUNTRY_API = "https://raw.githubusercontent.com/dr5hn/countries-states-ci
 const RATES_API = "https://open.er-api.com/v6/latest/USD";
 const RATES_CACHE_KEY = "usd_rates_cache_v1";
 const RATES_TTL_MS = 1000 * 60 * 60 * 12;
+const COUNTRY_CACHE_KEY = "geoapify_country_cache_v1";
+const COUNTRY_TTL_MS = 1000 * 60 * 60 * 24;
 
 let countriesPromise = null;
 let countriesCache = null;
 
 let ratesPromise = null;
 let ratesCache = null;
+let userCountryPromise = null;
 
 export const getBrowserRegion = () => {
   if (typeof navigator === "undefined") {
@@ -22,6 +25,35 @@ export const getBrowserRegion = () => {
     }
   }
   return "";
+};
+
+export const getUserCountry = async () => {
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(COUNTRY_CACHE_KEY) || "null");
+      if (cached?.countryCode && Date.now() - cached.fetchedAt < COUNTRY_TTL_MS) return cached;
+    } catch {
+      // Ignore invalid or unavailable session storage.
+    }
+  }
+  if (!userCountryPromise) {
+    userCountryPromise = fetch("/api/market/location")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        const countryCode = String(data?.countryCode || "").toUpperCase();
+        if (!/^[A-Z]{2}$/.test(countryCode)) return null;
+        const country = { countryCode, countryName: String(data?.countryName || "") };
+        try {
+          sessionStorage.setItem(COUNTRY_CACHE_KEY, JSON.stringify({ ...country, fetchedAt: Date.now() }));
+        } catch {
+          // Ignore storage failures.
+        }
+        return country;
+      })
+      .catch(() => null)
+      .finally(() => { userCountryPromise = null; });
+  }
+  return userCountryPromise;
 };
 
 export const getCountries = async () => {
@@ -40,11 +72,13 @@ export const getCountries = async () => {
               ? entry.currencies
               : entry?.currencies
                 ? Object.keys(entry.currencies)
-                : [];
+                : entry?.currency
+                  ? [entry.currency]
+                  : [];
             if (!name || !iso2) {
               return null;
             }
-            return { name, iso2, currencies };
+            return { name, code: iso2.toUpperCase(), currencies };
           })
           .filter(Boolean)
           .sort((a, b) => a.name.localeCompare(b.name)),
