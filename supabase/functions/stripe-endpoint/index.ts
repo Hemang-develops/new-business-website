@@ -144,6 +144,7 @@ const assertPriceMatchesProductConfig = async (productId: string, currency: stri
   if (Math.abs(numericAmount - expectedAmount) > tolerance) {
     throw new Error("The checkout amount does not match this product’s configured price.");
   }
+  return expectedAmount;
 };
 
 const verifyCheckoutSession = async (sessionId: string, productId: string) => {
@@ -199,7 +200,11 @@ const createStripeCheckoutSession = async (body: Record<string, unknown>, req: R
     throw new Error("Amount and currency are required.");
   }
 
-  await assertPriceMatchesProductConfig(String(productId), String(presentmentCurrency), Number(presentmentUnitAmount));
+  const canonicalAmount = await assertPriceMatchesProductConfig(
+    String(productId),
+    String(presentmentCurrency),
+    Number(presentmentUnitAmount),
+  );
 
   const successUrl = `${siteUrl}/buy/${encodeURIComponent(String(productId))}/success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${siteUrl}/buy/${encodeURIComponent(String(productId))}/cancel`;
@@ -216,7 +221,7 @@ const createStripeCheckoutSession = async (body: Record<string, unknown>, req: R
             package_id: packageId ? String(packageId) : "",
           },
         },
-        unit_amount: Number(presentmentUnitAmount),
+        unit_amount: canonicalAmount,
       },
       quantity: 1,
     },

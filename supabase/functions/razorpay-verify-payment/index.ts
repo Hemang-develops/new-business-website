@@ -25,64 +25,6 @@ const getAdminClient = () => {
   });
 };
 
-const getFxRate = async (currencyCode: string) => {
-  const normalized = String(currencyCode || "").trim().toUpperCase();
-  if (!normalized || normalized === "USD") {
-    return 1;
-  }
-
-  const response = await fetch("https://open.er-api.com/v6/latest/USD");
-  if (!response.ok) {
-    throw new Error("Unable to fetch live FX rates.");
-  }
-
-  const payload = await response.json() as Record<string, unknown>;
-  const rate = Number((payload.rates as Record<string, number> | undefined)?.[normalized]);
-  if (!Number.isFinite(rate) || rate <= 0) {
-    throw new Error(`Unsupported checkout currency: ${currencyCode}.`);
-  }
-
-  return rate;
-};
-
-const getCanonicalProductAmount = async (productId: string, currency: string) => {
-  const normalizedProductId = String(productId || "").trim();
-  const normalizedCurrency = String(currency || "").trim().toLowerCase();
-
-  if (!normalizedProductId || !normalizedCurrency) {
-    throw new Error("Product and currency are required.");
-  }
-
-  const supabase = getAdminClient();
-  const { data: configRow, error: configError } = await supabase
-    .from("storefront_checkout_configs")
-    .select("config")
-    .eq("product_id", normalizedProductId)
-    .maybeSingle();
-
-  if (configError) {
-    throw configError;
-  }
-
-  const config = configRow?.config && typeof configRow.config === "object" ? configRow.config as Record<string, any> : null;
-  if (!config) {
-    throw new Error("Checkout pricing for this product is not configured.");
-  }
-
-  const currencies = config.currencies && typeof config.currencies === "object" ? config.currencies as Record<string, any> : {};
-  const usdAmount = Number(currencies.usd?.unitAmount ?? 0);
-  if (!Number.isFinite(usdAmount) || usdAmount <= 0) {
-    throw new Error("This product does not have a valid USD base price.");
-  }
-
-  if (normalizedCurrency === "usd") {
-    return usdAmount;
-  }
-
-  const fxRate = await getFxRate(normalizedCurrency);
-  return Math.max(1, Math.round(usdAmount * fxRate));
-};
-
 const sign = async (value: string, secret: string) => {
   const key = await crypto.subtle.importKey(
     "raw",
@@ -223,18 +165,24 @@ Deno.serve(async (request) => {
     }
 
     const orderProductId = String(orderPayload?.notes?.productId || "").trim();
-    if (!orderProductId || orderProductId !== String(productId || "").trim()) {
+    if (
+      !orderProductId ||
+      orderProductId !== String(productId || "").trim() ||
+      String(paymentPayload.order_id || "") !== normalizedOrderId
+    ) {
       return json(400, {
         status: "failed",
         error: "Razorpay payment does not match the requested product.",
       });
     }
 
-    const expectedAmount = await getCanonicalProductAmount(orderProductId, String(paymentPayload.currency || orderPayload.currency || "usd"));
-    if (Math.abs(Number(paymentPayload.amount || orderPayload.amount || 0) - expectedAmount) > 1) {
+    if (
+      Number(paymentPayload.amount || 0) !== Number(orderPayload.amount || 0) ||
+      String(paymentPayload.currency || "").toUpperCase() !== String(orderPayload.currency || "").toUpperCase()
+    ) {
       return json(400, {
         status: "failed",
-        error: "Razorpay payment amount does not match the configured product price.",
+        error: "Razorpay payment amount does not match its verified order.",
       });
     }
 

@@ -182,7 +182,7 @@ Deno.serve(async (request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: normalizedAmount,
+        amount: expectedAmount,
         currency: normalizedCurrency,
         receipt,
         notes: {
