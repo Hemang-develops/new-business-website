@@ -132,7 +132,7 @@ export default function useCatalogAdminSaves({
 
   const handleSaveOffering = async ({ publishVersion = false } = {}) => {
     if (!editor) {
-      return;
+      return false;
     }
     setIsSavingOffering(true);
     setStatus({ type: "idle", message: "" });
@@ -145,26 +145,26 @@ export default function useCatalogAdminSaves({
       const shouldPublish = Boolean(publishVersion);
       if (priceUsd == null) {
         setStatus({ type: "error", message: "Add a USD price before saving a paid product." });
-        return;
+        return false;
       }
       if (!["digital", "booking", "reading"].includes(fulfillmentMode)) {
         setStatus({ type: "error", message: "Choose a fulfillment mode before saving the product." });
-        return;
+        return false;
       }
       if (shouldPublish && fulfillmentMode === "digital") {
         if (editor.digital_delivery_type === "course") {
           if (!courses.some((course) => course.offering_id === editor.id && course.is_active)) {
             setStatus({ type: "error", message: "Link an active course before publishing this digital product." });
-            return;
+            return false;
           }
         } else if (!String(editor.delivery_url || "").trim()) {
           setStatus({ type: "error", message: "Add a download URL before publishing this digital product." });
-          return;
+          return false;
         }
       }
       if (shouldPublish && fulfillmentMode === "reading" && !String(editor.reading_email_body || "").trim()) {
         setStatus({ type: "error", message: "Add the reading email body before publishing this reading product." });
-        return;
+        return false;
       }
       const nextVersion = publishVersion
         ? Number(editor.fulfillment_version || 1) + 1
@@ -283,8 +283,10 @@ export default function useCatalogAdminSaves({
               ? "Product and booking synced successfully."
               : "Product saved successfully.",
       });
+      return true;
     } catch (error) {
       setStatus({ type: "error", message: error?.message || "Unable to save product." });
+      return false;
     } finally {
       setIsSavingOffering(false);
     }
@@ -404,11 +406,11 @@ export default function useCatalogAdminSaves({
     const targetSectionId = newOffering.section_id || selectedSectionId || sections[0]?.id;
     if (!targetSectionId) {
       setStatus({ type: "error", message: "Select a product type before creating a product." });
-      return;
+      return false;
     }
     if (!title) {
       setStatus({ type: "error", message: "Add a product title first." });
-      return;
+      return false;
     }
 
     setIsCreatingOffering(true);
@@ -431,7 +433,7 @@ export default function useCatalogAdminSaves({
       const priceUsd = parseUsdPrice(newOffering.price_usd);
       if (priceUsd == null) {
         setStatus({ type: "error", message: "Add a USD price before creating a paid product." });
-        return;
+        return false;
       }
 
       const payload = {
@@ -539,8 +541,10 @@ export default function useCatalogAdminSaves({
               ? "Product created and published live."
               : "Product draft created successfully.",
       });
+      return true;
     } catch (error) {
       setStatus({ type: "error", message: error?.message || "Unable to create product." });
+      return false;
     } finally {
       setIsCreatingOffering(false);
     }

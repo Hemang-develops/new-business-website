@@ -743,7 +743,7 @@ const ProductsTab = ({ state, actions }) => {
                     />
                   </label>
 
-                  <label className="block space-y-1 text-xs text-white/60">
+                  <div className="block space-y-1 text-xs text-white/60">
                     <span className="inline-flex items-center gap-1.5">
                       Long Description
                       <AdminInfoHint text="Use this for the detailed story, transformation, curriculum, or delivery explanation." />
@@ -754,7 +754,7 @@ const ProductsTab = ({ state, actions }) => {
                       minHeightClass="min-h-[10rem]"
                       placeholder="Write the full description with formatting, bullet points, etc..."
                     />
-                  </label>
+                  </div>
 
                   {/* Product Image */}
                   <div className="space-y-2 border-t border-white/10 pt-3">
@@ -1030,12 +1030,14 @@ const ProductsTab = ({ state, actions }) => {
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
+                        let saved;
                         if (isCreateMode) {
-                          handleCreateOffering({ publishVersion: false });
+                          saved = await handleCreateOffering({ publishVersion: false });
                         } else {
-                          handleSaveOffering({ publishVersion: false });
+                          saved = await handleSaveOffering({ publishVersion: false });
                         }
+                        if (saved) closeDrawer();
                       }}
                       disabled={isCreateMode ? isCreatingOffering : isSavingOffering}
                       className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/15 disabled:opacity-50"
@@ -1047,12 +1049,14 @@ const ProductsTab = ({ state, actions }) => {
 
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
+                        let saved;
                         if (isCreateMode) {
-                          handleCreateOffering({ publishVersion: true });
+                          saved = await handleCreateOffering({ publishVersion: true });
                         } else {
-                          handleSaveOffering({ publishVersion: true });
+                          saved = await handleSaveOffering({ publishVersion: true });
                         }
+                        if (saved) closeDrawer();
                       }}
                       disabled={isCreateMode ? isCreatingOffering : isSavingOffering}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-teal-400 px-5 py-2 text-sm font-semibold text-gray-950 shadow-[0_4px_15px_rgba(45,212,191,0.3)] transition hover:bg-teal-300 disabled:opacity-50"
@@ -1158,7 +1162,7 @@ const ProductsTab = ({ state, actions }) => {
                       />
                     </label>
 
-                    <label className="block space-y-1 text-xs text-white/60">
+                    <div className="block space-y-1 text-xs text-white/60">
                       <span>Description</span>
                       <SimpleEditor
                         value={newSection.description}
@@ -1166,7 +1170,7 @@ const ProductsTab = ({ state, actions }) => {
                         minHeightClass="min-h-[8rem]"
                         placeholder="Short description for this category..."
                       />
-                    </label>
+                    </div>
 
                     <button
                       type="button"
@@ -1203,7 +1207,7 @@ const ProductsTab = ({ state, actions }) => {
                       />
                     </label>
 
-                    <label className="block space-y-1 text-xs text-white/60">
+                    <div className="block space-y-1 text-xs text-white/60">
                       <span>Description</span>
                       <SimpleEditor
                         value={selectedSection.description || ""}
@@ -1211,7 +1215,7 @@ const ProductsTab = ({ state, actions }) => {
                         minHeightClass="min-h-[8rem]"
                         placeholder="Description for this category..."
                       />
-                    </label>
+                    </div>
 
                     {/* Hero Section Banner Settings */}
                     <div className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
@@ -1236,7 +1240,7 @@ const ProductsTab = ({ state, actions }) => {
                         </label>
                       </div>
 
-                      <label className="block space-y-1 text-xs text-white/60">
+                      <div className="block space-y-1 text-xs text-white/60">
                         <span>Hero Description</span>
                         <SimpleEditor
                           value={selectedSection.hero_description || ""}
@@ -1244,7 +1248,7 @@ const ProductsTab = ({ state, actions }) => {
                           minHeightClass="min-h-[8rem]"
                           placeholder="Hero copy..."
                         />
-                      </label>
+                      </div>
 
                       <div className="space-y-2 border-t border-white/10 pt-2">
                         <span className="text-xs text-white/60">Hero Image</span>
