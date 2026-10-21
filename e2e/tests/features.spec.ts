@@ -20,7 +20,7 @@ test.describe('API & Fulfillment checks', () => {
     expect((offerings || []).length).toBeGreaterThanOrEqual(0);
   });
 
-  test('invoke course-access-fulfill when secret provided', async ({ request }) => {
+  test('rejects fulfillment for a missing offering', async ({ request }) => {
     test.skip(!FULFILLMENT_SECRET || !SUPA_URL, 'Missing FULFILLMENT_SECRET or SUPABASE URL');
     const offeringId = 'test-offering';
     const payload = {
@@ -41,9 +41,8 @@ test.describe('API & Fulfillment checks', () => {
       data: payload,
     });
 
-    expect(res.status()).toBeGreaterThanOrEqual(200);
-    expect(res.status()).toBeLessThan(300);
+    expect(res.status()).toBe(400);
     const body = await res.json().catch(() => null);
-    expect(body).not.toBeNull();
+    expect(body?.error).toBe('Offering was not found for this payment.');
   });
 });
