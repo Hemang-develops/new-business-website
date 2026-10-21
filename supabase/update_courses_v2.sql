@@ -51,6 +51,7 @@ alter table public.storefront_user_course_progress enable row level security;
 alter table public.storefront_user_achievements enable row level security;
 
 -- Admin policies for modules
+drop policy if exists "Admins manage modules" on public.storefront_course_modules;
 create policy "Admins manage modules"
   on public.storefront_course_modules
   for all
@@ -58,6 +59,7 @@ create policy "Admins manage modules"
   with check (public.is_storefront_admin());
 
 -- User policies for modules (Read-only for buyers)
+drop policy if exists "Users can view modules for courses they own" on public.storefront_course_modules;
 create policy "Users can view modules for courses they own"
   on public.storefront_course_modules
   for select
@@ -70,6 +72,40 @@ create policy "Users can view modules for courses they own"
     )
   );
 
+create or replace function public.can_access_course_item(target_course_id uuid, target_item_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.storefront_course_access a
+    join public.storefront_course_items i
+      on i.course_id = a.course_id
+     and i.id = target_item_id
+    where a.course_id = target_course_id
+      and a.user_id = auth.uid()
+      and auth.uid() is not null
+      and a.revoked_at is null
+      and (a.expires_at is null or a.expires_at > now())
+      and i.is_active
+      and coalesce(i.unlock_after_days, 0) <= floor(extract(epoch from (now() - a.starts_at)) / 86400)
+      and (
+        i.unlock_on_completion_id is null
+        or exists (
+          select 1
+          from public.storefront_user_course_progress prerequisite
+          where prerequisite.user_id = auth.uid()
+            and prerequisite.course_id = i.course_id
+            and prerequisite.item_id = i.unlock_on_completion_id
+            and prerequisite.completed_at is not null
+        )
+      )
+  );
+$$;
+
 -- User policies for progress (Read/Write only when a valid active course access exists)
 drop policy if exists "Users can manage own progress" on public.storefront_user_course_progress;
 create policy "Users can manage own progress"
@@ -77,42 +113,15 @@ create policy "Users can manage own progress"
   for all
   using (
     user_id = auth.uid()
-    and exists (
-      select 1
-      from public.storefront_course_access a
-      where a.course_id = storefront_user_course_progress.course_id
-        and a.user_id = auth.uid()
-        and a.revoked_at is null
-        and (a.expires_at is null or a.expires_at > now())
-    )
-    and exists (
-      select 1
-      from public.storefront_course_items i
-      where i.id = storefront_user_course_progress.item_id
-        and i.course_id = storefront_user_course_progress.course_id
-        and i.is_active
-    )
+    and public.can_access_course_item(course_id, item_id)
   )
   with check (
     user_id = auth.uid()
-    and exists (
-      select 1
-      from public.storefront_course_access a
-      where a.course_id = storefront_user_course_progress.course_id
-        and a.user_id = auth.uid()
-        and a.revoked_at is null
-        and (a.expires_at is null or a.expires_at > now())
-    )
-    and exists (
-      select 1
-      from public.storefront_course_items i
-      where i.id = storefront_user_course_progress.item_id
-        and i.course_id = storefront_user_course_progress.course_id
-        and i.is_active
-    )
+    and public.can_access_course_item(course_id, item_id)
   );
 
 -- User policies for achievements (Read own)
+drop policy if exists "Users can view own achievements" on public.storefront_user_achievements;
 create policy "Users can view own achievements"
   on public.storefront_user_achievements
   for select
